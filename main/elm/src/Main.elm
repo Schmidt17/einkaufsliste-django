@@ -5,6 +5,7 @@ import Html exposing (Html, a, br, button, div, h1, i, input, label, p, span, te
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, onMouseDown)
 import Html.Events.Extra.Touch exposing (onStart)
+import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Time
@@ -23,7 +24,7 @@ main =
 
 
 type alias Model =
-    { items : List String }
+    { items : List String, apiKey : String }
 
 
 
@@ -32,7 +33,7 @@ type alias Model =
 
 init : String -> ( Model, Cmd Msg )
 init flags =
-    ( Model [ "Milch", "Brot" ], Cmd.none )
+    ( Model [ "Milch" ] flags, getItems flags )
 
 
 
@@ -40,14 +41,33 @@ init flags =
 
 
 type Msg
-    = Unit
+    = FetchItems
+    | ItemsReceived (Result Http.Error String)
+
+
+itemsUrl : String -> String
+itemsUrl apiKey =
+    "/items/?k=" ++ apiKey
+
+
+getItems : String -> Cmd Msg
+getItems apiKey =
+    Http.get { url = itemsUrl apiKey, expect = Http.expectString ItemsReceived }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        _ ->
-            ( model, Cmd.none )
+        FetchItems ->
+            ( model, getItems model.apiKey )
+
+        ItemsReceived payload ->
+            case payload of
+                Ok items ->
+                    ( { model | items = String.split "," items }, Cmd.none )
+
+                Err httpError ->
+                    ( model, Cmd.none )
 
 
 
