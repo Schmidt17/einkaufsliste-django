@@ -1,0 +1,59 @@
+li.add {
+    text-align: center;    
+}
+
+a.add-list {
+    text-align: center;
+}
+
+i.add-list-trigger {
+    position: absolute;
+    right: 10px;
+    cursor: pointer;
+}
+
+#add-listname {
+    padding-left: 30px;
+    padding-right: 40px;
+}
+
+#slide-out {
+}
+
+.line-through {
+    text-decoration: line-through;
+}
+
+.center-horizontally {
+    right: inherit;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.item-card {
+    max-height: 150px;
+}
+
+.chips-wrapper {
+    display: flex;
+    overflow-x: scroll;
+}
+
+.chip {
+    cursor: pointer;
+}
+
+.justify-right {
+    justify-content: right;
+}
+
+.filter-chips {
+    padding: 10px;
+    flex-wrap: wrap;
+}
+
+.nav-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}

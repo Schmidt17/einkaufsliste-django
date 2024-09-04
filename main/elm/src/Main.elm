@@ -86,7 +86,16 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    div [] [ text (String.join ", " (List.map .title model.items)) ]
+    div [ class "container" ] (List.map itemCard model.items)
+
+
+itemCard : ItemData -> Html Msg
+itemCard itemData =
+    div [ class "card s12 item-card" ]
+        [ div [ class "card-content" ]
+            [ span [ class "card-title" ] [ text itemData.title ]
+            ]
+        ]
 
 
 
