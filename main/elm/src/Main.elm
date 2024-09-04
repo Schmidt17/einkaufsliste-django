@@ -24,7 +24,7 @@ main =
 
 
 type alias Model =
-    { items : List String, apiKey : String }
+    { items : List ItemData, apiKey : String }
 
 
 
@@ -33,7 +33,7 @@ type alias Model =
 
 init : String -> ( Model, Cmd Msg )
 init flags =
-    ( Model [ "Milch" ] flags, getItems flags )
+    ( Model [] flags, getItems flags )
 
 
 
@@ -63,8 +63,8 @@ update msg model =
 
         ItemsReceived payload ->
             case payload of
-                Ok items ->
-                    ( { model | items = String.split "," items }, Cmd.none )
+                Ok rawString ->
+                    ( { model | items = parseItems rawString }, Cmd.none )
 
                 Err httpError ->
                     ( model, Cmd.none )
@@ -86,4 +86,40 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    div [] [ text (String.join ", " model.items) ]
+    div [] [ text (String.join ", " (List.map .title model.items)) ]
+
+
+
+-- UTILITIES
+
+
+type alias ItemData =
+    { id : String
+    , title : String
+    , tags : List String
+    , done : Int
+    }
+
+
+jsonParseItemData : Decode.Decoder ItemData
+jsonParseItemData =
+    Decode.map4 ItemData
+        (Decode.field "id" Decode.string)
+        (Decode.field "title" Decode.string)
+        (Decode.field "tags" (Decode.list Decode.string))
+        (Decode.field "done" Decode.int)
+
+
+jsonParseItemList : Decode.Decoder (List ItemData)
+jsonParseItemList =
+    Decode.list jsonParseItemData
+
+
+parseItems : String -> List ItemData
+parseItems rawString =
+    case Decode.decodeString jsonParseItemList rawString of
+        Ok itemsList ->
+            itemsList
+
+        Err _ ->
+            []

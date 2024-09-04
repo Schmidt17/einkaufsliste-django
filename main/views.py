@@ -1,4 +1,4 @@
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.template import loader
 
 
@@ -11,4 +11,19 @@ def main(request):
 
 
 def get_items(request):
-    return HttpResponse("Milch,Brot,Käse")
+    test_data = [
+        {
+            "id": "123",
+            "title": "Milch",
+            "tags": ["Supermarkt"],
+            "done": 0
+        },
+        {
+            "id": "456",
+            "title": "Shampoo",
+            "tags": ["Supermarkt", "Drogerie"],
+            "done": 0
+        }
+    ]
+
+    return JsonResponse(test_data, safe=False)

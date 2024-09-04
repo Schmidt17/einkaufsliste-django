@@ -6132,11 +6132,7 @@ var $author$project$Main$getItems = function (apiKey) {
 };
 var $author$project$Main$init = function (flags) {
 	return _Utils_Tuple2(
-		A2(
-			$author$project$Main$Model,
-			_List_fromArray(
-				['Milch']),
-			flags),
+		A2($author$project$Main$Model, _List_Nil, flags),
 		$author$project$Main$getItems(flags));
 };
 var $elm$json$Json$Decode$string = _Json_decodeString;
@@ -6146,6 +6142,35 @@ var $author$project$Main$subscriptions = function (model) {
 };
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $elm$json$Json$Decode$decodeString = _Json_runOnString;
+var $author$project$Main$ItemData = F4(
+	function (id, title, tags, done) {
+		return {done: done, id: id, tags: tags, title: title};
+	});
+var $elm$json$Json$Decode$field = _Json_decodeField;
+var $elm$json$Json$Decode$int = _Json_decodeInt;
+var $elm$json$Json$Decode$list = _Json_decodeList;
+var $elm$json$Json$Decode$map4 = _Json_map4;
+var $author$project$Main$jsonParseItemData = A5(
+	$elm$json$Json$Decode$map4,
+	$author$project$Main$ItemData,
+	A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string),
+	A2($elm$json$Json$Decode$field, 'title', $elm$json$Json$Decode$string),
+	A2(
+		$elm$json$Json$Decode$field,
+		'tags',
+		$elm$json$Json$Decode$list($elm$json$Json$Decode$string)),
+	A2($elm$json$Json$Decode$field, 'done', $elm$json$Json$Decode$int));
+var $author$project$Main$jsonParseItemList = $elm$json$Json$Decode$list($author$project$Main$jsonParseItemData);
+var $author$project$Main$parseItems = function (rawString) {
+	var _v0 = A2($elm$json$Json$Decode$decodeString, $author$project$Main$jsonParseItemList, rawString);
+	if (_v0.$ === 'Ok') {
+		var itemsList = _v0.a;
+		return itemsList;
+	} else {
+		return _List_Nil;
+	}
+};
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		if (msg.$ === 'FetchItems') {
@@ -6155,12 +6180,12 @@ var $author$project$Main$update = F2(
 		} else {
 			var payload = msg.a;
 			if (payload.$ === 'Ok') {
-				var items = payload.a;
+				var rawString = payload.a;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{
-							items: A2($elm$core$String$split, ',', items)
+							items: $author$project$Main$parseItems(rawString)
 						}),
 					$elm$core$Platform$Cmd$none);
 			} else {
@@ -6179,7 +6204,15 @@ var $author$project$Main$view = function (model) {
 		_List_fromArray(
 			[
 				$elm$html$Html$text(
-				A2($elm$core$String$join, ', ', model.items))
+				A2(
+					$elm$core$String$join,
+					', ',
+					A2(
+						$elm$core$List$map,
+						function ($) {
+							return $.title;
+						},
+						model.items)))
 			]));
 };
 var $author$project$Main$main = $elm$browser$Browser$element(
