@@ -1,9 +1,11 @@
 module Main exposing (main)
 
 import Browser
-import Html exposing (Html, a, br, button, div, h1, i, input, label, p, span, text)
+import Html exposing (Html, a, br, button, div, h1, header, i, input, label, main_, nav, p, span, text)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, onInput, onMouseDown)
+import Html.Attributes.Aria as Aria
+import Html.Events exposing (onClick, onInput, onMouseDown, preventDefaultOn)
+import Html.Events.Extra.Mouse exposing (onWithOptions)
 import Html.Events.Extra.Touch exposing (onStart)
 import Http
 import Json.Decode as Decode
@@ -43,6 +45,7 @@ init flags =
 type Msg
     = FetchItems
     | ItemsReceived (Result Http.Error String)
+    | EditCard
 
 
 itemsUrl : String -> String
@@ -69,6 +72,9 @@ update msg model =
                 Err httpError ->
                     ( model, Cmd.none )
 
+        _ ->
+            ( model, Cmd.none )
+
 
 
 -- SUBSCRIPTIONS
@@ -86,16 +92,44 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    div [ class "container" ] (List.map itemCard model.items)
+    div []
+        [ headerView model
+        , main_ [ Aria.ariaLabel "Listenbereich" ]
+            [ div [ class "container" ] (List.map itemCard model.items)
+            ]
+        ]
+
+
+headerView : Model -> Html Msg
+headerView model =
+    header [ Aria.ariaLabel "Filterbereich" ]
+        [ nav [ Aria.ariaLabel "Header", style "height" "auto" ]
+            [ div [ class "nav-wrapper", style "display" "flex" ] []
+            ]
+        ]
 
 
 itemCard : ItemData -> Html Msg
 itemCard itemData =
     div [ class "card s12 item-card" ]
         [ div [ class "card-content" ]
-            [ span [ class "card-title" ] [ text itemData.title ]
+            [ editButton
+            , span [ class "card-title" ] [ text itemData.title ]
+            , div [ class "chips-wrapper" ] []
             ]
         ]
+
+
+editButton : Html Msg
+editButton =
+    a
+        [ href ""
+        , onWithOptions "click" { stopPropagation = True, preventDefault = True } (\event -> EditCard)
+        , class "edit-btn right"
+        , Aria.role "button"
+        , Aria.ariaLabel "Bearbeiten"
+        ]
+        [ i [ class "material-icons grey-text right-align" ] [ text "edit" ] ]
 
 
 
