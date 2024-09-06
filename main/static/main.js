@@ -6183,6 +6183,21 @@ var $author$project$Main$parseItems = function (rawString) {
 		return _List_Nil;
 	}
 };
+var $author$project$Main$toggleDoneCond = F2(
+	function (idToMatch, item) {
+		return _Utils_eq(item.id, idToMatch) ? _Utils_update(
+			item,
+			{
+				done: (!item.done) ? 1 : 0
+			}) : item;
+	});
+var $author$project$Main$toggleDone = F2(
+	function (itemId, items) {
+		return A2(
+			$elm$core$List$map,
+			$author$project$Main$toggleDoneCond(itemId),
+			items);
+	});
 var $elm$core$Basics$not = _Basics_not;
 var $author$project$Main$toggleTag = F2(
 	function (tag, tagList) {
@@ -6270,6 +6285,15 @@ var $author$project$Main$update = F2(
 						model,
 						{
 							filterTags: A2($author$project$Main$toggleTag, tag, model.filterTags)
+						}),
+					$elm$core$Platform$Cmd$none);
+			case 'CardClicked':
+				var itemId = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							items: A2($author$project$Main$toggleDone, itemId, model.items)
 						}),
 					$elm$core$Platform$Cmd$none);
 			default:
@@ -6446,6 +6470,9 @@ var $author$project$Main$isVisible = F2(
 				},
 				item.tags));
 	});
+var $author$project$Main$CardClicked = function (a) {
+	return {$: 'CardClicked', a: a};
+};
 var $author$project$Main$displayTagChip = function (tag) {
 	return A2(
 		$elm$html$Html$div,
@@ -6605,7 +6632,10 @@ var $author$project$Main$itemCard = function (itemData) {
 		$elm$html$Html$div,
 		_List_fromArray(
 			[
-				$elm$html$Html$Attributes$class('card s12 item-card')
+				$elm$html$Html$Attributes$class(
+				'card s12 item-card' + ((itemData.done === 1) ? ' grey lighten-2 grey-text' : '')),
+				$elm$html$Html$Events$onClick(
+				$author$project$Main$CardClicked(itemData.id))
 			]),
 		_List_fromArray(
 			[
@@ -6622,7 +6652,8 @@ var $author$project$Main$itemCard = function (itemData) {
 						$elm$html$Html$span,
 						_List_fromArray(
 							[
-								$elm$html$Html$Attributes$class('card-title')
+								$elm$html$Html$Attributes$class(
+								'card-title' + ((itemData.done === 1) ? ' line-through' : ''))
 							]),
 						_List_fromArray(
 							[

@@ -57,6 +57,7 @@ type Msg
     | ItemsReceived (Result Http.Error String)
     | EditCard
     | FilterClicked String
+    | CardClicked String
 
 
 itemsUrl : String -> String
@@ -94,6 +95,9 @@ update msg model =
 
         FilterClicked tag ->
             ( { model | filterTags = toggleTag tag model.filterTags }, Cmd.none )
+
+        CardClicked itemId ->
+            ( { model | items = toggleDone itemId model.items }, Cmd.none )
 
         _ ->
             ( model, Cmd.none )
@@ -137,13 +141,56 @@ headerView model =
 
 itemCard : ItemData -> Html Msg
 itemCard itemData =
-    div [ class "card s12 item-card" ]
+    div
+        [ class
+            ("card s12 item-card"
+                ++ (if itemData.done == 1 then
+                        " grey lighten-2 grey-text"
+
+                    else
+                        ""
+                   )
+            )
+        , onClick (CardClicked itemData.id)
+        ]
         [ div [ class "card-content" ]
             [ editButton
-            , span [ class "card-title" ] [ text itemData.title ]
+            , span
+                [ class
+                    ("card-title"
+                        ++ (if itemData.done == 1 then
+                                " line-through"
+
+                            else
+                                ""
+                           )
+                    )
+                ]
+                [ text itemData.title ]
             , div [ class "chips-wrapper" ] (List.map displayTagChip itemData.tags)
             ]
         ]
+
+
+toggleDoneCond : String -> ItemData -> ItemData
+toggleDoneCond idToMatch item =
+    if item.id == idToMatch then
+        { item
+            | done =
+                if item.done == 0 then
+                    1
+
+                else
+                    0
+        }
+
+    else
+        item
+
+
+toggleDone : String -> List ItemData -> List ItemData
+toggleDone itemId items =
+    List.map (toggleDoneCond itemId) items
 
 
 editButton : Html Msg
