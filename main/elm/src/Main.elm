@@ -141,7 +141,7 @@ itemCard itemData =
         [ div [ class "card-content" ]
             [ editButton
             , span [ class "card-title" ] [ text itemData.title ]
-            , div [ class "chips-wrapper" ] []
+            , div [ class "chips-wrapper" ] (List.map displayTagChip itemData.tags)
             ]
         ]
 
@@ -174,6 +174,13 @@ filterTagChip filterTag =
         , onClick (FilterClicked filterTag.tag)
         ]
         [ text filterTag.tag ]
+
+
+displayTagChip : String -> Html Msg
+displayTagChip tag =
+    div
+        [ class "chip green-text green lighten-5" ]
+        [ text tag ]
 
 
 isVisible : Model -> ItemData -> Bool

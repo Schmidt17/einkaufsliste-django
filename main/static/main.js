@@ -6446,6 +6446,18 @@ var $author$project$Main$isVisible = F2(
 				},
 				item.tags));
 	});
+var $author$project$Main$displayTagChip = function (tag) {
+	return A2(
+		$elm$html$Html$div,
+		_List_fromArray(
+			[
+				$elm$html$Html$Attributes$class('chip green-text green lighten-5')
+			]),
+		_List_fromArray(
+			[
+				$elm$html$Html$text(tag)
+			]));
+};
 var $author$project$Main$EditCard = {$: 'EditCard'};
 var $elm$html$Html$a = _VirtualDom_node('a');
 var $elm$html$Html$Attributes$href = function (url) {
@@ -6622,7 +6634,7 @@ var $author$project$Main$itemCard = function (itemData) {
 							[
 								$elm$html$Html$Attributes$class('chips-wrapper')
 							]),
-						_List_Nil)
+						A2($elm$core$List$map, $author$project$Main$displayTagChip, itemData.tags))
 					]))
 			]));
 };
