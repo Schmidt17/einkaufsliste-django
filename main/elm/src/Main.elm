@@ -10,6 +10,7 @@ import Html.Events.Extra.Touch exposing (onStart)
 import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
+import Set
 import Time
 
 
@@ -104,7 +105,13 @@ headerView : Model -> Html Msg
 headerView model =
     header [ Aria.ariaLabel "Filterbereich" ]
         [ nav [ Aria.ariaLabel "Header", style "height" "auto" ]
-            [ div [ class "nav-wrapper", style "display" "flex" ] []
+            [ div [ class "nav-wrapper", style "display" "flex" ]
+                [ div [ class "chips-wrapper filter-chips", Aria.ariaLabel "Filterbereich", Aria.role "navigation" ]
+                    (List.map
+                        tagChip
+                        (Set.toList (uniqueTags model.items))
+                    )
+                ]
             ]
         ]
 
@@ -130,6 +137,11 @@ editButton =
         , Aria.ariaLabel "Bearbeiten"
         ]
         [ i [ class "material-icons grey-text right-align" ] [ text "edit" ] ]
+
+
+tagChip : String -> Html Msg
+tagChip tag =
+    div [ class "chip green-text green lighten-5" ] [ text tag ]
 
 
 
@@ -166,3 +178,13 @@ parseItems rawString =
 
         Err _ ->
             []
+
+
+uniqueTags : List ItemData -> Set.Set String
+uniqueTags items =
+    Set.fromList (allTags items)
+
+
+allTags : List ItemData -> List String
+allTags =
+    List.concatMap .tags

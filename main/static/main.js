@@ -6218,8 +6218,60 @@ var $elm$html$Html$Attributes$class = $elm$html$Html$Attributes$stringProperty('
 var $elm$html$Html$div = _VirtualDom_node('div');
 var $elm$html$Html$header = _VirtualDom_node('header');
 var $elm$html$Html$nav = _VirtualDom_node('nav');
+var $fapian$elm_html_aria$Html$Attributes$Aria$role = $elm$html$Html$Attributes$attribute('role');
 var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
 var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
+var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
+var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
+var $author$project$Main$tagChip = function (tag) {
+	return A2(
+		$elm$html$Html$div,
+		_List_fromArray(
+			[
+				$elm$html$Html$Attributes$class('chip green-text green lighten-5')
+			]),
+		_List_fromArray(
+			[
+				$elm$html$Html$text(tag)
+			]));
+};
+var $elm$core$List$append = F2(
+	function (xs, ys) {
+		if (!ys.b) {
+			return xs;
+		} else {
+			return A3($elm$core$List$foldr, $elm$core$List$cons, ys, xs);
+		}
+	});
+var $elm$core$List$concat = function (lists) {
+	return A3($elm$core$List$foldr, $elm$core$List$append, _List_Nil, lists);
+};
+var $elm$core$List$concatMap = F2(
+	function (f, list) {
+		return $elm$core$List$concat(
+			A2($elm$core$List$map, f, list));
+	});
+var $author$project$Main$allTags = $elm$core$List$concatMap(
+	function ($) {
+		return $.tags;
+	});
+var $elm$core$Set$Set_elm_builtin = function (a) {
+	return {$: 'Set_elm_builtin', a: a};
+};
+var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
+var $elm$core$Set$insert = F2(
+	function (key, _v0) {
+		var dict = _v0.a;
+		return $elm$core$Set$Set_elm_builtin(
+			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
+	});
+var $elm$core$Set$fromList = function (list) {
+	return A3($elm$core$List$foldl, $elm$core$Set$insert, $elm$core$Set$empty, list);
+};
+var $author$project$Main$uniqueTags = function (items) {
+	return $elm$core$Set$fromList(
+		$author$project$Main$allTags(items));
+};
 var $author$project$Main$headerView = function (model) {
 	return A2(
 		$elm$html$Html$header,
@@ -6245,7 +6297,22 @@ var $author$project$Main$headerView = function (model) {
 								$elm$html$Html$Attributes$class('nav-wrapper'),
 								A2($elm$html$Html$Attributes$style, 'display', 'flex')
 							]),
-						_List_Nil)
+						_List_fromArray(
+							[
+								A2(
+								$elm$html$Html$div,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$class('chips-wrapper filter-chips'),
+										$fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel('Filterbereich'),
+										$fapian$elm_html_aria$Html$Attributes$Aria$role('navigation')
+									]),
+								A2(
+									$elm$core$List$map,
+									$author$project$Main$tagChip,
+									$elm$core$Set$toList(
+										$author$project$Main$uniqueTags(model.items))))
+							]))
 					]))
 			]));
 };
@@ -6362,9 +6429,6 @@ var $mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$onWithOptions = F3(
 				},
 				$mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$eventDecoder));
 	});
-var $fapian$elm_html_aria$Html$Attributes$Aria$role = $elm$html$Html$Attributes$attribute('role');
-var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
-var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
 var $author$project$Main$editButton = A2(
 	$elm$html$Html$a,
 	_List_fromArray(
