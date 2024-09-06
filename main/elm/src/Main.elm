@@ -28,7 +28,7 @@ main =
 
 type alias Model =
     { items : List ItemData
-    , tags : List FilterTag
+    , filterTags : List FilterTag
     , apiKey : String
     }
 
@@ -87,13 +87,13 @@ update msg model =
                         items =
                             parseItems rawString
                     in
-                    ( { model | items = items, tags = initTags ([ "No tags" ] ++ Set.toList (uniqueTags items)) }, Cmd.none )
+                    ( { model | items = items, filterTags = initTags ([ "No tags" ] ++ Set.toList (uniqueTags items)) }, Cmd.none )
 
                 Err httpError ->
                     ( model, Cmd.none )
 
         FilterClicked tag ->
-            ( { model | tags = toggleTag tag model.tags }, Cmd.none )
+            ( { model | filterTags = toggleTag tag model.filterTags }, Cmd.none )
 
         _ ->
             ( model, Cmd.none )
@@ -118,7 +118,7 @@ view model =
     div []
         [ headerView model
         , main_ [ Aria.ariaLabel "Listenbereich" ]
-            [ div [ class "container" ] (List.map itemCard model.items)
+            [ div [ class "container" ] (List.map itemCard (List.filter (isVisible model) model.items))
             ]
         ]
 
@@ -129,7 +129,7 @@ headerView model =
         [ nav [ Aria.ariaLabel "Header", style "height" "auto" ]
             [ div [ class "nav-wrapper", style "display" "flex" ]
                 [ div [ class "chips-wrapper filter-chips", Aria.ariaLabel "Filterbereich", Aria.role "navigation" ]
-                    (List.map filterTagChip model.tags)
+                    (List.map filterTagChip model.filterTags)
                 ]
             ]
         ]
@@ -174,6 +174,22 @@ filterTagChip filterTag =
         , onClick (FilterClicked filterTag.tag)
         ]
         [ text filterTag.tag ]
+
+
+isVisible : Model -> ItemData -> Bool
+isVisible model item =
+    let
+        filters =
+            activeFilters model.filterTags
+
+        filteringActive =
+            List.length filters > 0
+    in
+    if not filteringActive then
+        True
+
+    else
+        List.foldl (||) False (List.map (\x -> List.member x filters) item.tags)
 
 
 
@@ -233,3 +249,17 @@ toggleTag tag tagList =
                 filterTag
     in
     List.map (toggle tag) tagList
+
+
+maybeActiveTag : FilterTag -> Maybe String
+maybeActiveTag filterTag =
+    if filterTag.isActive then
+        Just filterTag.tag
+
+    else
+        Nothing
+
+
+activeFilters : List FilterTag -> List String
+activeFilters filterTags =
+    List.filterMap maybeActiveTag filterTags

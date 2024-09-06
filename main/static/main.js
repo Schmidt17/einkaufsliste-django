@@ -5335,8 +5335,8 @@ var $elm$core$Task$perform = F2(
 	});
 var $elm$browser$Browser$element = _Browser_element;
 var $author$project$Main$Model = F3(
-	function (items, tags, apiKey) {
-		return {apiKey: apiKey, items: items, tags: tags};
+	function (items, filterTags, apiKey) {
+		return {apiKey: apiKey, filterTags: filterTags, items: items};
 	});
 var $author$project$Main$ItemsReceived = function (a) {
 	return {$: 'ItemsReceived', a: a};
@@ -6250,13 +6250,13 @@ var $author$project$Main$update = F2(
 						_Utils_update(
 							model,
 							{
-								items: items,
-								tags: $author$project$Main$initTags(
+								filterTags: $author$project$Main$initTags(
 									_Utils_ap(
 										_List_fromArray(
 											['No tags']),
 										$elm$core$Set$toList(
-											$author$project$Main$uniqueTags(items))))
+											$author$project$Main$uniqueTags(items)))),
+								items: items
 							}),
 						$elm$core$Platform$Cmd$none);
 				} else {
@@ -6269,7 +6269,7 @@ var $author$project$Main$update = F2(
 					_Utils_update(
 						model,
 						{
-							tags: A2($author$project$Main$toggleTag, tag, model.tags)
+							filterTags: A2($author$project$Main$toggleTag, tag, model.filterTags)
 						}),
 					$elm$core$Platform$Cmd$none);
 			default:
@@ -6295,6 +6295,17 @@ var $elm$html$Html$Attributes$stringProperty = F2(
 	});
 var $elm$html$Html$Attributes$class = $elm$html$Html$Attributes$stringProperty('className');
 var $elm$html$Html$div = _VirtualDom_node('div');
+var $elm$core$List$filter = F2(
+	function (isGood, list) {
+		return A3(
+			$elm$core$List$foldr,
+			F2(
+				function (x, xs) {
+					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
+				}),
+			_List_Nil,
+			list);
+	});
 var $author$project$Main$FilterClicked = function (a) {
 	return {$: 'FilterClicked', a: a};
 };
@@ -6379,11 +6390,62 @@ var $author$project$Main$headerView = function (model) {
 										$fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel('Filterbereich'),
 										$fapian$elm_html_aria$Html$Attributes$Aria$role('navigation')
 									]),
-								A2($elm$core$List$map, $author$project$Main$filterTagChip, model.tags))
+								A2($elm$core$List$map, $author$project$Main$filterTagChip, model.filterTags))
 							]))
 					]))
 			]));
 };
+var $author$project$Main$maybeActiveTag = function (filterTag) {
+	return filterTag.isActive ? $elm$core$Maybe$Just(filterTag.tag) : $elm$core$Maybe$Nothing;
+};
+var $author$project$Main$activeFilters = function (filterTags) {
+	return A2($elm$core$List$filterMap, $author$project$Main$maybeActiveTag, filterTags);
+};
+var $elm$core$List$any = F2(
+	function (isOkay, list) {
+		any:
+		while (true) {
+			if (!list.b) {
+				return false;
+			} else {
+				var x = list.a;
+				var xs = list.b;
+				if (isOkay(x)) {
+					return true;
+				} else {
+					var $temp$isOkay = isOkay,
+						$temp$list = xs;
+					isOkay = $temp$isOkay;
+					list = $temp$list;
+					continue any;
+				}
+			}
+		}
+	});
+var $elm$core$List$member = F2(
+	function (x, xs) {
+		return A2(
+			$elm$core$List$any,
+			function (a) {
+				return _Utils_eq(a, x);
+			},
+			xs);
+	});
+var $author$project$Main$isVisible = F2(
+	function (model, item) {
+		var filters = $author$project$Main$activeFilters(model.filterTags);
+		var filteringActive = $elm$core$List$length(filters) > 0;
+		return (!filteringActive) ? true : A3(
+			$elm$core$List$foldl,
+			$elm$core$Basics$or,
+			false,
+			A2(
+				$elm$core$List$map,
+				function (x) {
+					return A2($elm$core$List$member, x, filters);
+				},
+				item.tags));
+	});
 var $author$project$Main$EditCard = {$: 'EditCard'};
 var $elm$html$Html$a = _VirtualDom_node('a');
 var $elm$html$Html$Attributes$href = function (url) {
@@ -6586,7 +6648,13 @@ var $author$project$Main$view = function (model) {
 							[
 								$elm$html$Html$Attributes$class('container')
 							]),
-						A2($elm$core$List$map, $author$project$Main$itemCard, model.items))
+						A2(
+							$elm$core$List$map,
+							$author$project$Main$itemCard,
+							A2(
+								$elm$core$List$filter,
+								$author$project$Main$isVisible(model),
+								model.items)))
 					]))
 			]));
 };
