@@ -27,7 +27,16 @@ main =
 
 
 type alias Model =
-    { items : List ItemData, apiKey : String }
+    { items : List ItemData
+    , tags : List FilterTag
+    , apiKey : String
+    }
+
+
+type alias FilterTag =
+    { tag : String
+    , isActive : Bool
+    }
 
 
 
@@ -36,7 +45,7 @@ type alias Model =
 
 init : String -> ( Model, Cmd Msg )
 init flags =
-    ( Model [] flags, getItems flags )
+    ( Model [] [] flags, getItems flags )
 
 
 
@@ -47,6 +56,7 @@ type Msg
     = FetchItems
     | ItemsReceived (Result Http.Error String)
     | EditCard
+    | FilterClicked String
 
 
 itemsUrl : String -> String
@@ -59,6 +69,11 @@ getItems apiKey =
     Http.get { url = itemsUrl apiKey, expect = Http.expectString ItemsReceived }
 
 
+initTags : List String -> List FilterTag
+initTags tagNames =
+    List.map (\tag -> FilterTag tag False) tagNames
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -68,10 +83,17 @@ update msg model =
         ItemsReceived payload ->
             case payload of
                 Ok rawString ->
-                    ( { model | items = parseItems rawString }, Cmd.none )
+                    let
+                        items =
+                            parseItems rawString
+                    in
+                    ( { model | items = items, tags = initTags ([ "No tags" ] ++ Set.toList (uniqueTags items)) }, Cmd.none )
 
                 Err httpError ->
                     ( model, Cmd.none )
+
+        FilterClicked tag ->
+            ( { model | tags = toggleTag tag model.tags }, Cmd.none )
 
         _ ->
             ( model, Cmd.none )
@@ -107,10 +129,7 @@ headerView model =
         [ nav [ Aria.ariaLabel "Header", style "height" "auto" ]
             [ div [ class "nav-wrapper", style "display" "flex" ]
                 [ div [ class "chips-wrapper filter-chips", Aria.ariaLabel "Filterbereich", Aria.role "navigation" ]
-                    (List.map
-                        tagChip
-                        (Set.toList (uniqueTags model.items))
-                    )
+                    (List.map filterTagChip model.tags)
                 ]
             ]
         ]
@@ -139,9 +158,22 @@ editButton =
         [ i [ class "material-icons grey-text right-align" ] [ text "edit" ] ]
 
 
-tagChip : String -> Html Msg
-tagChip tag =
-    div [ class "chip green-text green lighten-5" ] [ text tag ]
+filterTagChip : FilterTag -> Html Msg
+filterTagChip filterTag =
+    div
+        [ class
+            ("chip green-text green lighten-5"
+                ++ (case filterTag.isActive of
+                        True ->
+                            " darken-1 white-text"
+
+                        False ->
+                            ""
+                   )
+            )
+        , onClick (FilterClicked filterTag.tag)
+        ]
+        [ text filterTag.tag ]
 
 
 
@@ -188,3 +220,16 @@ uniqueTags items =
 allTags : List ItemData -> List String
 allTags =
     List.concatMap .tags
+
+
+toggleTag : String -> List FilterTag -> List FilterTag
+toggleTag tag tagList =
+    let
+        toggle tagToMatch filterTag =
+            if tagToMatch == filterTag.tag then
+                { filterTag | isActive = not filterTag.isActive }
+
+            else
+                filterTag
+    in
+    List.map (toggle tag) tagList

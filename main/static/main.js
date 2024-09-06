@@ -5334,9 +5334,9 @@ var $elm$core$Task$perform = F2(
 				A2($elm$core$Task$map, toMessage, task)));
 	});
 var $elm$browser$Browser$element = _Browser_element;
-var $author$project$Main$Model = F2(
-	function (items, apiKey) {
-		return {apiKey: apiKey, items: items};
+var $author$project$Main$Model = F3(
+	function (items, tags, apiKey) {
+		return {apiKey: apiKey, items: items, tags: tags};
 	});
 var $author$project$Main$ItemsReceived = function (a) {
 	return {$: 'ItemsReceived', a: a};
@@ -6132,13 +6132,25 @@ var $author$project$Main$getItems = function (apiKey) {
 };
 var $author$project$Main$init = function (flags) {
 	return _Utils_Tuple2(
-		A2($author$project$Main$Model, _List_Nil, flags),
+		A3($author$project$Main$Model, _List_Nil, _List_Nil, flags),
 		$author$project$Main$getItems(flags));
 };
 var $elm$json$Json$Decode$string = _Json_decodeString;
 var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $author$project$Main$subscriptions = function (model) {
 	return $elm$core$Platform$Sub$batch(_List_Nil);
+};
+var $author$project$Main$FilterTag = F2(
+	function (tag, isActive) {
+		return {isActive: isActive, tag: tag};
+	});
+var $author$project$Main$initTags = function (tagNames) {
+	return A2(
+		$elm$core$List$map,
+		function (tag) {
+			return A2($author$project$Main$FilterTag, tag, false);
+		},
+		tagNames);
 };
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
@@ -6171,70 +6183,20 @@ var $author$project$Main$parseItems = function (rawString) {
 		return _List_Nil;
 	}
 };
-var $author$project$Main$update = F2(
-	function (msg, model) {
-		switch (msg.$) {
-			case 'FetchItems':
-				return _Utils_Tuple2(
-					model,
-					$author$project$Main$getItems(model.apiKey));
-			case 'ItemsReceived':
-				var payload = msg.a;
-				if (payload.$ === 'Ok') {
-					var rawString = payload.a;
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{
-								items: $author$project$Main$parseItems(rawString)
-							}),
-						$elm$core$Platform$Cmd$none);
-				} else {
-					var httpError = payload.a;
-					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-				}
-			default:
-				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-		}
-	});
-var $elm$virtual_dom$VirtualDom$attribute = F2(
-	function (key, value) {
+var $elm$core$Basics$not = _Basics_not;
+var $author$project$Main$toggleTag = F2(
+	function (tag, tagList) {
+		var toggle = F2(
+			function (tagToMatch, filterTag) {
+				return _Utils_eq(tagToMatch, filterTag.tag) ? _Utils_update(
+					filterTag,
+					{isActive: !filterTag.isActive}) : filterTag;
+			});
 		return A2(
-			_VirtualDom_attribute,
-			_VirtualDom_noOnOrFormAction(key),
-			_VirtualDom_noJavaScriptOrHtmlUri(value));
+			$elm$core$List$map,
+			toggle(tag),
+			tagList);
 	});
-var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
-var $fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel = $elm$html$Html$Attributes$attribute('aria-label');
-var $elm$json$Json$Encode$string = _Json_wrap;
-var $elm$html$Html$Attributes$stringProperty = F2(
-	function (key, string) {
-		return A2(
-			_VirtualDom_property,
-			key,
-			$elm$json$Json$Encode$string(string));
-	});
-var $elm$html$Html$Attributes$class = $elm$html$Html$Attributes$stringProperty('className');
-var $elm$html$Html$div = _VirtualDom_node('div');
-var $elm$html$Html$header = _VirtualDom_node('header');
-var $elm$html$Html$nav = _VirtualDom_node('nav');
-var $fapian$elm_html_aria$Html$Attributes$Aria$role = $elm$html$Html$Attributes$attribute('role');
-var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
-var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
-var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
-var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
-var $author$project$Main$tagChip = function (tag) {
-	return A2(
-		$elm$html$Html$div,
-		_List_fromArray(
-			[
-				$elm$html$Html$Attributes$class('chip green-text green lighten-5')
-			]),
-		_List_fromArray(
-			[
-				$elm$html$Html$text(tag)
-			]));
-};
 var $elm$core$List$append = F2(
 	function (xs, ys) {
 		if (!ys.b) {
@@ -6272,6 +6234,116 @@ var $author$project$Main$uniqueTags = function (items) {
 	return $elm$core$Set$fromList(
 		$author$project$Main$allTags(items));
 };
+var $author$project$Main$update = F2(
+	function (msg, model) {
+		switch (msg.$) {
+			case 'FetchItems':
+				return _Utils_Tuple2(
+					model,
+					$author$project$Main$getItems(model.apiKey));
+			case 'ItemsReceived':
+				var payload = msg.a;
+				if (payload.$ === 'Ok') {
+					var rawString = payload.a;
+					var items = $author$project$Main$parseItems(rawString);
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								items: items,
+								tags: $author$project$Main$initTags(
+									_Utils_ap(
+										_List_fromArray(
+											['No tags']),
+										$elm$core$Set$toList(
+											$author$project$Main$uniqueTags(items))))
+							}),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					var httpError = payload.a;
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				}
+			case 'FilterClicked':
+				var tag = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							tags: A2($author$project$Main$toggleTag, tag, model.tags)
+						}),
+					$elm$core$Platform$Cmd$none);
+			default:
+				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+		}
+	});
+var $elm$virtual_dom$VirtualDom$attribute = F2(
+	function (key, value) {
+		return A2(
+			_VirtualDom_attribute,
+			_VirtualDom_noOnOrFormAction(key),
+			_VirtualDom_noJavaScriptOrHtmlUri(value));
+	});
+var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
+var $fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel = $elm$html$Html$Attributes$attribute('aria-label');
+var $elm$json$Json$Encode$string = _Json_wrap;
+var $elm$html$Html$Attributes$stringProperty = F2(
+	function (key, string) {
+		return A2(
+			_VirtualDom_property,
+			key,
+			$elm$json$Json$Encode$string(string));
+	});
+var $elm$html$Html$Attributes$class = $elm$html$Html$Attributes$stringProperty('className');
+var $elm$html$Html$div = _VirtualDom_node('div');
+var $author$project$Main$FilterClicked = function (a) {
+	return {$: 'FilterClicked', a: a};
+};
+var $elm$virtual_dom$VirtualDom$Normal = function (a) {
+	return {$: 'Normal', a: a};
+};
+var $elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
+var $elm$html$Html$Events$on = F2(
+	function (event, decoder) {
+		return A2(
+			$elm$virtual_dom$VirtualDom$on,
+			event,
+			$elm$virtual_dom$VirtualDom$Normal(decoder));
+	});
+var $elm$html$Html$Events$onClick = function (msg) {
+	return A2(
+		$elm$html$Html$Events$on,
+		'click',
+		$elm$json$Json$Decode$succeed(msg));
+};
+var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
+var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
+var $author$project$Main$filterTagChip = function (filterTag) {
+	return A2(
+		$elm$html$Html$div,
+		_List_fromArray(
+			[
+				$elm$html$Html$Attributes$class(
+				'chip green-text green lighten-5' + function () {
+					var _v0 = filterTag.isActive;
+					if (_v0) {
+						return ' darken-1 white-text';
+					} else {
+						return '';
+					}
+				}()),
+				$elm$html$Html$Events$onClick(
+				$author$project$Main$FilterClicked(filterTag.tag))
+			]),
+		_List_fromArray(
+			[
+				$elm$html$Html$text(filterTag.tag)
+			]));
+};
+var $elm$html$Html$header = _VirtualDom_node('header');
+var $elm$html$Html$nav = _VirtualDom_node('nav');
+var $fapian$elm_html_aria$Html$Attributes$Aria$role = $elm$html$Html$Attributes$attribute('role');
+var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
+var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $author$project$Main$headerView = function (model) {
 	return A2(
 		$elm$html$Html$header,
@@ -6307,11 +6379,7 @@ var $author$project$Main$headerView = function (model) {
 										$fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel('Filterbereich'),
 										$fapian$elm_html_aria$Html$Attributes$Aria$role('navigation')
 									]),
-								A2(
-									$elm$core$List$map,
-									$author$project$Main$tagChip,
-									$elm$core$Set$toList(
-										$author$project$Main$uniqueTags(model.items))))
+								A2($elm$core$List$map, $author$project$Main$filterTagChip, model.tags))
 							]))
 					]))
 			]));
@@ -6328,7 +6396,6 @@ var $elm$html$Html$i = _VirtualDom_node('i');
 var $elm$virtual_dom$VirtualDom$Custom = function (a) {
 	return {$: 'Custom', a: a};
 };
-var $elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
 var $elm$html$Html$Events$custom = F2(
 	function (event, decoder) {
 		return A2(
