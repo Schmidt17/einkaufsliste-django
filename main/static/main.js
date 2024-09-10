@@ -6155,7 +6155,7 @@ var $author$project$Main$initTags = function (tagNames) {
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $elm$json$Json$Decode$decodeString = _Json_runOnString;
-var $author$project$Main$ItemData = F4(
+var $author$project$Main$ItemDataReceived = F4(
 	function (id, title, tags, done) {
 		return {done: done, id: id, tags: tags, title: title};
 	});
@@ -6165,7 +6165,7 @@ var $elm$json$Json$Decode$list = _Json_decodeList;
 var $elm$json$Json$Decode$map4 = _Json_map4;
 var $author$project$Main$jsonParseItemData = A5(
 	$elm$json$Json$Decode$map4,
-	$author$project$Main$ItemData,
+	$author$project$Main$ItemDataReceived,
 	A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string),
 	A2($elm$json$Json$Decode$field, 'title', $elm$json$Json$Decode$string),
 	A2(
@@ -6183,6 +6183,10 @@ var $author$project$Main$parseItems = function (rawString) {
 		return _List_Nil;
 	}
 };
+var $author$project$Main$receivedToItem = F2(
+	function (index, itemReceived) {
+		return {done: itemReceived.done, id: itemReceived.id, orderIndex: index, tags: itemReceived.tags, title: itemReceived.title};
+	});
 var $author$project$Main$toggleDoneCond = F2(
 	function (idToMatch, item) {
 		return _Utils_eq(item.id, idToMatch) ? _Utils_update(
@@ -6260,7 +6264,10 @@ var $author$project$Main$update = F2(
 				var payload = msg.a;
 				if (payload.$ === 'Ok') {
 					var rawString = payload.a;
-					var items = $author$project$Main$parseItems(rawString);
+					var items = A2(
+						$elm$core$List$indexedMap,
+						$author$project$Main$receivedToItem,
+						$author$project$Main$parseItems(rawString));
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,

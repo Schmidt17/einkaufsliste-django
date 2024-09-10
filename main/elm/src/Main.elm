@@ -39,6 +39,15 @@ type alias FilterTag =
     }
 
 
+type alias ItemData =
+    { id : String
+    , title : String
+    , tags : List String
+    , done : Int
+    , orderIndex : Int
+    }
+
+
 
 -- INIT
 
@@ -86,7 +95,7 @@ update msg model =
                 Ok rawString ->
                     let
                         items =
-                            parseItems rawString
+                            List.indexedMap receivedToItem (parseItems rawString)
                     in
                     ( { model | items = items, filterTags = initTags ([ "No tags" ] ++ Set.toList (uniqueTags items)) }, Cmd.none )
 
@@ -250,7 +259,7 @@ isVisible model item =
 -- UTILITIES
 
 
-type alias ItemData =
+type alias ItemDataReceived =
     { id : String
     , title : String
     , tags : List String
@@ -258,21 +267,21 @@ type alias ItemData =
     }
 
 
-jsonParseItemData : Decode.Decoder ItemData
+jsonParseItemData : Decode.Decoder ItemDataReceived
 jsonParseItemData =
-    Decode.map4 ItemData
+    Decode.map4 ItemDataReceived
         (Decode.field "id" Decode.string)
         (Decode.field "title" Decode.string)
         (Decode.field "tags" (Decode.list Decode.string))
         (Decode.field "done" Decode.int)
 
 
-jsonParseItemList : Decode.Decoder (List ItemData)
+jsonParseItemList : Decode.Decoder (List ItemDataReceived)
 jsonParseItemList =
     Decode.list jsonParseItemData
 
 
-parseItems : String -> List ItemData
+parseItems : String -> List ItemDataReceived
 parseItems rawString =
     case Decode.decodeString jsonParseItemList rawString of
         Ok itemsList ->
@@ -280,6 +289,16 @@ parseItems rawString =
 
         Err _ ->
             []
+
+
+receivedToItem : Int -> ItemDataReceived -> ItemData
+receivedToItem index itemReceived =
+    { id = itemReceived.id, title = itemReceived.title, tags = itemReceived.tags, done = itemReceived.done, orderIndex = index }
+
+
+itemToReceived : ItemData -> ItemDataReceived
+itemToReceived item =
+    { id = item.id, title = item.title, tags = item.tags, done = item.done }
 
 
 uniqueTags : List ItemData -> Set.Set String
