@@ -131,7 +131,7 @@ view model =
     div []
         [ headerView model
         , main_ [ Aria.ariaLabel "Listenbereich" ]
-            [ div [ class "container" ] (List.map itemCard (List.filter (isVisible model) model.items))
+            [ div [ class "container" ] (List.map itemCard (sortItems (List.filter (isVisible model) model.items)))
             ]
         ]
 
@@ -253,6 +253,11 @@ isVisible model item =
 
     else
         List.foldl (||) False (List.map (\x -> List.member x filters) item.tags)
+
+
+sortItems : List ItemData -> List ItemData
+sortItems items =
+    List.sortBy .orderIndex items
 
 
 

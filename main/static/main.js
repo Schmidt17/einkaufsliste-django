@@ -6677,6 +6677,15 @@ var $author$project$Main$itemCard = function (itemData) {
 			]));
 };
 var $elm$html$Html$main_ = _VirtualDom_node('main');
+var $elm$core$List$sortBy = _List_sortBy;
+var $author$project$Main$sortItems = function (items) {
+	return A2(
+		$elm$core$List$sortBy,
+		function ($) {
+			return $.orderIndex;
+		},
+		items);
+};
 var $author$project$Main$view = function (model) {
 	return A2(
 		$elm$html$Html$div,
@@ -6701,10 +6710,11 @@ var $author$project$Main$view = function (model) {
 						A2(
 							$elm$core$List$map,
 							$author$project$Main$itemCard,
-							A2(
-								$elm$core$List$filter,
-								$author$project$Main$isVisible(model),
-								model.items)))
+							$author$project$Main$sortItems(
+								A2(
+									$elm$core$List$filter,
+									$author$project$Main$isVisible(model),
+									model.items))))
 					]))
 			]));
 };
