@@ -69,6 +69,8 @@ type Msg
     | FilterClicked String
     | CardClicked String
     | CancelEditing
+    | AddNewCard
+    | TitleChanged String String
 
 
 itemsUrl : String -> String
@@ -112,6 +114,12 @@ update msg model =
 
         EditCardClicked itemId ->
             ( { model | items = toggleEdit itemId model.items }, Cmd.none )
+
+        AddNewCard ->
+            ( { model | items = { id = "", title = "", tags = [], done = 0, orderIndex = 0, editing = True } :: model.items }, Cmd.none )
+
+        TitleChanged itemId newTitle ->
+            ( { model | items = updateTitle newTitle itemId model.items }, Cmd.none )
 
         _ ->
             ( model, Cmd.none )
@@ -167,7 +175,7 @@ itemCardsView model =
 cardView : ItemData -> Html Msg
 cardView itemData =
     if itemData.editing then
-        editCard
+        editCard itemData
 
     else
         itemCard itemData
@@ -227,6 +235,22 @@ toggleDone itemId items =
     List.map (toggleDoneCond itemId) items
 
 
+updateTitleCond : String -> String -> ItemData -> ItemData
+updateTitleCond newTitle idToMatch item =
+    if item.id == idToMatch then
+        { item
+            | title = newTitle
+        }
+
+    else
+        item
+
+
+updateTitle : String -> String -> List ItemData -> List ItemData
+updateTitle newTitle itemId items =
+    List.map (updateTitleCond newTitle itemId) items
+
+
 editButton : ItemData -> Html Msg
 editButton item =
     a
@@ -260,14 +284,14 @@ toggleEdit itemId items =
     List.map (toggleEditCond itemId) items
 
 
-editCard : Html Msg
-editCard =
+editCard : ItemData -> Html Msg
+editCard item =
     div
         [ class
             "card s12 item-edit"
         ]
         [ div [ class "card-content" ]
-            [ div [ class "input-field card-title" ] [ input [ placeholder "Neuer Eintrag", type_ "text" ] [] ]
+            [ div [ class "input-field card-title" ] [ input [ placeholder "Neuer Eintrag", type_ "text", value item.title, onInput (TitleChanged item.id) ] [] ]
             , div [ class "chips chips-autocomplete chips-placeholder", placeholder "Tags" ] []
             , div [ class "card-action valign-wrapper justify-right" ]
                 [ cancelButton
@@ -337,7 +361,12 @@ sortItems items =
 addCardButton : Model -> Html Msg
 addCardButton model =
     div [ class "fixed-action-btn center-horizontally" ]
-        [ a [ class "btn-floating btn-large waves-effect red", Aria.role "button", Aria.ariaLabel "Neuer Eintrag" ]
+        [ a
+            [ class "btn-floating btn-large waves-effect red"
+            , Aria.role "button"
+            , Aria.ariaLabel "Neuer Eintrag"
+            , onClick AddNewCard
+            ]
             [ i [ class "large material-icons" ] [ text "add" ]
             ]
         ]

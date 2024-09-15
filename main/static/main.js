@@ -6268,6 +6268,19 @@ var $author$project$Main$uniqueTags = function (items) {
 	return $elm$core$Set$fromList(
 		$author$project$Main$allTags(items));
 };
+var $author$project$Main$updateTitleCond = F3(
+	function (newTitle, idToMatch, item) {
+		return _Utils_eq(item.id, idToMatch) ? _Utils_update(
+			item,
+			{title: newTitle}) : item;
+	});
+var $author$project$Main$updateTitle = F3(
+	function (newTitle, itemId, items) {
+		return A2(
+			$elm$core$List$map,
+			A2($author$project$Main$updateTitleCond, newTitle, itemId),
+			items);
+	});
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
@@ -6327,10 +6340,32 @@ var $author$project$Main$update = F2(
 							items: A2($author$project$Main$toggleEdit, itemId, model.items)
 						}),
 					$elm$core$Platform$Cmd$none);
+			case 'AddNewCard':
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							items: A2(
+								$elm$core$List$cons,
+								{done: 0, editing: true, id: '', orderIndex: 0, tags: _List_Nil, title: ''},
+								model.items)
+						}),
+					$elm$core$Platform$Cmd$none);
+			case 'TitleChanged':
+				var itemId = msg.a;
+				var newTitle = msg.b;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							items: A3($author$project$Main$updateTitle, newTitle, itemId, model.items)
+						}),
+					$elm$core$Platform$Cmd$none);
 			default:
 				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 		}
 	});
+var $author$project$Main$AddNewCard = {$: 'AddNewCard'};
 var $elm$html$Html$a = _VirtualDom_node('a');
 var $elm$virtual_dom$VirtualDom$attribute = F2(
 	function (key, value) {
@@ -6352,6 +6387,23 @@ var $elm$html$Html$Attributes$stringProperty = F2(
 var $elm$html$Html$Attributes$class = $elm$html$Html$Attributes$stringProperty('className');
 var $elm$html$Html$div = _VirtualDom_node('div');
 var $elm$html$Html$i = _VirtualDom_node('i');
+var $elm$virtual_dom$VirtualDom$Normal = function (a) {
+	return {$: 'Normal', a: a};
+};
+var $elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
+var $elm$html$Html$Events$on = F2(
+	function (event, decoder) {
+		return A2(
+			$elm$virtual_dom$VirtualDom$on,
+			event,
+			$elm$virtual_dom$VirtualDom$Normal(decoder));
+	});
+var $elm$html$Html$Events$onClick = function (msg) {
+	return A2(
+		$elm$html$Html$Events$on,
+		'click',
+		$elm$json$Json$Decode$succeed(msg));
+};
 var $fapian$elm_html_aria$Html$Attributes$Aria$role = $elm$html$Html$Attributes$attribute('role');
 var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
 var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
@@ -6370,7 +6422,8 @@ var $author$project$Main$addCardButton = function (model) {
 					[
 						$elm$html$Html$Attributes$class('btn-floating btn-large waves-effect red'),
 						$fapian$elm_html_aria$Html$Attributes$Aria$role('button'),
-						$fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel('Neuer Eintrag')
+						$fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel('Neuer Eintrag'),
+						$elm$html$Html$Events$onClick($author$project$Main$AddNewCard)
 					]),
 				_List_fromArray(
 					[
@@ -6389,23 +6442,6 @@ var $author$project$Main$addCardButton = function (model) {
 };
 var $author$project$Main$FilterClicked = function (a) {
 	return {$: 'FilterClicked', a: a};
-};
-var $elm$virtual_dom$VirtualDom$Normal = function (a) {
-	return {$: 'Normal', a: a};
-};
-var $elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
-var $elm$html$Html$Events$on = F2(
-	function (event, decoder) {
-		return A2(
-			$elm$virtual_dom$VirtualDom$on,
-			event,
-			$elm$virtual_dom$VirtualDom$Normal(decoder));
-	});
-var $elm$html$Html$Events$onClick = function (msg) {
-	return A2(
-		$elm$html$Html$Events$on,
-		'click',
-		$elm$json$Json$Decode$succeed(msg));
 };
 var $author$project$Main$filterTagChip = function (filterTag) {
 	return A2(
@@ -6473,6 +6509,10 @@ var $author$project$Main$headerView = function (model) {
 					]))
 			]));
 };
+var $author$project$Main$TitleChanged = F2(
+	function (a, b) {
+		return {$: 'TitleChanged', a: a, b: b};
+	});
 var $author$project$Main$CancelEditing = {$: 'CancelEditing'};
 var $elm$html$Html$Attributes$href = function (url) {
 	return A2(
@@ -6603,82 +6643,119 @@ var $author$project$Main$cancelButton = A2(
 			$elm$html$Html$text('Abbrechen')
 		]));
 var $elm$html$Html$input = _VirtualDom_node('input');
+var $elm$html$Html$Events$alwaysStop = function (x) {
+	return _Utils_Tuple2(x, true);
+};
+var $elm$virtual_dom$VirtualDom$MayStopPropagation = function (a) {
+	return {$: 'MayStopPropagation', a: a};
+};
+var $elm$html$Html$Events$stopPropagationOn = F2(
+	function (event, decoder) {
+		return A2(
+			$elm$virtual_dom$VirtualDom$on,
+			event,
+			$elm$virtual_dom$VirtualDom$MayStopPropagation(decoder));
+	});
+var $elm$json$Json$Decode$at = F2(
+	function (fields, decoder) {
+		return A3($elm$core$List$foldr, $elm$json$Json$Decode$field, decoder, fields);
+	});
+var $elm$html$Html$Events$targetValue = A2(
+	$elm$json$Json$Decode$at,
+	_List_fromArray(
+		['target', 'value']),
+	$elm$json$Json$Decode$string);
+var $elm$html$Html$Events$onInput = function (tagger) {
+	return A2(
+		$elm$html$Html$Events$stopPropagationOn,
+		'input',
+		A2(
+			$elm$json$Json$Decode$map,
+			$elm$html$Html$Events$alwaysStop,
+			A2($elm$json$Json$Decode$map, tagger, $elm$html$Html$Events$targetValue)));
+};
 var $elm$html$Html$Attributes$placeholder = $elm$html$Html$Attributes$stringProperty('placeholder');
 var $elm$html$Html$Attributes$type_ = $elm$html$Html$Attributes$stringProperty('type');
-var $author$project$Main$editCard = A2(
-	$elm$html$Html$div,
-	_List_fromArray(
-		[
-			$elm$html$Html$Attributes$class('card s12 item-edit')
-		]),
-	_List_fromArray(
-		[
-			A2(
-			$elm$html$Html$div,
-			_List_fromArray(
-				[
-					$elm$html$Html$Attributes$class('card-content')
-				]),
-			_List_fromArray(
-				[
-					A2(
-					$elm$html$Html$div,
-					_List_fromArray(
-						[
-							$elm$html$Html$Attributes$class('input-field card-title')
-						]),
-					_List_fromArray(
-						[
-							A2(
-							$elm$html$Html$input,
-							_List_fromArray(
-								[
-									$elm$html$Html$Attributes$placeholder('Neuer Eintrag'),
-									$elm$html$Html$Attributes$type_('text')
-								]),
-							_List_Nil)
-						])),
-					A2(
-					$elm$html$Html$div,
-					_List_fromArray(
-						[
-							$elm$html$Html$Attributes$class('chips chips-autocomplete chips-placeholder'),
-							$elm$html$Html$Attributes$placeholder('Tags')
-						]),
-					_List_Nil),
-					A2(
-					$elm$html$Html$div,
-					_List_fromArray(
-						[
-							$elm$html$Html$Attributes$class('card-action valign-wrapper justify-right')
-						]),
-					_List_fromArray(
-						[
-							$author$project$Main$cancelButton,
-							A2(
-							$elm$html$Html$a,
-							_List_fromArray(
-								[
-									$elm$html$Html$Attributes$class('green btn finish-edit'),
-									$fapian$elm_html_aria$Html$Attributes$Aria$role('button'),
-									$fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel('Bestätigen')
-								]),
-							_List_fromArray(
-								[
-									A2(
-									$elm$html$Html$i,
-									_List_fromArray(
-										[
-											$elm$html$Html$Attributes$class('material-icons')
-										]),
-									_List_fromArray(
-										[
-											$elm$html$Html$text('check')
-										]))
-								]))
-						]))
-				]))
-		]));
+var $elm$html$Html$Attributes$value = $elm$html$Html$Attributes$stringProperty('value');
+var $author$project$Main$editCard = function (item) {
+	return A2(
+		$elm$html$Html$div,
+		_List_fromArray(
+			[
+				$elm$html$Html$Attributes$class('card s12 item-edit')
+			]),
+		_List_fromArray(
+			[
+				A2(
+				$elm$html$Html$div,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$class('card-content')
+					]),
+				_List_fromArray(
+					[
+						A2(
+						$elm$html$Html$div,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$class('input-field card-title')
+							]),
+						_List_fromArray(
+							[
+								A2(
+								$elm$html$Html$input,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$placeholder('Neuer Eintrag'),
+										$elm$html$Html$Attributes$type_('text'),
+										$elm$html$Html$Attributes$value(item.title),
+										$elm$html$Html$Events$onInput(
+										$author$project$Main$TitleChanged(item.id))
+									]),
+								_List_Nil)
+							])),
+						A2(
+						$elm$html$Html$div,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$class('chips chips-autocomplete chips-placeholder'),
+								$elm$html$Html$Attributes$placeholder('Tags')
+							]),
+						_List_Nil),
+						A2(
+						$elm$html$Html$div,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$class('card-action valign-wrapper justify-right')
+							]),
+						_List_fromArray(
+							[
+								$author$project$Main$cancelButton,
+								A2(
+								$elm$html$Html$a,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$class('green btn finish-edit'),
+										$fapian$elm_html_aria$Html$Attributes$Aria$role('button'),
+										$fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel('Bestätigen')
+									]),
+								_List_fromArray(
+									[
+										A2(
+										$elm$html$Html$i,
+										_List_fromArray(
+											[
+												$elm$html$Html$Attributes$class('material-icons')
+											]),
+										_List_fromArray(
+											[
+												$elm$html$Html$text('check')
+											]))
+									]))
+							]))
+					]))
+			]));
+};
 var $author$project$Main$CardClicked = function (a) {
 	return {$: 'CardClicked', a: a};
 };
@@ -6772,7 +6849,7 @@ var $author$project$Main$itemCard = function (itemData) {
 			]));
 };
 var $author$project$Main$cardView = function (itemData) {
-	return itemData.editing ? $author$project$Main$editCard : $author$project$Main$itemCard(itemData);
+	return itemData.editing ? $author$project$Main$editCard(itemData) : $author$project$Main$itemCard(itemData);
 };
 var $elm$core$List$filter = F2(
 	function (isGood, list) {
