@@ -4545,7 +4545,90 @@ function _Http_track(router, xhr, tracker)
 			size: event.lengthComputable ? $elm$core$Maybe$Just(event.total) : $elm$core$Maybe$Nothing
 		}))));
 	});
-}var $elm$core$Basics$EQ = {$: 'EQ'};
+}
+
+
+var _Bitwise_and = F2(function(a, b)
+{
+	return a & b;
+});
+
+var _Bitwise_or = F2(function(a, b)
+{
+	return a | b;
+});
+
+var _Bitwise_xor = F2(function(a, b)
+{
+	return a ^ b;
+});
+
+function _Bitwise_complement(a)
+{
+	return ~a;
+};
+
+var _Bitwise_shiftLeftBy = F2(function(offset, a)
+{
+	return a << offset;
+});
+
+var _Bitwise_shiftRightBy = F2(function(offset, a)
+{
+	return a >> offset;
+});
+
+var _Bitwise_shiftRightZfBy = F2(function(offset, a)
+{
+	return a >>> offset;
+});
+
+
+
+function _Time_now(millisToPosix)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		callback(_Scheduler_succeed(millisToPosix(Date.now())));
+	});
+}
+
+var _Time_setInterval = F2(function(interval, task)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		var id = setInterval(function() { _Scheduler_rawSpawn(task); }, interval);
+		return function() { clearInterval(id); };
+	});
+});
+
+function _Time_here()
+{
+	return _Scheduler_binding(function(callback)
+	{
+		callback(_Scheduler_succeed(
+			A2($elm$time$Time$customZone, -(new Date().getTimezoneOffset()), _List_Nil)
+		));
+	});
+}
+
+
+function _Time_getZoneName()
+{
+	return _Scheduler_binding(function(callback)
+	{
+		try
+		{
+			var name = $elm$time$Time$Name(Intl.DateTimeFormat().resolvedOptions().timeZone);
+		}
+		catch (e)
+		{
+			var name = $elm$time$Time$Offset(new Date().getTimezoneOffset());
+		}
+		callback(_Scheduler_succeed(name));
+	});
+}
+var $elm$core$Basics$EQ = {$: 'EQ'};
 var $elm$core$Basics$GT = {$: 'GT'};
 var $elm$core$Basics$LT = {$: 'LT'};
 var $elm$core$List$cons = _List_cons;
@@ -5338,6 +5421,8 @@ var $author$project$Main$Model = F3(
 	function (items, filterTags, apiKey) {
 		return {apiKey: apiKey, filterTags: filterTags, items: items};
 	});
+var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
+var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
 var $author$project$Main$ItemsReceived = function (a) {
 	return {$: 'ItemsReceived', a: a};
 };
@@ -5360,8 +5445,6 @@ var $elm$http$Http$Sending = function (a) {
 	return {$: 'Sending', a: a};
 };
 var $elm$http$Http$Timeout_ = {$: 'Timeout_'};
-var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
-var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
 var $elm$core$Maybe$isJust = function (maybe) {
 	if (maybe.$ === 'Just') {
 		return true;
@@ -6132,7 +6215,7 @@ var $author$project$Main$getItems = function (apiKey) {
 };
 var $author$project$Main$init = function (flags) {
 	return _Utils_Tuple2(
-		A3($author$project$Main$Model, _List_Nil, _List_Nil, flags),
+		A3($author$project$Main$Model, $elm$core$Dict$empty, _List_Nil, flags),
 		$author$project$Main$getItems(flags));
 };
 var $elm$json$Json$Decode$string = _Json_decodeString;
@@ -6140,6 +6223,275 @@ var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $author$project$Main$subscriptions = function (model) {
 	return $elm$core$Platform$Sub$batch(_List_Nil);
 };
+var $author$project$Main$AddNewCard = function (a) {
+	return {$: 'AddNewCard', a: a};
+};
+var $elm$core$List$maximum = function (list) {
+	if (list.b) {
+		var x = list.a;
+		var xs = list.b;
+		return $elm$core$Maybe$Just(
+			A3($elm$core$List$foldl, $elm$core$Basics$max, x, xs));
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
+var $author$project$Main$maxOrderIndex = function (items) {
+	return $elm$core$List$maximum(
+		A2(
+			$elm$core$List$map,
+			function ($) {
+				return $.orderIndex;
+			},
+			items));
+};
+var $elm$core$Dict$values = function (dict) {
+	return A3(
+		$elm$core$Dict$foldr,
+		F3(
+			function (key, value, valueList) {
+				return A2($elm$core$List$cons, value, valueList);
+			}),
+		_List_Nil,
+		dict);
+};
+var $author$project$Main$addNewItem = F2(
+	function (newId, dict) {
+		var newIndex = function () {
+			var _v0 = $author$project$Main$maxOrderIndex(
+				$elm$core$Dict$values(dict));
+			if (_v0.$ === 'Just') {
+				var maxIndex = _v0.a;
+				return maxIndex + 1;
+			} else {
+				return 0;
+			}
+		}();
+		return A3(
+			$elm$core$Dict$insert,
+			newId,
+			{done: 0, editing: true, id: newId, orderIndex: newIndex, tags: _List_Nil, title: ''},
+			dict);
+	});
+var $elm$random$Random$Generate = function (a) {
+	return {$: 'Generate', a: a};
+};
+var $elm$random$Random$Seed = F2(
+	function (a, b) {
+		return {$: 'Seed', a: a, b: b};
+	});
+var $elm$core$Bitwise$shiftRightZfBy = _Bitwise_shiftRightZfBy;
+var $elm$random$Random$next = function (_v0) {
+	var state0 = _v0.a;
+	var incr = _v0.b;
+	return A2($elm$random$Random$Seed, ((state0 * 1664525) + incr) >>> 0, incr);
+};
+var $elm$random$Random$initialSeed = function (x) {
+	var _v0 = $elm$random$Random$next(
+		A2($elm$random$Random$Seed, 0, 1013904223));
+	var state1 = _v0.a;
+	var incr = _v0.b;
+	var state2 = (state1 + x) >>> 0;
+	return $elm$random$Random$next(
+		A2($elm$random$Random$Seed, state2, incr));
+};
+var $elm$time$Time$Name = function (a) {
+	return {$: 'Name', a: a};
+};
+var $elm$time$Time$Offset = function (a) {
+	return {$: 'Offset', a: a};
+};
+var $elm$time$Time$Zone = F2(
+	function (a, b) {
+		return {$: 'Zone', a: a, b: b};
+	});
+var $elm$time$Time$customZone = $elm$time$Time$Zone;
+var $elm$time$Time$Posix = function (a) {
+	return {$: 'Posix', a: a};
+};
+var $elm$time$Time$millisToPosix = $elm$time$Time$Posix;
+var $elm$time$Time$now = _Time_now($elm$time$Time$millisToPosix);
+var $elm$time$Time$posixToMillis = function (_v0) {
+	var millis = _v0.a;
+	return millis;
+};
+var $elm$random$Random$init = A2(
+	$elm$core$Task$andThen,
+	function (time) {
+		return $elm$core$Task$succeed(
+			$elm$random$Random$initialSeed(
+				$elm$time$Time$posixToMillis(time)));
+	},
+	$elm$time$Time$now);
+var $elm$random$Random$step = F2(
+	function (_v0, seed) {
+		var generator = _v0.a;
+		return generator(seed);
+	});
+var $elm$random$Random$onEffects = F3(
+	function (router, commands, seed) {
+		if (!commands.b) {
+			return $elm$core$Task$succeed(seed);
+		} else {
+			var generator = commands.a.a;
+			var rest = commands.b;
+			var _v1 = A2($elm$random$Random$step, generator, seed);
+			var value = _v1.a;
+			var newSeed = _v1.b;
+			return A2(
+				$elm$core$Task$andThen,
+				function (_v2) {
+					return A3($elm$random$Random$onEffects, router, rest, newSeed);
+				},
+				A2($elm$core$Platform$sendToApp, router, value));
+		}
+	});
+var $elm$random$Random$onSelfMsg = F3(
+	function (_v0, _v1, seed) {
+		return $elm$core$Task$succeed(seed);
+	});
+var $elm$random$Random$Generator = function (a) {
+	return {$: 'Generator', a: a};
+};
+var $elm$random$Random$map = F2(
+	function (func, _v0) {
+		var genA = _v0.a;
+		return $elm$random$Random$Generator(
+			function (seed0) {
+				var _v1 = genA(seed0);
+				var a = _v1.a;
+				var seed1 = _v1.b;
+				return _Utils_Tuple2(
+					func(a),
+					seed1);
+			});
+	});
+var $elm$random$Random$cmdMap = F2(
+	function (func, _v0) {
+		var generator = _v0.a;
+		return $elm$random$Random$Generate(
+			A2($elm$random$Random$map, func, generator));
+	});
+_Platform_effectManagers['Random'] = _Platform_createManager($elm$random$Random$init, $elm$random$Random$onEffects, $elm$random$Random$onSelfMsg, $elm$random$Random$cmdMap);
+var $elm$random$Random$command = _Platform_leaf('Random');
+var $elm$random$Random$generate = F2(
+	function (tagger, generator) {
+		return $elm$random$Random$command(
+			$elm$random$Random$Generate(
+				A2($elm$random$Random$map, tagger, generator)));
+	});
+var $TSFoster$elm_uuid$UUID$UUID = F4(
+	function (a, b, c, d) {
+		return {$: 'UUID', a: a, b: b, c: c, d: d};
+	});
+var $elm$random$Random$map4 = F5(
+	function (func, _v0, _v1, _v2, _v3) {
+		var genA = _v0.a;
+		var genB = _v1.a;
+		var genC = _v2.a;
+		var genD = _v3.a;
+		return $elm$random$Random$Generator(
+			function (seed0) {
+				var _v4 = genA(seed0);
+				var a = _v4.a;
+				var seed1 = _v4.b;
+				var _v5 = genB(seed1);
+				var b = _v5.a;
+				var seed2 = _v5.b;
+				var _v6 = genC(seed2);
+				var c = _v6.a;
+				var seed3 = _v6.b;
+				var _v7 = genD(seed3);
+				var d = _v7.a;
+				var seed4 = _v7.b;
+				return _Utils_Tuple2(
+					A4(func, a, b, c, d),
+					seed4);
+			});
+	});
+var $TSFoster$elm_uuid$UUID$forceUnsigned = $elm$core$Bitwise$shiftRightZfBy(0);
+var $elm$core$Bitwise$and = _Bitwise_and;
+var $elm$core$Basics$negate = function (n) {
+	return -n;
+};
+var $elm$core$Bitwise$xor = _Bitwise_xor;
+var $elm$random$Random$peel = function (_v0) {
+	var state = _v0.a;
+	var word = (state ^ (state >>> ((state >>> 28) + 4))) * 277803737;
+	return ((word >>> 22) ^ word) >>> 0;
+};
+var $elm$random$Random$int = F2(
+	function (a, b) {
+		return $elm$random$Random$Generator(
+			function (seed0) {
+				var _v0 = (_Utils_cmp(a, b) < 0) ? _Utils_Tuple2(a, b) : _Utils_Tuple2(b, a);
+				var lo = _v0.a;
+				var hi = _v0.b;
+				var range = (hi - lo) + 1;
+				if (!((range - 1) & range)) {
+					return _Utils_Tuple2(
+						(((range - 1) & $elm$random$Random$peel(seed0)) >>> 0) + lo,
+						$elm$random$Random$next(seed0));
+				} else {
+					var threshhold = (((-range) >>> 0) % range) >>> 0;
+					var accountForBias = function (seed) {
+						accountForBias:
+						while (true) {
+							var x = $elm$random$Random$peel(seed);
+							var seedN = $elm$random$Random$next(seed);
+							if (_Utils_cmp(x, threshhold) < 0) {
+								var $temp$seed = seedN;
+								seed = $temp$seed;
+								continue accountForBias;
+							} else {
+								return _Utils_Tuple2((x % range) + lo, seedN);
+							}
+						}
+					};
+					return accountForBias(seed0);
+				}
+			});
+	});
+var $elm$random$Random$maxInt = 2147483647;
+var $elm$random$Random$minInt = -2147483648;
+var $TSFoster$elm_uuid$UUID$randomU32 = A2(
+	$elm$random$Random$map,
+	$TSFoster$elm_uuid$UUID$forceUnsigned,
+	A2($elm$random$Random$int, $elm$random$Random$minInt, $elm$random$Random$maxInt));
+var $elm$core$Bitwise$or = _Bitwise_or;
+var $TSFoster$elm_uuid$UUID$toVariant1 = function (_v0) {
+	var a = _v0.a;
+	var b = _v0.b;
+	var c = _v0.c;
+	var d = _v0.d;
+	return A4(
+		$TSFoster$elm_uuid$UUID$UUID,
+		a,
+		b,
+		$TSFoster$elm_uuid$UUID$forceUnsigned(2147483648 | (1073741823 & c)),
+		d);
+};
+var $elm$core$Bitwise$shiftLeftBy = _Bitwise_shiftLeftBy;
+var $TSFoster$elm_uuid$UUID$toVersion = F2(
+	function (v, _v0) {
+		var a = _v0.a;
+		var b = _v0.b;
+		var c = _v0.c;
+		var d = _v0.d;
+		return A4(
+			$TSFoster$elm_uuid$UUID$UUID,
+			a,
+			$TSFoster$elm_uuid$UUID$forceUnsigned((v << 12) | (4294905855 & b)),
+			c,
+			d);
+	});
+var $TSFoster$elm_uuid$UUID$generator = A2(
+	$elm$random$Random$map,
+	A2(
+		$elm$core$Basics$composeR,
+		$TSFoster$elm_uuid$UUID$toVersion(4),
+		$TSFoster$elm_uuid$UUID$toVariant1),
+	A5($elm$random$Random$map4, $TSFoster$elm_uuid$UUID$UUID, $TSFoster$elm_uuid$UUID$randomU32, $TSFoster$elm_uuid$UUID$randomU32, $TSFoster$elm_uuid$UUID$randomU32, $TSFoster$elm_uuid$UUID$randomU32));
 var $author$project$Main$FilterTag = F2(
 	function (tag, isActive) {
 		return {isActive: isActive, tag: tag};
@@ -6151,6 +6503,30 @@ var $author$project$Main$initTags = function (tagNames) {
 			return A2($author$project$Main$FilterTag, tag, false);
 		},
 		tagNames);
+};
+var $elm$core$Dict$fromList = function (assocs) {
+	return A3(
+		$elm$core$List$foldl,
+		F2(
+			function (_v0, dict) {
+				var key = _v0.a;
+				var value = _v0.b;
+				return A3($elm$core$Dict$insert, key, value, dict);
+			}),
+		$elm$core$Dict$empty,
+		assocs);
+};
+var $author$project$Main$itemListToAssoc = function (items) {
+	return A2(
+		$elm$core$List$map,
+		function (item) {
+			return _Utils_Tuple2(item.id, item);
+		},
+		items);
+};
+var $author$project$Main$itemListToDict = function (items) {
+	return $elm$core$Dict$fromList(
+		$author$project$Main$itemListToAssoc(items));
 };
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
@@ -6187,37 +6563,161 @@ var $author$project$Main$receivedToItem = F2(
 	function (index, itemReceived) {
 		return {done: itemReceived.done, editing: false, id: itemReceived.id, orderIndex: index, tags: itemReceived.tags, title: itemReceived.title};
 	});
-var $author$project$Main$toggleDoneCond = F2(
-	function (idToMatch, item) {
-		return _Utils_eq(item.id, idToMatch) ? _Utils_update(
-			item,
-			{
-				done: (!item.done) ? 1 : 0
-			}) : item;
+var $elm$core$String$cons = _String_cons;
+var $elm$core$String$fromChar = function (_char) {
+	return A2($elm$core$String$cons, _char, '');
+};
+var $elm$core$Bitwise$shiftRightBy = _Bitwise_shiftRightBy;
+var $elm$core$String$repeatHelp = F3(
+	function (n, chunk, result) {
+		return (n <= 0) ? result : A3(
+			$elm$core$String$repeatHelp,
+			n >> 1,
+			_Utils_ap(chunk, chunk),
+			(!(n & 1)) ? result : _Utils_ap(result, chunk));
 	});
-var $author$project$Main$toggleDone = F2(
-	function (itemId, items) {
-		return A2(
-			$elm$core$List$map,
-			$author$project$Main$toggleDoneCond(itemId),
-			items);
+var $elm$core$String$repeat = F2(
+	function (n, chunk) {
+		return A3($elm$core$String$repeatHelp, n, chunk, '');
 	});
-var $author$project$Main$toggleEditCond = F2(
-	function (idToMatch, item) {
-		return _Utils_eq(item.id, idToMatch) ? _Utils_update(
-			item,
-			{
-				editing: item.editing ? false : true
-			}) : item;
+var $elm$core$String$padLeft = F3(
+	function (n, _char, string) {
+		return _Utils_ap(
+			A2(
+				$elm$core$String$repeat,
+				n - $elm$core$String$length(string),
+				$elm$core$String$fromChar(_char)),
+			string);
 	});
-var $author$project$Main$toggleEdit = F2(
-	function (itemId, items) {
-		return A2(
-			$elm$core$List$map,
-			$author$project$Main$toggleEditCond(itemId),
-			items);
+var $elm$core$String$fromList = _String_fromList;
+var $TSFoster$elm_uuid$UUID$toHex = F2(
+	function (acc, _int) {
+		toHex:
+		while (true) {
+			if (!_int) {
+				return $elm$core$String$fromList(acc);
+			} else {
+				var _char = function () {
+					var _v0 = 15 & _int;
+					switch (_v0) {
+						case 0:
+							return _Utils_chr('0');
+						case 1:
+							return _Utils_chr('1');
+						case 2:
+							return _Utils_chr('2');
+						case 3:
+							return _Utils_chr('3');
+						case 4:
+							return _Utils_chr('4');
+						case 5:
+							return _Utils_chr('5');
+						case 6:
+							return _Utils_chr('6');
+						case 7:
+							return _Utils_chr('7');
+						case 8:
+							return _Utils_chr('8');
+						case 9:
+							return _Utils_chr('9');
+						case 10:
+							return _Utils_chr('a');
+						case 11:
+							return _Utils_chr('b');
+						case 12:
+							return _Utils_chr('c');
+						case 13:
+							return _Utils_chr('d');
+						case 14:
+							return _Utils_chr('e');
+						default:
+							return _Utils_chr('f');
+					}
+				}();
+				var $temp$acc = A2($elm$core$List$cons, _char, acc),
+					$temp$int = _int >>> 4;
+				acc = $temp$acc;
+				_int = $temp$int;
+				continue toHex;
+			}
+		}
 	});
+var $TSFoster$elm_uuid$UUID$toStringWith = F2(
+	function (sep, _v0) {
+		var a = _v0.a;
+		var b = _v0.b;
+		var c = _v0.c;
+		var d = _v0.d;
+		return _Utils_ap(
+			A3(
+				$elm$core$String$padLeft,
+				8,
+				_Utils_chr('0'),
+				A2($TSFoster$elm_uuid$UUID$toHex, _List_Nil, a)),
+			_Utils_ap(
+				sep,
+				_Utils_ap(
+					A3(
+						$elm$core$String$padLeft,
+						4,
+						_Utils_chr('0'),
+						A2($TSFoster$elm_uuid$UUID$toHex, _List_Nil, b >>> 16)),
+					_Utils_ap(
+						sep,
+						_Utils_ap(
+							A3(
+								$elm$core$String$padLeft,
+								4,
+								_Utils_chr('0'),
+								A2($TSFoster$elm_uuid$UUID$toHex, _List_Nil, 65535 & b)),
+							_Utils_ap(
+								sep,
+								_Utils_ap(
+									A3(
+										$elm$core$String$padLeft,
+										4,
+										_Utils_chr('0'),
+										A2($TSFoster$elm_uuid$UUID$toHex, _List_Nil, c >>> 16)),
+									_Utils_ap(
+										sep,
+										_Utils_ap(
+											A3(
+												$elm$core$String$padLeft,
+												4,
+												_Utils_chr('0'),
+												A2($TSFoster$elm_uuid$UUID$toHex, _List_Nil, 65535 & c)),
+											A3(
+												$elm$core$String$padLeft,
+												8,
+												_Utils_chr('0'),
+												A2($TSFoster$elm_uuid$UUID$toHex, _List_Nil, d)))))))))));
+	});
+var $TSFoster$elm_uuid$UUID$toString = $TSFoster$elm_uuid$UUID$toStringWith('-');
+var $author$project$Main$toggleDone = function (maybeItem) {
+	if (maybeItem.$ === 'Just') {
+		var item = maybeItem.a;
+		return $elm$core$Maybe$Just(
+			_Utils_update(
+				item,
+				{
+					done: (!item.done) ? 1 : 0
+				}));
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
 var $elm$core$Basics$not = _Basics_not;
+var $author$project$Main$toggleEdit = function (maybeItem) {
+	if (maybeItem.$ === 'Just') {
+		var item = maybeItem.a;
+		return $elm$core$Maybe$Just(
+			_Utils_update(
+				item,
+				{editing: !item.editing}));
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
 var $author$project$Main$toggleTag = F2(
 	function (tag, tagList) {
 		var toggle = F2(
@@ -6268,18 +6768,17 @@ var $author$project$Main$uniqueTags = function (items) {
 	return $elm$core$Set$fromList(
 		$author$project$Main$allTags(items));
 };
-var $author$project$Main$updateTitleCond = F3(
-	function (newTitle, idToMatch, item) {
-		return _Utils_eq(item.id, idToMatch) ? _Utils_update(
-			item,
-			{title: newTitle}) : item;
-	});
-var $author$project$Main$updateTitle = F3(
-	function (newTitle, itemId, items) {
-		return A2(
-			$elm$core$List$map,
-			A2($author$project$Main$updateTitleCond, newTitle, itemId),
-			items);
+var $author$project$Main$updateTitle = F2(
+	function (newTitle, maybeItem) {
+		if (maybeItem.$ === 'Just') {
+			var item = maybeItem.a;
+			return $elm$core$Maybe$Just(
+				_Utils_update(
+					item,
+					{title: newTitle}));
+		} else {
+			return $elm$core$Maybe$Nothing;
+		}
 	});
 var $author$project$Main$update = F2(
 	function (msg, model) {
@@ -6292,10 +6791,11 @@ var $author$project$Main$update = F2(
 				var payload = msg.a;
 				if (payload.$ === 'Ok') {
 					var rawString = payload.a;
-					var items = A2(
-						$elm$core$List$indexedMap,
-						$author$project$Main$receivedToItem,
-						$author$project$Main$parseItems(rawString));
+					var items = $author$project$Main$itemListToDict(
+						A2(
+							$elm$core$List$indexedMap,
+							$author$project$Main$receivedToItem,
+							$author$project$Main$parseItems(rawString)));
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
@@ -6305,7 +6805,8 @@ var $author$project$Main$update = F2(
 										_List_fromArray(
 											['No tags']),
 										$elm$core$Set$toList(
-											$author$project$Main$uniqueTags(items)))),
+											$author$project$Main$uniqueTags(
+												$elm$core$Dict$values(items))))),
 								items: items
 							}),
 						$elm$core$Platform$Cmd$none);
@@ -6328,7 +6829,7 @@ var $author$project$Main$update = F2(
 					_Utils_update(
 						model,
 						{
-							items: A2($author$project$Main$toggleDone, itemId, model.items)
+							items: A3($elm$core$Dict$update, itemId, $author$project$Main$toggleDone, model.items)
 						}),
 					$elm$core$Platform$Cmd$none);
 			case 'EditCardClicked':
@@ -6337,18 +6838,21 @@ var $author$project$Main$update = F2(
 					_Utils_update(
 						model,
 						{
-							items: A2($author$project$Main$toggleEdit, itemId, model.items)
+							items: A3($elm$core$Dict$update, itemId, $author$project$Main$toggleEdit, model.items)
 						}),
 					$elm$core$Platform$Cmd$none);
+			case 'AddNewCardClicked':
+				return _Utils_Tuple2(
+					model,
+					A2($elm$random$Random$generate, $author$project$Main$AddNewCard, $TSFoster$elm_uuid$UUID$generator));
 			case 'AddNewCard':
+				var newUUID = msg.a;
+				var newId = $TSFoster$elm_uuid$UUID$toString(newUUID);
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{
-							items: A2(
-								$elm$core$List$cons,
-								{done: 0, editing: true, id: '', orderIndex: 0, tags: _List_Nil, title: ''},
-								model.items)
+							items: A2($author$project$Main$addNewItem, newId, model.items)
 						}),
 					$elm$core$Platform$Cmd$none);
 			case 'TitleChanged':
@@ -6358,14 +6862,18 @@ var $author$project$Main$update = F2(
 					_Utils_update(
 						model,
 						{
-							items: A3($author$project$Main$updateTitle, newTitle, itemId, model.items)
+							items: A3(
+								$elm$core$Dict$update,
+								itemId,
+								$author$project$Main$updateTitle(newTitle),
+								model.items)
 						}),
 					$elm$core$Platform$Cmd$none);
 			default:
 				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 		}
 	});
-var $author$project$Main$AddNewCard = {$: 'AddNewCard'};
+var $author$project$Main$AddNewCardClicked = {$: 'AddNewCardClicked'};
 var $elm$html$Html$a = _VirtualDom_node('a');
 var $elm$virtual_dom$VirtualDom$attribute = F2(
 	function (key, value) {
@@ -6423,7 +6931,7 @@ var $author$project$Main$addCardButton = function (model) {
 						$elm$html$Html$Attributes$class('btn-floating btn-large waves-effect red'),
 						$fapian$elm_html_aria$Html$Attributes$Aria$role('button'),
 						$fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel('Neuer Eintrag'),
-						$elm$html$Html$Events$onClick($author$project$Main$AddNewCard)
+						$elm$html$Html$Events$onClick($author$project$Main$AddNewCardClicked)
 					]),
 				_List_fromArray(
 					[
@@ -6915,19 +7423,20 @@ var $author$project$Main$isVisible = F2(
 	});
 var $elm$core$List$sortBy = _List_sortBy;
 var $author$project$Main$sortItems = function (items) {
-	return A2(
-		$elm$core$List$sortBy,
-		function ($) {
-			return $.orderIndex;
-		},
-		items);
+	return $elm$core$List$reverse(
+		A2(
+			$elm$core$List$sortBy,
+			function ($) {
+				return $.orderIndex;
+			},
+			items));
 };
 var $author$project$Main$itemsToShow = function (model) {
 	return $author$project$Main$sortItems(
 		A2(
 			$elm$core$List$filter,
 			$author$project$Main$isVisible(model),
-			model.items));
+			$elm$core$Dict$values(model.items)));
 };
 var $author$project$Main$itemCardsView = function (model) {
 	return A2(

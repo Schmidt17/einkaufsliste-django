@@ -1,6 +1,7 @@
 module Main exposing (main)
 
 import Browser
+import Dict exposing (Dict)
 import Html exposing (Html, a, br, button, div, h1, header, i, input, label, main_, nav, p, span, text)
 import Html.Attributes exposing (..)
 import Html.Attributes.Aria as Aria
@@ -10,8 +11,10 @@ import Html.Events.Extra.Touch exposing (onStart)
 import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
+import Random
 import Set
 import Time
+import UUID
 
 
 
@@ -27,7 +30,7 @@ main =
 
 
 type alias Model =
-    { items : List ItemData
+    { items : Dict String ItemData
     , filterTags : List FilterTag
     , apiKey : String
     }
@@ -55,7 +58,7 @@ type alias ItemData =
 
 init : String -> ( Model, Cmd Msg )
 init flags =
-    ( Model [] [] flags, getItems flags )
+    ( Model Dict.empty [] flags, getItems flags )
 
 
 
@@ -69,7 +72,8 @@ type Msg
     | FilterClicked String
     | CardClicked String
     | CancelEditing
-    | AddNewCard
+    | AddNewCardClicked
+    | AddNewCard UUID.UUID
     | TitleChanged String String
 
 
@@ -99,9 +103,9 @@ update msg model =
                 Ok rawString ->
                     let
                         items =
-                            List.indexedMap receivedToItem (parseItems rawString)
+                            itemListToDict (List.indexedMap receivedToItem (parseItems rawString))
                     in
-                    ( { model | items = items, filterTags = initTags ([ "No tags" ] ++ Set.toList (uniqueTags items)) }, Cmd.none )
+                    ( { model | items = items, filterTags = initTags ([ "No tags" ] ++ Set.toList (uniqueTags (Dict.values items))) }, Cmd.none )
 
                 Err httpError ->
                     ( model, Cmd.none )
@@ -110,19 +114,78 @@ update msg model =
             ( { model | filterTags = toggleTag tag model.filterTags }, Cmd.none )
 
         CardClicked itemId ->
-            ( { model | items = toggleDone itemId model.items }, Cmd.none )
+            ( { model | items = Dict.update itemId toggleDone model.items }, Cmd.none )
 
         EditCardClicked itemId ->
-            ( { model | items = toggleEdit itemId model.items }, Cmd.none )
+            ( { model | items = Dict.update itemId toggleEdit model.items }, Cmd.none )
 
-        AddNewCard ->
-            ( { model | items = { id = "", title = "", tags = [], done = 0, orderIndex = 0, editing = True } :: model.items }, Cmd.none )
+        AddNewCardClicked ->
+            ( model, Random.generate AddNewCard UUID.generator )
+
+        AddNewCard newUUID ->
+            let
+                newId =
+                    UUID.toString newUUID
+            in
+            ( { model | items = addNewItem newId model.items }, Cmd.none )
 
         TitleChanged itemId newTitle ->
-            ( { model | items = updateTitle newTitle itemId model.items }, Cmd.none )
+            ( { model | items = Dict.update itemId (updateTitle newTitle) model.items }, Cmd.none )
 
         _ ->
             ( model, Cmd.none )
+
+
+updateTitle : String -> Maybe ItemData -> Maybe ItemData
+updateTitle newTitle maybeItem =
+    case maybeItem of
+        Just item ->
+            Just { item | title = newTitle }
+
+        Nothing ->
+            Nothing
+
+
+toggleEdit : Maybe ItemData -> Maybe ItemData
+toggleEdit maybeItem =
+    case maybeItem of
+        Just item ->
+            Just { item | editing = not item.editing }
+
+        Nothing ->
+            Nothing
+
+
+toggleDone : Maybe ItemData -> Maybe ItemData
+toggleDone maybeItem =
+    case maybeItem of
+        Just item ->
+            Just
+                { item
+                    | done =
+                        if item.done == 0 then
+                            1
+
+                        else
+                            0
+                }
+
+        Nothing ->
+            Nothing
+
+
+addNewItem : String -> Dict String ItemData -> Dict String ItemData
+addNewItem newId dict =
+    let
+        newIndex =
+            case maxOrderIndex (Dict.values dict) of
+                Just maxIndex ->
+                    maxIndex + 1
+
+                Nothing ->
+                    0
+    in
+    Dict.insert newId { id = newId, title = "", tags = [], done = 0, orderIndex = newIndex, editing = True } dict
 
 
 
@@ -152,7 +215,7 @@ view model =
 
 itemsToShow : Model -> List ItemData
 itemsToShow model =
-    sortItems (List.filter (isVisible model) model.items)
+    sortItems (List.filter (isVisible model) (Dict.values model.items))
 
 
 headerView : Model -> Html Msg
@@ -214,43 +277,6 @@ itemCard itemData =
         ]
 
 
-toggleDoneCond : String -> ItemData -> ItemData
-toggleDoneCond idToMatch item =
-    if item.id == idToMatch then
-        { item
-            | done =
-                if item.done == 0 then
-                    1
-
-                else
-                    0
-        }
-
-    else
-        item
-
-
-toggleDone : String -> List ItemData -> List ItemData
-toggleDone itemId items =
-    List.map (toggleDoneCond itemId) items
-
-
-updateTitleCond : String -> String -> ItemData -> ItemData
-updateTitleCond newTitle idToMatch item =
-    if item.id == idToMatch then
-        { item
-            | title = newTitle
-        }
-
-    else
-        item
-
-
-updateTitle : String -> String -> List ItemData -> List ItemData
-updateTitle newTitle itemId items =
-    List.map (updateTitleCond newTitle itemId) items
-
-
 editButton : ItemData -> Html Msg
 editButton item =
     a
@@ -261,27 +287,6 @@ editButton item =
         , Aria.ariaLabel "Bearbeiten"
         ]
         [ i [ class "material-icons grey-text right-align" ] [ text "edit" ] ]
-
-
-toggleEditCond : String -> ItemData -> ItemData
-toggleEditCond idToMatch item =
-    if item.id == idToMatch then
-        { item
-            | editing =
-                if item.editing then
-                    False
-
-                else
-                    True
-        }
-
-    else
-        item
-
-
-toggleEdit : String -> List ItemData -> List ItemData
-toggleEdit itemId items =
-    List.map (toggleEditCond itemId) items
 
 
 editCard : ItemData -> Html Msg
@@ -356,6 +361,7 @@ isVisible model item =
 sortItems : List ItemData -> List ItemData
 sortItems items =
     List.sortBy .orderIndex items
+        |> List.reverse
 
 
 addCardButton : Model -> Html Msg
@@ -365,7 +371,7 @@ addCardButton model =
             [ class "btn-floating btn-large waves-effect red"
             , Aria.role "button"
             , Aria.ariaLabel "Neuer Eintrag"
-            , onClick AddNewCard
+            , onClick AddNewCardClicked
             ]
             [ i [ class "large material-icons" ] [ text "add" ]
             ]
@@ -453,3 +459,18 @@ maybeActiveTag filterTag =
 activeFilters : List FilterTag -> List String
 activeFilters filterTags =
     List.filterMap maybeActiveTag filterTags
+
+
+itemListToDict : List ItemData -> Dict String ItemData
+itemListToDict items =
+    Dict.fromList (itemListToAssoc items)
+
+
+itemListToAssoc : List ItemData -> List ( String, ItemData )
+itemListToAssoc items =
+    List.map (\item -> ( item.id, item )) items
+
+
+maxOrderIndex : List ItemData -> Maybe Int
+maxOrderIndex items =
+    List.maximum (List.map .orderIndex items)
