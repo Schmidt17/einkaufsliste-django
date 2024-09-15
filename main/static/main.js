@@ -6326,17 +6326,6 @@ var $elm$html$Html$Attributes$stringProperty = F2(
 	});
 var $elm$html$Html$Attributes$class = $elm$html$Html$Attributes$stringProperty('className');
 var $elm$html$Html$div = _VirtualDom_node('div');
-var $elm$core$List$filter = F2(
-	function (isGood, list) {
-		return A3(
-			$elm$core$List$foldr,
-			F2(
-				function (x, xs) {
-					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
-				}),
-			_List_Nil,
-			list);
-	});
 var $author$project$Main$FilterClicked = function (a) {
 	return {$: 'FilterClicked', a: a};
 };
@@ -6426,57 +6415,6 @@ var $author$project$Main$headerView = function (model) {
 					]))
 			]));
 };
-var $author$project$Main$maybeActiveTag = function (filterTag) {
-	return filterTag.isActive ? $elm$core$Maybe$Just(filterTag.tag) : $elm$core$Maybe$Nothing;
-};
-var $author$project$Main$activeFilters = function (filterTags) {
-	return A2($elm$core$List$filterMap, $author$project$Main$maybeActiveTag, filterTags);
-};
-var $elm$core$List$any = F2(
-	function (isOkay, list) {
-		any:
-		while (true) {
-			if (!list.b) {
-				return false;
-			} else {
-				var x = list.a;
-				var xs = list.b;
-				if (isOkay(x)) {
-					return true;
-				} else {
-					var $temp$isOkay = isOkay,
-						$temp$list = xs;
-					isOkay = $temp$isOkay;
-					list = $temp$list;
-					continue any;
-				}
-			}
-		}
-	});
-var $elm$core$List$member = F2(
-	function (x, xs) {
-		return A2(
-			$elm$core$List$any,
-			function (a) {
-				return _Utils_eq(a, x);
-			},
-			xs);
-	});
-var $author$project$Main$isVisible = F2(
-	function (model, item) {
-		var filters = $author$project$Main$activeFilters(model.filterTags);
-		var filteringActive = $elm$core$List$length(filters) > 0;
-		return (!filteringActive) ? true : A3(
-			$elm$core$List$foldl,
-			$elm$core$Basics$or,
-			false,
-			A2(
-				$elm$core$List$map,
-				function (x) {
-					return A2($elm$core$List$member, x, filters);
-				},
-				item.tags));
-	});
 var $author$project$Main$CardClicked = function (a) {
 	return {$: 'CardClicked', a: a};
 };
@@ -6676,7 +6614,68 @@ var $author$project$Main$itemCard = function (itemData) {
 					]))
 			]));
 };
-var $elm$html$Html$main_ = _VirtualDom_node('main');
+var $elm$core$List$filter = F2(
+	function (isGood, list) {
+		return A3(
+			$elm$core$List$foldr,
+			F2(
+				function (x, xs) {
+					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
+				}),
+			_List_Nil,
+			list);
+	});
+var $author$project$Main$maybeActiveTag = function (filterTag) {
+	return filterTag.isActive ? $elm$core$Maybe$Just(filterTag.tag) : $elm$core$Maybe$Nothing;
+};
+var $author$project$Main$activeFilters = function (filterTags) {
+	return A2($elm$core$List$filterMap, $author$project$Main$maybeActiveTag, filterTags);
+};
+var $elm$core$List$any = F2(
+	function (isOkay, list) {
+		any:
+		while (true) {
+			if (!list.b) {
+				return false;
+			} else {
+				var x = list.a;
+				var xs = list.b;
+				if (isOkay(x)) {
+					return true;
+				} else {
+					var $temp$isOkay = isOkay,
+						$temp$list = xs;
+					isOkay = $temp$isOkay;
+					list = $temp$list;
+					continue any;
+				}
+			}
+		}
+	});
+var $elm$core$List$member = F2(
+	function (x, xs) {
+		return A2(
+			$elm$core$List$any,
+			function (a) {
+				return _Utils_eq(a, x);
+			},
+			xs);
+	});
+var $author$project$Main$isVisible = F2(
+	function (model, item) {
+		var filters = $author$project$Main$activeFilters(model.filterTags);
+		var filteringActive = $elm$core$List$length(filters) > 0;
+		return (!filteringActive) ? true : A3(
+			$elm$core$List$foldl,
+			$elm$core$Basics$or,
+			false,
+			A2(
+				$elm$core$List$map,
+				function (x) {
+					return A2($elm$core$List$member, x, filters);
+				},
+				item.tags));
+	});
 var $elm$core$List$sortBy = _List_sortBy;
 var $author$project$Main$sortItems = function (items) {
 	return A2(
@@ -6686,6 +6685,14 @@ var $author$project$Main$sortItems = function (items) {
 		},
 		items);
 };
+var $author$project$Main$itemsToShow = function (model) {
+	return $author$project$Main$sortItems(
+		A2(
+			$elm$core$List$filter,
+			$author$project$Main$isVisible(model),
+			model.items));
+};
+var $elm$html$Html$main_ = _VirtualDom_node('main');
 var $author$project$Main$view = function (model) {
 	return A2(
 		$elm$html$Html$div,
@@ -6710,11 +6717,7 @@ var $author$project$Main$view = function (model) {
 						A2(
 							$elm$core$List$map,
 							$author$project$Main$itemCard,
-							$author$project$Main$sortItems(
-								A2(
-									$elm$core$List$filter,
-									$author$project$Main$isVisible(model),
-									model.items))))
+							$author$project$Main$itemsToShow(model)))
 					]))
 			]));
 };

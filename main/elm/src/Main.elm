@@ -131,7 +131,8 @@ view model =
     div []
         [ headerView model
         , main_ [ Aria.ariaLabel "Listenbereich" ]
-            [ div [ class "container" ] (List.map itemCard (itemsToShow model))
+            [ itemCardsView model
+            , fixedActionButton model
             ]
         ]
 
@@ -151,6 +152,11 @@ headerView model =
                 ]
             ]
         ]
+
+
+itemCardsView : Model -> Html Msg
+itemCardsView model =
+    div [ class "container" ] (List.map itemCard (itemsToShow model))
 
 
 itemCard : ItemData -> Html Msg
@@ -263,6 +269,15 @@ isVisible model item =
 sortItems : List ItemData -> List ItemData
 sortItems items =
     List.sortBy .orderIndex items
+
+
+fixedActionButton : Model -> Html Msg
+fixedActionButton model =
+    div [ class "fixed-action-btn center-horizontally" ]
+        [ a [ class "btn-floating btn-large waves-effect red", Aria.role "button", Aria.ariaLabel "Neuer Eintrag" ]
+            [ i [ class "large material-icons" ] [ text "add" ]
+            ]
+        ]
 
 
 
