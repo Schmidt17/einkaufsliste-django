@@ -45,6 +45,7 @@ type alias ItemData =
     , tags : List String
     , done : Int
     , orderIndex : Int
+    , editing : Bool
     }
 
 
@@ -64,9 +65,10 @@ init flags =
 type Msg
     = FetchItems
     | ItemsReceived (Result Http.Error String)
-    | EditCard
+    | EditCardClicked String
     | FilterClicked String
     | CardClicked String
+    | CancelEditing
 
 
 itemsUrl : String -> String
@@ -108,6 +110,9 @@ update msg model =
         CardClicked itemId ->
             ( { model | items = toggleDone itemId model.items }, Cmd.none )
 
+        EditCardClicked itemId ->
+            ( { model | items = toggleEdit itemId model.items }, Cmd.none )
+
         _ ->
             ( model, Cmd.none )
 
@@ -132,7 +137,7 @@ view model =
         [ headerView model
         , main_ [ Aria.ariaLabel "Listenbereich" ]
             [ itemCardsView model
-            , fixedActionButton model
+            , addCardButton model
             ]
         ]
 
@@ -156,7 +161,16 @@ headerView model =
 
 itemCardsView : Model -> Html Msg
 itemCardsView model =
-    div [ class "container" ] (List.map itemCard (itemsToShow model))
+    div [ class "container" ] (List.map cardView (itemsToShow model))
+
+
+cardView : ItemData -> Html Msg
+cardView itemData =
+    if itemData.editing then
+        editCard
+
+    else
+        itemCard itemData
 
 
 itemCard : ItemData -> Html Msg
@@ -174,7 +188,7 @@ itemCard itemData =
         , onClick (CardClicked itemData.id)
         ]
         [ div [ class "card-content" ]
-            [ editButton
+            [ editButton itemData
             , span
                 [ class
                     ("card-title"
@@ -213,16 +227,65 @@ toggleDone itemId items =
     List.map (toggleDoneCond itemId) items
 
 
-editButton : Html Msg
-editButton =
+editButton : ItemData -> Html Msg
+editButton item =
     a
         [ href ""
-        , onWithOptions "click" { stopPropagation = True, preventDefault = True } (\event -> EditCard)
+        , onWithOptions "click" { stopPropagation = True, preventDefault = True } (\event -> EditCardClicked item.id)
         , class "edit-btn right"
         , Aria.role "button"
         , Aria.ariaLabel "Bearbeiten"
         ]
         [ i [ class "material-icons grey-text right-align" ] [ text "edit" ] ]
+
+
+toggleEditCond : String -> ItemData -> ItemData
+toggleEditCond idToMatch item =
+    if item.id == idToMatch then
+        { item
+            | editing =
+                if item.editing then
+                    False
+
+                else
+                    True
+        }
+
+    else
+        item
+
+
+toggleEdit : String -> List ItemData -> List ItemData
+toggleEdit itemId items =
+    List.map (toggleEditCond itemId) items
+
+
+editCard : Html Msg
+editCard =
+    div
+        [ class
+            "card s12 item-edit"
+        ]
+        [ div [ class "card-content" ]
+            [ div [ class "input-field card-title" ] [ input [ placeholder "Neuer Eintrag", type_ "text" ] [] ]
+            , div [ class "chips chips-autocomplete chips-placeholder", placeholder "Tags" ] []
+            , div [ class "card-action valign-wrapper justify-right" ]
+                [ cancelButton
+                , a [ class "green btn finish-edit", Aria.role "button", Aria.ariaLabel "Bestätigen" ] [ i [ class "material-icons" ] [ text "check" ] ]
+                ]
+            ]
+        ]
+
+
+cancelButton : Html Msg
+cancelButton =
+    a
+        [ href ""
+        , onWithOptions "click" { preventDefault = True, stopPropagation = True } (\event -> CancelEditing)
+        , class "grey-text cancel-edit"
+        , Aria.role "button"
+        ]
+        [ text "Abbrechen" ]
 
 
 filterTagChip : FilterTag -> Html Msg
@@ -271,8 +334,8 @@ sortItems items =
     List.sortBy .orderIndex items
 
 
-fixedActionButton : Model -> Html Msg
-fixedActionButton model =
+addCardButton : Model -> Html Msg
+addCardButton model =
     div [ class "fixed-action-btn center-horizontally" ]
         [ a [ class "btn-floating btn-large waves-effect red", Aria.role "button", Aria.ariaLabel "Neuer Eintrag" ]
             [ i [ class "large material-icons" ] [ text "add" ]
@@ -318,7 +381,7 @@ parseItems rawString =
 
 receivedToItem : Int -> ItemDataReceived -> ItemData
 receivedToItem index itemReceived =
-    { id = itemReceived.id, title = itemReceived.title, tags = itemReceived.tags, done = itemReceived.done, orderIndex = index }
+    { id = itemReceived.id, title = itemReceived.title, tags = itemReceived.tags, done = itemReceived.done, orderIndex = index, editing = False }
 
 
 itemToReceived : ItemData -> ItemDataReceived

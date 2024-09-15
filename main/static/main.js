@@ -6185,7 +6185,7 @@ var $author$project$Main$parseItems = function (rawString) {
 };
 var $author$project$Main$receivedToItem = F2(
 	function (index, itemReceived) {
-		return {done: itemReceived.done, id: itemReceived.id, orderIndex: index, tags: itemReceived.tags, title: itemReceived.title};
+		return {done: itemReceived.done, editing: false, id: itemReceived.id, orderIndex: index, tags: itemReceived.tags, title: itemReceived.title};
 	});
 var $author$project$Main$toggleDoneCond = F2(
 	function (idToMatch, item) {
@@ -6200,6 +6200,21 @@ var $author$project$Main$toggleDone = F2(
 		return A2(
 			$elm$core$List$map,
 			$author$project$Main$toggleDoneCond(itemId),
+			items);
+	});
+var $author$project$Main$toggleEditCond = F2(
+	function (idToMatch, item) {
+		return _Utils_eq(item.id, idToMatch) ? _Utils_update(
+			item,
+			{
+				editing: item.editing ? false : true
+			}) : item;
+	});
+var $author$project$Main$toggleEdit = F2(
+	function (itemId, items) {
+		return A2(
+			$elm$core$List$map,
+			$author$project$Main$toggleEditCond(itemId),
 			items);
 	});
 var $elm$core$Basics$not = _Basics_not;
@@ -6303,10 +6318,20 @@ var $author$project$Main$update = F2(
 							items: A2($author$project$Main$toggleDone, itemId, model.items)
 						}),
 					$elm$core$Platform$Cmd$none);
+			case 'EditCardClicked':
+				var itemId = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							items: A2($author$project$Main$toggleEdit, itemId, model.items)
+						}),
+					$elm$core$Platform$Cmd$none);
 			default:
 				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 		}
 	});
+var $elm$html$Html$a = _VirtualDom_node('a');
 var $elm$virtual_dom$VirtualDom$attribute = F2(
 	function (key, value) {
 		return A2(
@@ -6326,6 +6351,42 @@ var $elm$html$Html$Attributes$stringProperty = F2(
 	});
 var $elm$html$Html$Attributes$class = $elm$html$Html$Attributes$stringProperty('className');
 var $elm$html$Html$div = _VirtualDom_node('div');
+var $elm$html$Html$i = _VirtualDom_node('i');
+var $fapian$elm_html_aria$Html$Attributes$Aria$role = $elm$html$Html$Attributes$attribute('role');
+var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
+var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
+var $author$project$Main$addCardButton = function (model) {
+	return A2(
+		$elm$html$Html$div,
+		_List_fromArray(
+			[
+				$elm$html$Html$Attributes$class('fixed-action-btn center-horizontally')
+			]),
+		_List_fromArray(
+			[
+				A2(
+				$elm$html$Html$a,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$class('btn-floating btn-large waves-effect red'),
+						$fapian$elm_html_aria$Html$Attributes$Aria$role('button'),
+						$fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel('Neuer Eintrag')
+					]),
+				_List_fromArray(
+					[
+						A2(
+						$elm$html$Html$i,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$class('large material-icons')
+							]),
+						_List_fromArray(
+							[
+								$elm$html$Html$text('add')
+							]))
+					]))
+			]));
+};
 var $author$project$Main$FilterClicked = function (a) {
 	return {$: 'FilterClicked', a: a};
 };
@@ -6346,8 +6407,6 @@ var $elm$html$Html$Events$onClick = function (msg) {
 		'click',
 		$elm$json$Json$Decode$succeed(msg));
 };
-var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
-var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
 var $author$project$Main$filterTagChip = function (filterTag) {
 	return A2(
 		$elm$html$Html$div,
@@ -6372,7 +6431,6 @@ var $author$project$Main$filterTagChip = function (filterTag) {
 };
 var $elm$html$Html$header = _VirtualDom_node('header');
 var $elm$html$Html$nav = _VirtualDom_node('nav');
-var $fapian$elm_html_aria$Html$Attributes$Aria$role = $elm$html$Html$Attributes$attribute('role');
 var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
 var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $author$project$Main$headerView = function (model) {
@@ -6415,30 +6473,13 @@ var $author$project$Main$headerView = function (model) {
 					]))
 			]));
 };
-var $author$project$Main$CardClicked = function (a) {
-	return {$: 'CardClicked', a: a};
-};
-var $author$project$Main$displayTagChip = function (tag) {
-	return A2(
-		$elm$html$Html$div,
-		_List_fromArray(
-			[
-				$elm$html$Html$Attributes$class('chip green-text green lighten-5')
-			]),
-		_List_fromArray(
-			[
-				$elm$html$Html$text(tag)
-			]));
-};
-var $author$project$Main$EditCard = {$: 'EditCard'};
-var $elm$html$Html$a = _VirtualDom_node('a');
+var $author$project$Main$CancelEditing = {$: 'CancelEditing'};
 var $elm$html$Html$Attributes$href = function (url) {
 	return A2(
 		$elm$html$Html$Attributes$stringProperty,
 		'href',
 		_VirtualDom_noJavaScriptUri(url));
 };
-var $elm$html$Html$i = _VirtualDom_node('i');
 var $elm$virtual_dom$VirtualDom$Custom = function (a) {
 	return {$: 'Custom', a: a};
 };
@@ -6542,7 +6583,7 @@ var $mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$onWithOptions = F3(
 				},
 				$mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$eventDecoder));
 	});
-var $author$project$Main$editButton = A2(
+var $author$project$Main$cancelButton = A2(
 	$elm$html$Html$a,
 	_List_fromArray(
 		[
@@ -6552,25 +6593,141 @@ var $author$project$Main$editButton = A2(
 			'click',
 			{preventDefault: true, stopPropagation: true},
 			function (event) {
-				return $author$project$Main$EditCard;
+				return $author$project$Main$CancelEditing;
 			}),
-			$elm$html$Html$Attributes$class('edit-btn right'),
-			$fapian$elm_html_aria$Html$Attributes$Aria$role('button'),
-			$fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel('Bearbeiten')
+			$elm$html$Html$Attributes$class('grey-text cancel-edit'),
+			$fapian$elm_html_aria$Html$Attributes$Aria$role('button')
+		]),
+	_List_fromArray(
+		[
+			$elm$html$Html$text('Abbrechen')
+		]));
+var $elm$html$Html$input = _VirtualDom_node('input');
+var $elm$html$Html$Attributes$placeholder = $elm$html$Html$Attributes$stringProperty('placeholder');
+var $elm$html$Html$Attributes$type_ = $elm$html$Html$Attributes$stringProperty('type');
+var $author$project$Main$editCard = A2(
+	$elm$html$Html$div,
+	_List_fromArray(
+		[
+			$elm$html$Html$Attributes$class('card s12 item-edit')
 		]),
 	_List_fromArray(
 		[
 			A2(
-			$elm$html$Html$i,
+			$elm$html$Html$div,
 			_List_fromArray(
 				[
-					$elm$html$Html$Attributes$class('material-icons grey-text right-align')
+					$elm$html$Html$Attributes$class('card-content')
 				]),
 			_List_fromArray(
 				[
-					$elm$html$Html$text('edit')
+					A2(
+					$elm$html$Html$div,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$class('input-field card-title')
+						]),
+					_List_fromArray(
+						[
+							A2(
+							$elm$html$Html$input,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$placeholder('Neuer Eintrag'),
+									$elm$html$Html$Attributes$type_('text')
+								]),
+							_List_Nil)
+						])),
+					A2(
+					$elm$html$Html$div,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$class('chips chips-autocomplete chips-placeholder'),
+							$elm$html$Html$Attributes$placeholder('Tags')
+						]),
+					_List_Nil),
+					A2(
+					$elm$html$Html$div,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$class('card-action valign-wrapper justify-right')
+						]),
+					_List_fromArray(
+						[
+							$author$project$Main$cancelButton,
+							A2(
+							$elm$html$Html$a,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$class('green btn finish-edit'),
+									$fapian$elm_html_aria$Html$Attributes$Aria$role('button'),
+									$fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel('Bestätigen')
+								]),
+							_List_fromArray(
+								[
+									A2(
+									$elm$html$Html$i,
+									_List_fromArray(
+										[
+											$elm$html$Html$Attributes$class('material-icons')
+										]),
+									_List_fromArray(
+										[
+											$elm$html$Html$text('check')
+										]))
+								]))
+						]))
 				]))
 		]));
+var $author$project$Main$CardClicked = function (a) {
+	return {$: 'CardClicked', a: a};
+};
+var $author$project$Main$displayTagChip = function (tag) {
+	return A2(
+		$elm$html$Html$div,
+		_List_fromArray(
+			[
+				$elm$html$Html$Attributes$class('chip green-text green lighten-5')
+			]),
+		_List_fromArray(
+			[
+				$elm$html$Html$text(tag)
+			]));
+};
+var $author$project$Main$EditCardClicked = function (a) {
+	return {$: 'EditCardClicked', a: a};
+};
+var $author$project$Main$editButton = function (item) {
+	return A2(
+		$elm$html$Html$a,
+		_List_fromArray(
+			[
+				$elm$html$Html$Attributes$href(''),
+				A3(
+				$mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$onWithOptions,
+				'click',
+				{preventDefault: true, stopPropagation: true},
+				function (event) {
+					return $author$project$Main$EditCardClicked(item.id);
+				}),
+				$elm$html$Html$Attributes$class('edit-btn right'),
+				$fapian$elm_html_aria$Html$Attributes$Aria$role('button'),
+				$fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel('Bearbeiten')
+			]),
+		_List_fromArray(
+			[
+				A2(
+				$elm$html$Html$i,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$class('material-icons grey-text right-align')
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text('edit')
+					]))
+			]));
+};
 var $elm$html$Html$span = _VirtualDom_node('span');
 var $author$project$Main$itemCard = function (itemData) {
 	return A2(
@@ -6592,7 +6749,7 @@ var $author$project$Main$itemCard = function (itemData) {
 					]),
 				_List_fromArray(
 					[
-						$author$project$Main$editButton,
+						$author$project$Main$editButton(itemData),
 						A2(
 						$elm$html$Html$span,
 						_List_fromArray(
@@ -6613,6 +6770,9 @@ var $author$project$Main$itemCard = function (itemData) {
 						A2($elm$core$List$map, $author$project$Main$displayTagChip, itemData.tags))
 					]))
 			]));
+};
+var $author$project$Main$cardView = function (itemData) {
+	return itemData.editing ? $author$project$Main$editCard : $author$project$Main$itemCard(itemData);
 };
 var $elm$core$List$filter = F2(
 	function (isGood, list) {
@@ -6692,6 +6852,18 @@ var $author$project$Main$itemsToShow = function (model) {
 			$author$project$Main$isVisible(model),
 			model.items));
 };
+var $author$project$Main$itemCardsView = function (model) {
+	return A2(
+		$elm$html$Html$div,
+		_List_fromArray(
+			[
+				$elm$html$Html$Attributes$class('container')
+			]),
+		A2(
+			$elm$core$List$map,
+			$author$project$Main$cardView,
+			$author$project$Main$itemsToShow(model)));
+};
 var $elm$html$Html$main_ = _VirtualDom_node('main');
 var $author$project$Main$view = function (model) {
 	return A2(
@@ -6708,16 +6880,8 @@ var $author$project$Main$view = function (model) {
 					]),
 				_List_fromArray(
 					[
-						A2(
-						$elm$html$Html$div,
-						_List_fromArray(
-							[
-								$elm$html$Html$Attributes$class('container')
-							]),
-						A2(
-							$elm$core$List$map,
-							$author$project$Main$itemCard,
-							$author$project$Main$itemsToShow(model)))
+						$author$project$Main$itemCardsView(model),
+						$author$project$Main$addCardButton(model)
 					]))
 			]));
 };
