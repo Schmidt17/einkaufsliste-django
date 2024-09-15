@@ -351,7 +351,7 @@ isVisible model item =
         filteringActive =
             List.length filters > 0
     in
-    if not filteringActive then
+    if not filteringActive || item.editing then
         True
 
     else

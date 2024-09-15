@@ -7410,7 +7410,7 @@ var $author$project$Main$isVisible = F2(
 	function (model, item) {
 		var filters = $author$project$Main$activeFilters(model.filterTags);
 		var filteringActive = $elm$core$List$length(filters) > 0;
-		return (!filteringActive) ? true : A3(
+		return ((!filteringActive) || item.editing) ? true : A3(
 			$elm$core$List$foldl,
 			$elm$core$Basics$or,
 			false,
