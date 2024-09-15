@@ -131,9 +131,14 @@ view model =
     div []
         [ headerView model
         , main_ [ Aria.ariaLabel "Listenbereich" ]
-            [ div [ class "container" ] (List.map itemCard (sortItems (List.filter (isVisible model) model.items)))
+            [ div [ class "container" ] (List.map itemCard (itemsToShow model))
             ]
         ]
+
+
+itemsToShow : Model -> List ItemData
+itemsToShow model =
+    sortItems (List.filter (isVisible model) model.items)
 
 
 headerView : Model -> Html Msg
