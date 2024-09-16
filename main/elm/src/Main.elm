@@ -47,7 +47,8 @@ type alias ItemData =
     , title : String
     , tags : List String
     , done : Int
-    , orderIndex : Int
+    , orderIndexDefault : Int
+    , orderIndexOverride : Int
     , editing : Bool
     , synced : Bool
     }
@@ -204,7 +205,8 @@ addNewItem newId dict =
         , title = ""
         , tags = []
         , done = 0
-        , orderIndex = newIndex
+        , orderIndexDefault = newIndex
+        , orderIndexOverride = newIndex
         , editing = True
         , synced = False
         }
@@ -383,7 +385,7 @@ isVisible model item =
 
 sortItems : List ItemData -> List ItemData
 sortItems items =
-    List.sortBy .orderIndex items
+    List.sortBy .orderIndexDefault items
         |> List.reverse
 
 
@@ -443,7 +445,8 @@ receivedToItem index itemReceived =
     , title = itemReceived.title
     , tags = itemReceived.tags
     , done = itemReceived.done
-    , orderIndex = index
+    , orderIndexDefault = index
+    , orderIndexOverride = index
     , editing = False
     , synced = True
     }
@@ -503,4 +506,4 @@ itemListToAssoc items =
 
 maxOrderIndex : List ItemData -> Maybe Int
 maxOrderIndex items =
-    List.maximum (List.map .orderIndex items)
+    List.maximum (List.map .orderIndexDefault items)

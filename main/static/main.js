@@ -6241,7 +6241,7 @@ var $author$project$Main$maxOrderIndex = function (items) {
 		A2(
 			$elm$core$List$map,
 			function ($) {
-				return $.orderIndex;
+				return $.orderIndexDefault;
 			},
 			items));
 };
@@ -6270,7 +6270,7 @@ var $author$project$Main$addNewItem = F2(
 		return A3(
 			$elm$core$Dict$insert,
 			newId,
-			{done: 0, editing: true, id: newId, orderIndex: newIndex, synced: false, tags: _List_Nil, title: ''},
+			{done: 0, editing: true, id: newId, orderIndexDefault: newIndex, orderIndexOverride: newIndex, synced: false, tags: _List_Nil, title: ''},
 			dict);
 	});
 var $elm$random$Random$Generate = function (a) {
@@ -6561,7 +6561,7 @@ var $author$project$Main$parseItems = function (rawString) {
 };
 var $author$project$Main$receivedToItem = F2(
 	function (index, itemReceived) {
-		return {done: itemReceived.done, editing: false, id: itemReceived.id, orderIndex: index, synced: true, tags: itemReceived.tags, title: itemReceived.title};
+		return {done: itemReceived.done, editing: false, id: itemReceived.id, orderIndexDefault: index, orderIndexOverride: index, synced: true, tags: itemReceived.tags, title: itemReceived.title};
 	});
 var $elm$core$String$cons = _String_cons;
 var $elm$core$String$fromChar = function (_char) {
@@ -7450,7 +7450,7 @@ var $author$project$Main$sortItems = function (items) {
 		A2(
 			$elm$core$List$sortBy,
 			function ($) {
-				return $.orderIndex;
+				return $.orderIndexDefault;
 			},
 			items));
 };
