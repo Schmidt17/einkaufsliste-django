@@ -80,7 +80,7 @@ type Msg
 
 itemsUrl : String -> String
 itemsUrl apiKey =
-    "/items/?k=" ++ apiKey
+    "https://picluster.a-h.wtf/einkaufsliste/api/v1/items?k=" ++ apiKey
 
 
 getItems : String -> Cmd Msg

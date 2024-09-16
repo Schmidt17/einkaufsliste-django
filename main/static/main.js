@@ -6204,7 +6204,7 @@ var $elm$http$Http$get = function (r) {
 		{body: $elm$http$Http$emptyBody, expect: r.expect, headers: _List_Nil, method: 'GET', timeout: $elm$core$Maybe$Nothing, tracker: $elm$core$Maybe$Nothing, url: r.url});
 };
 var $author$project$Main$itemsUrl = function (apiKey) {
-	return '/items/?k=' + apiKey;
+	return 'https://picluster.a-h.wtf/einkaufsliste/api/v1/items?k=' + apiKey;
 };
 var $author$project$Main$getItems = function (apiKey) {
 	return $elm$http$Http$get(
