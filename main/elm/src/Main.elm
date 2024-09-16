@@ -49,6 +49,7 @@ type alias ItemData =
     , done : Int
     , orderIndex : Int
     , editing : Bool
+    , synced : Bool
     }
 
 
@@ -185,7 +186,16 @@ addNewItem newId dict =
                 Nothing ->
                     0
     in
-    Dict.insert newId { id = newId, title = "", tags = [], done = 0, orderIndex = newIndex, editing = True } dict
+    Dict.insert newId
+        { id = newId
+        , title = ""
+        , tags = []
+        , done = 0
+        , orderIndex = newIndex
+        , editing = True
+        , synced = False
+        }
+        dict
 
 
 
@@ -416,7 +426,14 @@ parseItems rawString =
 
 receivedToItem : Int -> ItemDataReceived -> ItemData
 receivedToItem index itemReceived =
-    { id = itemReceived.id, title = itemReceived.title, tags = itemReceived.tags, done = itemReceived.done, orderIndex = index, editing = False }
+    { id = itemReceived.id
+    , title = itemReceived.title
+    , tags = itemReceived.tags
+    , done = itemReceived.done
+    , orderIndex = index
+    , editing = False
+    , synced = True
+    }
 
 
 itemToReceived : ItemData -> ItemDataReceived
