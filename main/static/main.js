@@ -5417,9 +5417,9 @@ var $elm$core$Task$perform = F2(
 				A2($elm$core$Task$map, toMessage, task)));
 	});
 var $elm$browser$Browser$element = _Browser_element;
-var $author$project$Main$Model = F3(
-	function (items, filterTags, apiKey) {
-		return {apiKey: apiKey, filterTags: filterTags, items: items};
+var $author$project$Main$Model = F4(
+	function (items, overrideOrdering, filterTags, apiKey) {
+		return {apiKey: apiKey, filterTags: filterTags, items: items, overrideOrdering: overrideOrdering};
 	});
 var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
 var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
@@ -6215,7 +6215,7 @@ var $author$project$Main$getItems = function (apiKey) {
 };
 var $author$project$Main$init = function (flags) {
 	return _Utils_Tuple2(
-		A3($author$project$Main$Model, $elm$core$Dict$empty, _List_Nil, flags),
+		A4($author$project$Main$Model, $elm$core$Dict$empty, false, _List_Nil, flags),
 		$author$project$Main$getItems(flags));
 };
 var $elm$json$Json$Decode$string = _Json_decodeString;

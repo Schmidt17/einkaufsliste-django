@@ -31,6 +31,7 @@ main =
 
 type alias Model =
     { items : Dict String ItemData
+    , overrideOrdering : Bool
     , filterTags : List FilterTag
     , apiKey : String
     }
@@ -60,7 +61,7 @@ type alias ItemData =
 
 init : String -> ( Model, Cmd Msg )
 init flags =
-    ( Model Dict.empty [] flags, getItems flags )
+    ( Model Dict.empty False [] flags, getItems flags )
 
 
 
