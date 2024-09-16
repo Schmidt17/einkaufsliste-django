@@ -72,7 +72,7 @@ type Msg
     | EditCardClicked String
     | FilterClicked String
     | CardClicked String
-    | CancelEditing
+    | CancelEditing String
     | AddNewCardClicked
     | AddNewCard UUID.UUID
     | TitleChanged String String
@@ -120,6 +120,22 @@ update msg model =
         EditCardClicked itemId ->
             ( { model | items = Dict.update itemId toggleEdit model.items }, Cmd.none )
 
+        CancelEditing itemId ->
+            let
+                maybeItem =
+                    Dict.get itemId model.items
+            in
+            case maybeItem of
+                Just item ->
+                    if item.synced then
+                        ( { model | items = Dict.update itemId toggleEdit model.items }, Cmd.none )
+
+                    else
+                        ( { model | items = Dict.remove itemId model.items }, Cmd.none )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
         AddNewCardClicked ->
             ( model, Random.generate AddNewCard UUID.generator )
 
@@ -132,9 +148,6 @@ update msg model =
 
         TitleChanged itemId newTitle ->
             ( { model | items = Dict.update itemId (updateTitle newTitle) model.items }, Cmd.none )
-
-        _ ->
-            ( model, Cmd.none )
 
 
 updateTitle : String -> Maybe ItemData -> Maybe ItemData
@@ -309,18 +322,18 @@ editCard item =
             [ div [ class "input-field card-title" ] [ input [ placeholder "Neuer Eintrag", type_ "text", value item.title, onInput (TitleChanged item.id) ] [] ]
             , div [ class "chips chips-autocomplete chips-placeholder", placeholder "Tags" ] []
             , div [ class "card-action valign-wrapper justify-right" ]
-                [ cancelButton
+                [ cancelButton item.id
                 , a [ class "green btn finish-edit", Aria.role "button", Aria.ariaLabel "Bestätigen" ] [ i [ class "material-icons" ] [ text "check" ] ]
                 ]
             ]
         ]
 
 
-cancelButton : Html Msg
-cancelButton =
+cancelButton : String -> Html Msg
+cancelButton itemId =
     a
         [ href ""
-        , onWithOptions "click" { preventDefault = True, stopPropagation = True } (\event -> CancelEditing)
+        , onWithOptions "click" { preventDefault = True, stopPropagation = True } (\event -> CancelEditing itemId)
         , class "grey-text cancel-edit"
         , Aria.role "button"
         ]

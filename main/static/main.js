@@ -6841,6 +6841,27 @@ var $author$project$Main$update = F2(
 							items: A3($elm$core$Dict$update, itemId, $author$project$Main$toggleEdit, model.items)
 						}),
 					$elm$core$Platform$Cmd$none);
+			case 'CancelEditing':
+				var itemId = msg.a;
+				var maybeItem = A2($elm$core$Dict$get, itemId, model.items);
+				if (maybeItem.$ === 'Just') {
+					var item = maybeItem.a;
+					return item.synced ? _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								items: A3($elm$core$Dict$update, itemId, $author$project$Main$toggleEdit, model.items)
+							}),
+						$elm$core$Platform$Cmd$none) : _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								items: A2($elm$core$Dict$remove, itemId, model.items)
+							}),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				}
 			case 'AddNewCardClicked':
 				return _Utils_Tuple2(
 					model,
@@ -6855,7 +6876,7 @@ var $author$project$Main$update = F2(
 							items: A2($author$project$Main$addNewItem, newId, model.items)
 						}),
 					$elm$core$Platform$Cmd$none);
-			case 'TitleChanged':
+			default:
 				var itemId = msg.a;
 				var newTitle = msg.b;
 				return _Utils_Tuple2(
@@ -6869,8 +6890,6 @@ var $author$project$Main$update = F2(
 								model.items)
 						}),
 					$elm$core$Platform$Cmd$none);
-			default:
-				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 		}
 	});
 var $author$project$Main$AddNewCardClicked = {$: 'AddNewCardClicked'};
@@ -7021,7 +7040,9 @@ var $author$project$Main$TitleChanged = F2(
 	function (a, b) {
 		return {$: 'TitleChanged', a: a, b: b};
 	});
-var $author$project$Main$CancelEditing = {$: 'CancelEditing'};
+var $author$project$Main$CancelEditing = function (a) {
+	return {$: 'CancelEditing', a: a};
+};
 var $elm$html$Html$Attributes$href = function (url) {
 	return A2(
 		$elm$html$Html$Attributes$stringProperty,
@@ -7131,25 +7152,27 @@ var $mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$onWithOptions = F3(
 				},
 				$mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$eventDecoder));
 	});
-var $author$project$Main$cancelButton = A2(
-	$elm$html$Html$a,
-	_List_fromArray(
-		[
-			$elm$html$Html$Attributes$href(''),
-			A3(
-			$mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$onWithOptions,
-			'click',
-			{preventDefault: true, stopPropagation: true},
-			function (event) {
-				return $author$project$Main$CancelEditing;
-			}),
-			$elm$html$Html$Attributes$class('grey-text cancel-edit'),
-			$fapian$elm_html_aria$Html$Attributes$Aria$role('button')
-		]),
-	_List_fromArray(
-		[
-			$elm$html$Html$text('Abbrechen')
-		]));
+var $author$project$Main$cancelButton = function (itemId) {
+	return A2(
+		$elm$html$Html$a,
+		_List_fromArray(
+			[
+				$elm$html$Html$Attributes$href(''),
+				A3(
+				$mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$onWithOptions,
+				'click',
+				{preventDefault: true, stopPropagation: true},
+				function (event) {
+					return $author$project$Main$CancelEditing(itemId);
+				}),
+				$elm$html$Html$Attributes$class('grey-text cancel-edit'),
+				$fapian$elm_html_aria$Html$Attributes$Aria$role('button')
+			]),
+		_List_fromArray(
+			[
+				$elm$html$Html$text('Abbrechen')
+			]));
+};
 var $elm$html$Html$input = _VirtualDom_node('input');
 var $elm$html$Html$Events$alwaysStop = function (x) {
 	return _Utils_Tuple2(x, true);
@@ -7238,7 +7261,7 @@ var $author$project$Main$editCard = function (item) {
 							]),
 						_List_fromArray(
 							[
-								$author$project$Main$cancelButton,
+								$author$project$Main$cancelButton(item.id),
 								A2(
 								$elm$html$Html$a,
 								_List_fromArray(
