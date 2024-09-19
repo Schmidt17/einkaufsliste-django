@@ -2,7 +2,7 @@ module Main exposing (main)
 
 import Browser
 import Dict exposing (Dict)
-import Html exposing (Html, a, br, button, div, h1, header, i, input, label, main_, nav, p, span, text)
+import Html exposing (Html, a, br, button, div, h1, header, i, input, label, li, main_, nav, p, span, text, ul)
 import Html.Attributes exposing (..)
 import Html.Attributes.Aria as Aria
 import Html.Events exposing (onClick, onInput, onMouseDown, preventDefaultOn)
@@ -78,6 +78,8 @@ type Msg
     | AddNewCardClicked
     | AddNewCard UUID.UUID
     | TitleChanged String String
+    | SortButtonClicked
+    | SortResponseReceived (List String) (Result Http.Error (List Int))
 
 
 itemsUrl : String -> String
@@ -85,9 +87,23 @@ itemsUrl apiKey =
     "https://picluster.a-h.wtf/einkaufsliste/api/v1/items?k=" ++ apiKey
 
 
+sortUrl : String
+sortUrl =
+    "https://picluster.a-h.wtf/einkaufs_api/sort/"
+
+
 getItems : String -> Cmd Msg
 getItems apiKey =
     Http.get { url = itemsUrl apiKey, expect = Http.expectString ItemsReceived }
+
+
+callSortAPI : List ItemData -> Cmd Msg
+callSortAPI items =
+    Http.post
+        { url = sortUrl
+        , body = Http.jsonBody (Encode.object [ ( "input_list", Encode.list Encode.string (List.map .title items) ) ])
+        , expect = Http.expectJson (SortResponseReceived (List.map .id items)) sortAPIResponseDecoder
+        }
 
 
 initTags : List String -> List FilterTag
@@ -150,6 +166,38 @@ update msg model =
 
         TitleChanged itemId newTitle ->
             ( { model | items = Dict.update itemId (updateTitle newTitle) model.items }, Cmd.none )
+
+        SortButtonClicked ->
+            if model.overrideOrdering then
+                ( { model | overrideOrdering = False }, Cmd.none )
+
+            else
+                ( model, callSortAPI (Dict.values model.items) )
+
+        SortResponseReceived requestedIds payload ->
+            case payload of
+                Ok sortIndices ->
+                    let
+                        idToIndexDict =
+                            Dict.fromList (List.map2 Tuple.pair requestedIds sortIndices)
+                    in
+                    ( { model | items = Dict.map (updateOverrideOrderIndex idToIndexDict) model.items, overrideOrdering = True }, Cmd.none )
+
+                Err httpError ->
+                    ( model, Cmd.none )
+
+
+updateOverrideOrderIndex : Dict String Int -> String -> ItemData -> ItemData
+updateOverrideOrderIndex idToIndexDict itemId item =
+    { item
+        | orderIndexOverride =
+            case Dict.get itemId idToIndexDict of
+                Just newIndex ->
+                    newIndex
+
+                Nothing ->
+                    item.orderIndexOverride
+    }
 
 
 updateTitle : String -> Maybe ItemData -> Maybe ItemData
@@ -241,7 +289,7 @@ view model =
 
 itemsToShow : Model -> List ItemData
 itemsToShow model =
-    sortItems (List.filter (isVisible model) (Dict.values model.items))
+    sortItems model.overrideOrdering (List.filter (isVisible model) (Dict.values model.items))
 
 
 headerView : Model -> Html Msg
@@ -251,8 +299,39 @@ headerView model =
             [ div [ class "nav-wrapper", style "display" "flex" ]
                 [ div [ class "chips-wrapper filter-chips", Aria.ariaLabel "Filterbereich", Aria.role "navigation" ]
                     (List.map filterTagChip model.filterTags)
+                , ul [ id "nav-mobile" ]
+                    [ li [] [ sortButton model.overrideOrdering ]
+                    , li []
+                        [ a [ href "#delConfirmModal", class "modal-trigger", Aria.role "button", Aria.ariaLabel "Abgehakte löschen" ]
+                            [ i [ class "material-icons white-text" ] [ text "delete" ]
+                            ]
+                        ]
+                    ]
                 ]
             ]
+        ]
+
+
+sortButton : Bool -> Html Msg
+sortButton isActive =
+    a
+        [ href ""
+        , onWithOptions "click" { preventDefault = True, stopPropagation = True } (\event -> SortButtonClicked)
+        , Aria.role "button"
+        , Aria.ariaLabel "Sortieren"
+        ]
+        [ i
+            [ class
+                ("material-icons"
+                    ++ (if isActive then
+                            " yellow-text"
+
+                        else
+                            " white-text"
+                       )
+                )
+            ]
+            [ text "sort" ]
         ]
 
 
@@ -377,17 +456,21 @@ isVisible model item =
         filteringActive =
             List.length filters > 0
     in
-    if not filteringActive || item.editing then
+    if not filteringActive || item.editing || (List.member "No tags" filters && (List.length item.tags == 0)) then
         True
 
     else
         List.foldl (||) False (List.map (\x -> List.member x filters) item.tags)
 
 
-sortItems : List ItemData -> List ItemData
-sortItems items =
-    List.sortBy .orderIndexDefault items
-        |> List.reverse
+sortItems : Bool -> List ItemData -> List ItemData
+sortItems useOverrideIndex items =
+    if useOverrideIndex then
+        List.sortBy .orderIndexOverride items
+
+    else
+        List.sortBy .orderIndexDefault items
+            |> List.reverse
 
 
 addCardButton : Model -> Html Msg
@@ -508,3 +591,8 @@ itemListToAssoc items =
 maxOrderIndex : List ItemData -> Maybe Int
 maxOrderIndex items =
     List.maximum (List.map .orderIndexDefault items)
+
+
+sortAPIResponseDecoder : Decode.Decoder (List Int)
+sortAPIResponseDecoder =
+    Decode.field "sort_indices" (Decode.list Decode.int)

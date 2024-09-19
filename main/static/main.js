@@ -6273,6 +6273,109 @@ var $author$project$Main$addNewItem = F2(
 			{done: 0, editing: true, id: newId, orderIndexDefault: newIndex, orderIndexOverride: newIndex, synced: false, tags: _List_Nil, title: ''},
 			dict);
 	});
+var $author$project$Main$SortResponseReceived = F2(
+	function (a, b) {
+		return {$: 'SortResponseReceived', a: a, b: b};
+	});
+var $elm$json$Json$Decode$decodeString = _Json_runOnString;
+var $elm$http$Http$expectJson = F2(
+	function (toMsg, decoder) {
+		return A2(
+			$elm$http$Http$expectStringResponse,
+			toMsg,
+			$elm$http$Http$resolve(
+				function (string) {
+					return A2(
+						$elm$core$Result$mapError,
+						$elm$json$Json$Decode$errorToString,
+						A2($elm$json$Json$Decode$decodeString, decoder, string));
+				}));
+	});
+var $elm$http$Http$jsonBody = function (value) {
+	return A2(
+		_Http_pair,
+		'application/json',
+		A2($elm$json$Json$Encode$encode, 0, value));
+};
+var $elm$json$Json$Encode$list = F2(
+	function (func, entries) {
+		return _Json_wrap(
+			A3(
+				$elm$core$List$foldl,
+				_Json_addEntry(func),
+				_Json_emptyArray(_Utils_Tuple0),
+				entries));
+	});
+var $elm$json$Json$Encode$object = function (pairs) {
+	return _Json_wrap(
+		A3(
+			$elm$core$List$foldl,
+			F2(
+				function (_v0, obj) {
+					var k = _v0.a;
+					var v = _v0.b;
+					return A3(_Json_addField, k, v, obj);
+				}),
+			_Json_emptyObject(_Utils_Tuple0),
+			pairs));
+};
+var $elm$http$Http$post = function (r) {
+	return $elm$http$Http$request(
+		{body: r.body, expect: r.expect, headers: _List_Nil, method: 'POST', timeout: $elm$core$Maybe$Nothing, tracker: $elm$core$Maybe$Nothing, url: r.url});
+};
+var $elm$json$Json$Decode$field = _Json_decodeField;
+var $elm$json$Json$Decode$int = _Json_decodeInt;
+var $elm$json$Json$Decode$list = _Json_decodeList;
+var $author$project$Main$sortAPIResponseDecoder = A2(
+	$elm$json$Json$Decode$field,
+	'sort_indices',
+	$elm$json$Json$Decode$list($elm$json$Json$Decode$int));
+var $author$project$Main$sortUrl = 'https://picluster.a-h.wtf/einkaufs_api/sort/';
+var $elm$json$Json$Encode$string = _Json_wrap;
+var $author$project$Main$callSortAPI = function (items) {
+	return $elm$http$Http$post(
+		{
+			body: $elm$http$Http$jsonBody(
+				$elm$json$Json$Encode$object(
+					_List_fromArray(
+						[
+							_Utils_Tuple2(
+							'input_list',
+							A2(
+								$elm$json$Json$Encode$list,
+								$elm$json$Json$Encode$string,
+								A2(
+									$elm$core$List$map,
+									function ($) {
+										return $.title;
+									},
+									items)))
+						]))),
+			expect: A2(
+				$elm$http$Http$expectJson,
+				$author$project$Main$SortResponseReceived(
+					A2(
+						$elm$core$List$map,
+						function ($) {
+							return $.id;
+						},
+						items)),
+				$author$project$Main$sortAPIResponseDecoder),
+			url: $author$project$Main$sortUrl
+		});
+};
+var $elm$core$Dict$fromList = function (assocs) {
+	return A3(
+		$elm$core$List$foldl,
+		F2(
+			function (_v0, dict) {
+				var key = _v0.a;
+				var value = _v0.b;
+				return A3($elm$core$Dict$insert, key, value, dict);
+			}),
+		$elm$core$Dict$empty,
+		assocs);
+};
 var $elm$random$Random$Generate = function (a) {
 	return {$: 'Generate', a: a};
 };
@@ -6504,18 +6607,6 @@ var $author$project$Main$initTags = function (tagNames) {
 		},
 		tagNames);
 };
-var $elm$core$Dict$fromList = function (assocs) {
-	return A3(
-		$elm$core$List$foldl,
-		F2(
-			function (_v0, dict) {
-				var key = _v0.a;
-				var value = _v0.b;
-				return A3($elm$core$Dict$insert, key, value, dict);
-			}),
-		$elm$core$Dict$empty,
-		assocs);
-};
 var $author$project$Main$itemListToAssoc = function (items) {
 	return A2(
 		$elm$core$List$map,
@@ -6528,16 +6619,35 @@ var $author$project$Main$itemListToDict = function (items) {
 	return $elm$core$Dict$fromList(
 		$author$project$Main$itemListToAssoc(items));
 };
+var $elm$core$Dict$map = F2(
+	function (func, dict) {
+		if (dict.$ === 'RBEmpty_elm_builtin') {
+			return $elm$core$Dict$RBEmpty_elm_builtin;
+		} else {
+			var color = dict.a;
+			var key = dict.b;
+			var value = dict.c;
+			var left = dict.d;
+			var right = dict.e;
+			return A5(
+				$elm$core$Dict$RBNode_elm_builtin,
+				color,
+				key,
+				A2(func, key, value),
+				A2($elm$core$Dict$map, func, left),
+				A2($elm$core$Dict$map, func, right));
+		}
+	});
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
-var $elm$json$Json$Decode$decodeString = _Json_runOnString;
+var $elm$core$Tuple$pair = F2(
+	function (a, b) {
+		return _Utils_Tuple2(a, b);
+	});
 var $author$project$Main$ItemDataReceived = F4(
 	function (id, title, tags, done) {
 		return {done: done, id: id, tags: tags, title: title};
 	});
-var $elm$json$Json$Decode$field = _Json_decodeField;
-var $elm$json$Json$Decode$int = _Json_decodeInt;
-var $elm$json$Json$Decode$list = _Json_decodeList;
 var $elm$json$Json$Decode$map4 = _Json_map4;
 var $author$project$Main$jsonParseItemData = A5(
 	$elm$json$Json$Decode$map4,
@@ -6768,6 +6878,22 @@ var $author$project$Main$uniqueTags = function (items) {
 	return $elm$core$Set$fromList(
 		$author$project$Main$allTags(items));
 };
+var $author$project$Main$updateOverrideOrderIndex = F3(
+	function (idToIndexDict, itemId, item) {
+		return _Utils_update(
+			item,
+			{
+				orderIndexOverride: function () {
+					var _v0 = A2($elm$core$Dict$get, itemId, idToIndexDict);
+					if (_v0.$ === 'Just') {
+						var newIndex = _v0.a;
+						return newIndex;
+					} else {
+						return item.orderIndexOverride;
+					}
+				}()
+			});
+	});
 var $author$project$Main$updateTitle = F2(
 	function (newTitle, maybeItem) {
 		if (maybeItem.$ === 'Just') {
@@ -6876,7 +7002,7 @@ var $author$project$Main$update = F2(
 							items: A2($author$project$Main$addNewItem, newId, model.items)
 						}),
 					$elm$core$Platform$Cmd$none);
-			default:
+			case 'TitleChanged':
 				var itemId = msg.a;
 				var newTitle = msg.b;
 				return _Utils_Tuple2(
@@ -6890,6 +7016,37 @@ var $author$project$Main$update = F2(
 								model.items)
 						}),
 					$elm$core$Platform$Cmd$none);
+			case 'SortButtonClicked':
+				return model.overrideOrdering ? _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{overrideOrdering: false}),
+					$elm$core$Platform$Cmd$none) : _Utils_Tuple2(
+					model,
+					$author$project$Main$callSortAPI(
+						$elm$core$Dict$values(model.items)));
+			default:
+				var requestedIds = msg.a;
+				var payload = msg.b;
+				if (payload.$ === 'Ok') {
+					var sortIndices = payload.a;
+					var idToIndexDict = $elm$core$Dict$fromList(
+						A3($elm$core$List$map2, $elm$core$Tuple$pair, requestedIds, sortIndices));
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								items: A2(
+									$elm$core$Dict$map,
+									$author$project$Main$updateOverrideOrderIndex(idToIndexDict),
+									model.items),
+								overrideOrdering: true
+							}),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					var httpError = payload.a;
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				}
 		}
 	});
 var $author$project$Main$AddNewCardClicked = {$: 'AddNewCardClicked'};
@@ -6903,7 +7060,6 @@ var $elm$virtual_dom$VirtualDom$attribute = F2(
 	});
 var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
 var $fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel = $elm$html$Html$Attributes$attribute('aria-label');
-var $elm$json$Json$Encode$string = _Json_wrap;
 var $elm$html$Html$Attributes$stringProperty = F2(
 	function (key, string) {
 		return A2(
@@ -6993,62 +7149,16 @@ var $author$project$Main$filterTagChip = function (filterTag) {
 			]));
 };
 var $elm$html$Html$header = _VirtualDom_node('header');
-var $elm$html$Html$nav = _VirtualDom_node('nav');
-var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
-var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
-var $author$project$Main$headerView = function (model) {
-	return A2(
-		$elm$html$Html$header,
-		_List_fromArray(
-			[
-				$fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel('Filterbereich')
-			]),
-		_List_fromArray(
-			[
-				A2(
-				$elm$html$Html$nav,
-				_List_fromArray(
-					[
-						$fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel('Header'),
-						A2($elm$html$Html$Attributes$style, 'height', 'auto')
-					]),
-				_List_fromArray(
-					[
-						A2(
-						$elm$html$Html$div,
-						_List_fromArray(
-							[
-								$elm$html$Html$Attributes$class('nav-wrapper'),
-								A2($elm$html$Html$Attributes$style, 'display', 'flex')
-							]),
-						_List_fromArray(
-							[
-								A2(
-								$elm$html$Html$div,
-								_List_fromArray(
-									[
-										$elm$html$Html$Attributes$class('chips-wrapper filter-chips'),
-										$fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel('Filterbereich'),
-										$fapian$elm_html_aria$Html$Attributes$Aria$role('navigation')
-									]),
-								A2($elm$core$List$map, $author$project$Main$filterTagChip, model.filterTags))
-							]))
-					]))
-			]));
-};
-var $author$project$Main$TitleChanged = F2(
-	function (a, b) {
-		return {$: 'TitleChanged', a: a, b: b};
-	});
-var $author$project$Main$CancelEditing = function (a) {
-	return {$: 'CancelEditing', a: a};
-};
 var $elm$html$Html$Attributes$href = function (url) {
 	return A2(
 		$elm$html$Html$Attributes$stringProperty,
 		'href',
 		_VirtualDom_noJavaScriptUri(url));
 };
+var $elm$html$Html$Attributes$id = $elm$html$Html$Attributes$stringProperty('id');
+var $elm$html$Html$li = _VirtualDom_node('li');
+var $elm$html$Html$nav = _VirtualDom_node('nav');
+var $author$project$Main$SortButtonClicked = {$: 'SortButtonClicked'};
 var $elm$virtual_dom$VirtualDom$Custom = function (a) {
 	return {$: 'Custom', a: a};
 };
@@ -7152,6 +7262,131 @@ var $mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$onWithOptions = F3(
 				},
 				$mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$eventDecoder));
 	});
+var $author$project$Main$sortButton = function (isActive) {
+	return A2(
+		$elm$html$Html$a,
+		_List_fromArray(
+			[
+				$elm$html$Html$Attributes$href(''),
+				A3(
+				$mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$onWithOptions,
+				'click',
+				{preventDefault: true, stopPropagation: true},
+				function (event) {
+					return $author$project$Main$SortButtonClicked;
+				}),
+				$fapian$elm_html_aria$Html$Attributes$Aria$role('button'),
+				$fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel('Sortieren')
+			]),
+		_List_fromArray(
+			[
+				A2(
+				$elm$html$Html$i,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$class(
+						'material-icons' + (isActive ? ' yellow-text' : ' white-text'))
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text('sort')
+					]))
+			]));
+};
+var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
+var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
+var $elm$html$Html$ul = _VirtualDom_node('ul');
+var $author$project$Main$headerView = function (model) {
+	return A2(
+		$elm$html$Html$header,
+		_List_fromArray(
+			[
+				$fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel('Filterbereich')
+			]),
+		_List_fromArray(
+			[
+				A2(
+				$elm$html$Html$nav,
+				_List_fromArray(
+					[
+						$fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel('Header'),
+						A2($elm$html$Html$Attributes$style, 'height', 'auto')
+					]),
+				_List_fromArray(
+					[
+						A2(
+						$elm$html$Html$div,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$class('nav-wrapper'),
+								A2($elm$html$Html$Attributes$style, 'display', 'flex')
+							]),
+						_List_fromArray(
+							[
+								A2(
+								$elm$html$Html$div,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$class('chips-wrapper filter-chips'),
+										$fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel('Filterbereich'),
+										$fapian$elm_html_aria$Html$Attributes$Aria$role('navigation')
+									]),
+								A2($elm$core$List$map, $author$project$Main$filterTagChip, model.filterTags)),
+								A2(
+								$elm$html$Html$ul,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$id('nav-mobile')
+									]),
+								_List_fromArray(
+									[
+										A2(
+										$elm$html$Html$li,
+										_List_Nil,
+										_List_fromArray(
+											[
+												$author$project$Main$sortButton(model.overrideOrdering)
+											])),
+										A2(
+										$elm$html$Html$li,
+										_List_Nil,
+										_List_fromArray(
+											[
+												A2(
+												$elm$html$Html$a,
+												_List_fromArray(
+													[
+														$elm$html$Html$Attributes$href('#delConfirmModal'),
+														$elm$html$Html$Attributes$class('modal-trigger'),
+														$fapian$elm_html_aria$Html$Attributes$Aria$role('button'),
+														$fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel('Abgehakte löschen')
+													]),
+												_List_fromArray(
+													[
+														A2(
+														$elm$html$Html$i,
+														_List_fromArray(
+															[
+																$elm$html$Html$Attributes$class('material-icons white-text')
+															]),
+														_List_fromArray(
+															[
+																$elm$html$Html$text('delete')
+															]))
+													]))
+											]))
+									]))
+							]))
+					]))
+			]));
+};
+var $author$project$Main$TitleChanged = F2(
+	function (a, b) {
+		return {$: 'TitleChanged', a: a, b: b};
+	});
+var $author$project$Main$CancelEditing = function (a) {
+	return {$: 'CancelEditing', a: a};
+};
 var $author$project$Main$cancelButton = function (itemId) {
 	return A2(
 		$elm$html$Html$a,
@@ -7433,7 +7668,7 @@ var $author$project$Main$isVisible = F2(
 	function (model, item) {
 		var filters = $author$project$Main$activeFilters(model.filterTags);
 		var filteringActive = $elm$core$List$length(filters) > 0;
-		return ((!filteringActive) || item.editing) ? true : A3(
+		return ((!filteringActive) || (item.editing || (A2($elm$core$List$member, 'No tags', filters) && (!$elm$core$List$length(item.tags))))) ? true : A3(
 			$elm$core$List$foldl,
 			$elm$core$Basics$or,
 			false,
@@ -7445,17 +7680,25 @@ var $author$project$Main$isVisible = F2(
 				item.tags));
 	});
 var $elm$core$List$sortBy = _List_sortBy;
-var $author$project$Main$sortItems = function (items) {
-	return $elm$core$List$reverse(
-		A2(
+var $author$project$Main$sortItems = F2(
+	function (useOverrideIndex, items) {
+		return useOverrideIndex ? A2(
 			$elm$core$List$sortBy,
 			function ($) {
-				return $.orderIndexDefault;
+				return $.orderIndexOverride;
 			},
-			items));
-};
+			items) : $elm$core$List$reverse(
+			A2(
+				$elm$core$List$sortBy,
+				function ($) {
+					return $.orderIndexDefault;
+				},
+				items));
+	});
 var $author$project$Main$itemsToShow = function (model) {
-	return $author$project$Main$sortItems(
+	return A2(
+		$author$project$Main$sortItems,
+		model.overrideOrdering,
 		A2(
 			$elm$core$List$filter,
 			$author$project$Main$isVisible(model),
