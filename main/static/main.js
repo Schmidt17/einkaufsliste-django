@@ -7000,7 +7000,7 @@ var $author$project$Main$update = F2(
 			case 'CardClicked':
 				var itemId = msg.a;
 				var newItems = A3($elm$core$Dict$update, itemId, $author$project$Main$toggleDone, model.items);
-				var maybeItem = A2($elm$core$Dict$get, itemId, model.items);
+				var maybeItem = A2($elm$core$Dict$get, itemId, newItems);
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
