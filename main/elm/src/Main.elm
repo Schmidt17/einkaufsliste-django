@@ -80,11 +80,17 @@ type Msg
     | TitleChanged String String
     | SortButtonClicked
     | SortResponseReceived (List String) (Result Http.Error (List Int))
+    | DoneResponseReceived (Result Http.Error Bool)
 
 
 itemsUrl : String -> String
 itemsUrl apiKey =
     "https://picluster.a-h.wtf/einkaufsliste/api/v1/items?k=" ++ apiKey
+
+
+updateDoneUrl : String -> String -> String
+updateDoneUrl apiKey itemId =
+    "https://picluster.a-h.wtf/einkaufsliste/api/v1/items/" ++ itemId ++ "/done?k=" ++ apiKey
 
 
 sortUrl : String
@@ -95,6 +101,28 @@ sortUrl =
 getItems : String -> Cmd Msg
 getItems apiKey =
     Http.get { url = itemsUrl apiKey, expect = Http.expectString ItemsReceived }
+
+
+httpUpdate : { url : String, body : Http.Body, expect : Http.Expect msg } -> Cmd msg
+httpUpdate options =
+    Http.request
+        { method = "UPDATE"
+        , headers = [ Http.header "Content-Type" "application/json" ]
+        , url = options.url
+        , body = options.body
+        , expect = options.expect
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
+updateDoneBackend : String -> String -> Int -> Cmd Msg
+updateDoneBackend apiKey itemId doneStatus =
+    httpUpdate
+        { url = updateDoneUrl apiKey itemId
+        , body = Http.jsonBody (Encode.object [ ( "done", Encode.int doneStatus ) ])
+        , expect = Http.expectJson DoneResponseReceived (Decode.field "success" Decode.bool)
+        }
 
 
 callSortAPI : List ItemData -> Cmd Msg
@@ -133,7 +161,21 @@ update msg model =
             ( { model | filterTags = toggleTag tag model.filterTags }, Cmd.none )
 
         CardClicked itemId ->
-            ( { model | items = Dict.update itemId toggleDone model.items }, Cmd.none )
+            let
+                newItems =
+                    Dict.update itemId toggleDone model.items
+
+                maybeItem =
+                    Dict.get itemId newItems
+            in
+            ( { model | items = newItems }
+            , case maybeItem of
+                Just item ->
+                    updateDoneBackend model.apiKey itemId item.done
+
+                Nothing ->
+                    Cmd.none
+            )
 
         EditCardClicked itemId ->
             ( { model | items = Dict.update itemId toggleEdit model.items }, Cmd.none )
@@ -185,6 +227,9 @@ update msg model =
 
                 Err httpError ->
                     ( model, Cmd.none )
+
+        DoneResponseReceived success ->
+            ( model, Cmd.none )
 
 
 updateOverrideOrderIndex : Dict String Int -> String -> ItemData -> ItemData
