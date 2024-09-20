@@ -1,4 +1,4 @@
-module Main exposing (main)
+port module Main exposing (main)
 
 import Browser
 import Dict exposing (Dict)
@@ -55,6 +55,12 @@ type alias ItemData =
     }
 
 
+type alias MqttMessage =
+    { id : String
+    , status : Int
+    }
+
+
 
 -- INIT
 
@@ -81,6 +87,7 @@ type Msg
     | SortButtonClicked
     | SortResponseReceived (List String) (Result Http.Error (List Int))
     | DoneResponseReceived (Result Http.Error Bool)
+    | ReceivedMQTTMessage String
 
 
 itemsUrl : String -> String
@@ -220,8 +227,11 @@ update msg model =
             case payload of
                 Ok sortIndices ->
                     let
+                        newIndices =
+                            argsort sortIndices
+
                         idToIndexDict =
-                            Dict.fromList (List.map2 Tuple.pair requestedIds sortIndices)
+                            Dict.fromList (List.map2 Tuple.pair requestedIds newIndices)
                     in
                     ( { model | items = Dict.map (updateOverrideOrderIndex idToIndexDict) model.items, overrideOrdering = True }, Cmd.none )
 
@@ -230,6 +240,18 @@ update msg model =
 
         DoneResponseReceived success ->
             ( model, Cmd.none )
+
+        ReceivedMQTTMessage mqttMsg ->
+            let
+                maybeMqttData =
+                    parseMQTTMessage mqttMsg
+            in
+            case maybeMqttData of
+                Just mqttData ->
+                    ( { model | items = Dict.update mqttData.id (setDone mqttData.status) model.items }, Cmd.none )
+
+                Nothing ->
+                    ( model, Cmd.none )
 
 
 updateOverrideOrderIndex : Dict String Int -> String -> ItemData -> ItemData
@@ -283,6 +305,16 @@ toggleDone maybeItem =
             Nothing
 
 
+setDone : Int -> Maybe ItemData -> Maybe ItemData
+setDone newStatus maybeItem =
+    case maybeItem of
+        Just item ->
+            Just { item | done = newStatus }
+
+        Nothing ->
+            Nothing
+
+
 addNewItem : String -> Dict String ItemData -> Dict String ItemData
 addNewItem newId dict =
     let
@@ -311,13 +343,30 @@ addNewItem newId dict =
 -- SUBSCRIPTIONS
 
 
+port receiveMQTTMessage : (String -> msg) -> Sub msg
+
+
 subscriptions : Model -> Sub Msg
-subscriptions model =
-    Sub.batch
-        []
+subscriptions _ =
+    receiveMQTTMessage ReceivedMQTTMessage
+
+
+parseMQTTMessage : String -> Maybe MqttMessage
+parseMQTTMessage rawString =
+    case Decode.decodeString (Decode.map2 MqttMessage (Decode.field "id" Decode.string) (Decode.field "status" Decode.int)) rawString of
+        Ok mqttData ->
+            Just mqttData
+
+        Err _ ->
+            Nothing
 
 
 
+{- subscriptions : Model -> Sub Msg
+   subscriptions model =
+       Sub.batch
+           []
+-}
 -- VIEW
 
 
@@ -641,3 +690,10 @@ maxOrderIndex items =
 sortAPIResponseDecoder : Decode.Decoder (List Int)
 sortAPIResponseDecoder =
     Decode.field "sort_indices" (Decode.list Decode.int)
+
+
+argsort : List comparable -> List Int
+argsort l =
+    List.indexedMap Tuple.pair l
+        |> List.sortBy Tuple.second
+        |> List.map Tuple.first
