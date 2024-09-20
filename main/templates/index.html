@@ -30,13 +30,16 @@
         // to be called when a MQTT message arrives
         function onMessageArrived(message) {
           const msg_string = message.payloadString;
-          app.ports.receiveMQTTMessage.send(message.payloadString);
+          console.log(msg_string);
+          app.ports.receiveMQTTMessage.send(msg_string);
         }
 
         // called when the client has connected
         function onConnectSuccess() {
           // Once a connection has been made, subscribe to the needed channels
           client.subscribe(done_topic, {qos: 1});
+
+          console.log("Subscribed");
           // client.subscribe(topic_newItem, {qos: 1});
         }
 

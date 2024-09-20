@@ -6690,6 +6690,7 @@ var $author$project$Main$MqttMessage = F2(
 	function (id, status) {
 		return {id: id, status: status};
 	});
+var $elm$json$Json$Decode$bool = _Json_decodeBool;
 var $author$project$Main$parseMQTTMessage = function (rawString) {
 	var _v0 = A2(
 		$elm$json$Json$Decode$decodeString,
@@ -6697,7 +6698,7 @@ var $author$project$Main$parseMQTTMessage = function (rawString) {
 			$elm$json$Json$Decode$map2,
 			$author$project$Main$MqttMessage,
 			A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string),
-			A2($elm$json$Json$Decode$field, 'status', $elm$json$Json$Decode$int)),
+			A2($elm$json$Json$Decode$field, 'status', $elm$json$Json$Decode$bool)),
 		rawString);
 	if (_v0.$ === 'Ok') {
 		var mqttData = _v0.a;
@@ -6930,7 +6931,6 @@ var $author$project$Main$uniqueTags = function (items) {
 var $author$project$Main$DoneResponseReceived = function (a) {
 	return {$: 'DoneResponseReceived', a: a};
 };
-var $elm$json$Json$Decode$bool = _Json_decodeBool;
 var $elm$http$Http$Header = F2(
 	function (a, b) {
 		return {$: 'Header', a: a, b: b};
@@ -7167,7 +7167,8 @@ var $author$project$Main$update = F2(
 								items: A3(
 									$elm$core$Dict$update,
 									mqttData.id,
-									$author$project$Main$setDone(mqttData.status),
+									$author$project$Main$setDone(
+										mqttData.status ? 1 : 0),
 									model.items)
 							}),
 						$elm$core$Platform$Cmd$none);
