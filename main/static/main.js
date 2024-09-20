@@ -6878,6 +6878,54 @@ var $author$project$Main$uniqueTags = function (items) {
 	return $elm$core$Set$fromList(
 		$author$project$Main$allTags(items));
 };
+var $author$project$Main$DoneResponseReceived = function (a) {
+	return {$: 'DoneResponseReceived', a: a};
+};
+var $elm$json$Json$Decode$bool = _Json_decodeBool;
+var $elm$http$Http$Header = F2(
+	function (a, b) {
+		return {$: 'Header', a: a, b: b};
+	});
+var $elm$http$Http$header = $elm$http$Http$Header;
+var $author$project$Main$httpUpdate = function (options) {
+	return $elm$http$Http$request(
+		{
+			body: options.body,
+			expect: options.expect,
+			headers: _List_fromArray(
+				[
+					A2($elm$http$Http$header, 'Content-Type', 'application/json')
+				]),
+			method: 'UPDATE',
+			timeout: $elm$core$Maybe$Nothing,
+			tracker: $elm$core$Maybe$Nothing,
+			url: options.url
+		});
+};
+var $elm$json$Json$Encode$int = _Json_wrap;
+var $author$project$Main$updateDoneUrl = F2(
+	function (apiKey, itemId) {
+		return 'https://picluster.a-h.wtf/einkaufsliste/api/v1/items/' + (itemId + ('/done?k=' + apiKey));
+	});
+var $author$project$Main$updateDoneBackend = F3(
+	function (apiKey, itemId, doneStatus) {
+		return $author$project$Main$httpUpdate(
+			{
+				body: $elm$http$Http$jsonBody(
+					$elm$json$Json$Encode$object(
+						_List_fromArray(
+							[
+								_Utils_Tuple2(
+								'done',
+								$elm$json$Json$Encode$int(doneStatus))
+							]))),
+				expect: A2(
+					$elm$http$Http$expectJson,
+					$author$project$Main$DoneResponseReceived,
+					A2($elm$json$Json$Decode$field, 'success', $elm$json$Json$Decode$bool)),
+				url: A2($author$project$Main$updateDoneUrl, apiKey, itemId)
+			});
+	});
 var $author$project$Main$updateOverrideOrderIndex = F3(
 	function (idToIndexDict, itemId, item) {
 		return _Utils_update(
@@ -6951,13 +6999,20 @@ var $author$project$Main$update = F2(
 					$elm$core$Platform$Cmd$none);
 			case 'CardClicked':
 				var itemId = msg.a;
+				var newItems = A3($elm$core$Dict$update, itemId, $author$project$Main$toggleDone, model.items);
+				var maybeItem = A2($elm$core$Dict$get, itemId, newItems);
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{
-							items: A3($elm$core$Dict$update, itemId, $author$project$Main$toggleDone, model.items)
-						}),
-					$elm$core$Platform$Cmd$none);
+						{items: newItems}),
+					function () {
+						if (maybeItem.$ === 'Just') {
+							var item = maybeItem.a;
+							return A3($author$project$Main$updateDoneBackend, model.apiKey, itemId, item.done);
+						} else {
+							return $elm$core$Platform$Cmd$none;
+						}
+					}());
 			case 'EditCardClicked':
 				var itemId = msg.a;
 				return _Utils_Tuple2(
@@ -7025,7 +7080,7 @@ var $author$project$Main$update = F2(
 					model,
 					$author$project$Main$callSortAPI(
 						$elm$core$Dict$values(model.items)));
-			default:
+			case 'SortResponseReceived':
 				var requestedIds = msg.a;
 				var payload = msg.b;
 				if (payload.$ === 'Ok') {
@@ -7047,6 +7102,9 @@ var $author$project$Main$update = F2(
 					var httpError = payload.a;
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
+			default:
+				var success = msg.a;
+				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 		}
 	});
 var $author$project$Main$AddNewCardClicked = {$: 'AddNewCardClicked'};
@@ -7212,7 +7270,6 @@ var $mpizenberg$elm_pointer_events$Internal$Decode$Keys = F4(
 	function (alt, ctrl, meta, shift) {
 		return {alt: alt, ctrl: ctrl, meta: meta, shift: shift};
 	});
-var $elm$json$Json$Decode$bool = _Json_decodeBool;
 var $mpizenberg$elm_pointer_events$Internal$Decode$keys = A5(
 	$elm$json$Json$Decode$map4,
 	$mpizenberg$elm_pointer_events$Internal$Decode$Keys,
