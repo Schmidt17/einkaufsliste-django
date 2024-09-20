@@ -6707,6 +6707,46 @@ var $author$project$Main$parseMQTTMessage = function (rawString) {
 		return $elm$core$Maybe$Nothing;
 	}
 };
+var $author$project$Main$ItemPosted = F2(
+	function (a, b) {
+		return {$: 'ItemPosted', a: a, b: b};
+	});
+var $author$project$Main$PostResponse = F2(
+	function (success, newId) {
+		return {newId: newId, success: success};
+	});
+var $author$project$Main$postItem = F2(
+	function (apiKey, item) {
+		return $elm$http$Http$post(
+			{
+				body: $elm$http$Http$jsonBody(
+					$elm$json$Json$Encode$object(
+						_List_fromArray(
+							[
+								_Utils_Tuple2(
+								'itemData',
+								$elm$json$Json$Encode$object(
+									_List_fromArray(
+										[
+											_Utils_Tuple2(
+											'title',
+											$elm$json$Json$Encode$string(item.title)),
+											_Utils_Tuple2(
+											'tags',
+											A2($elm$json$Json$Encode$list, $elm$json$Json$Encode$string, item.tags))
+										])))
+							]))),
+				expect: A2(
+					$elm$http$Http$expectJson,
+					$author$project$Main$ItemPosted(item.id),
+					A3(
+						$elm$json$Json$Decode$map2,
+						$author$project$Main$PostResponse,
+						A2($elm$json$Json$Decode$field, 'success', $elm$json$Json$Decode$bool),
+						A2($elm$json$Json$Decode$field, 'newId', $elm$json$Json$Decode$string))),
+				url: $author$project$Main$itemsUrl(apiKey)
+			});
+	});
 var $author$project$Main$receivedToItem = F2(
 	function (index, itemReceived) {
 		return {done: itemReceived.done, editing: false, id: itemReceived.id, orderIndexDefault: index, orderIndexOverride: index, synced: true, tags: itemReceived.tags, title: itemReceived.title};
@@ -7092,6 +7132,21 @@ var $author$project$Main$update = F2(
 				} else {
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
+			case 'FinishEditing':
+				var itemId = msg.a;
+				var maybeItem = A2($elm$core$Dict$get, itemId, model.items);
+				if (maybeItem.$ === 'Just') {
+					var item = maybeItem.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								items: A3($elm$core$Dict$update, itemId, $author$project$Main$toggleEdit, model.items)
+							}),
+						A2($author$project$Main$postItem, model.apiKey, item));
+				} else {
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				}
 			case 'AddNewCardClicked':
 				return _Utils_Tuple2(
 					model,
@@ -7155,7 +7210,7 @@ var $author$project$Main$update = F2(
 			case 'DoneResponseReceived':
 				var success = msg.a;
 				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-			default:
+			case 'ReceivedMQTTMessage':
 				var mqttMsg = msg.a;
 				var maybeMqttData = $author$project$Main$parseMQTTMessage(mqttMsg);
 				if (maybeMqttData.$ === 'Just') {
@@ -7175,6 +7230,8 @@ var $author$project$Main$update = F2(
 				} else {
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
+			default:
+				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 		}
 	});
 var $author$project$Main$AddNewCardClicked = {$: 'AddNewCardClicked'};
@@ -7507,6 +7564,9 @@ var $author$project$Main$headerView = function (model) {
 					]))
 			]));
 };
+var $author$project$Main$FinishEditing = function (a) {
+	return {$: 'FinishEditing', a: a};
+};
 var $author$project$Main$TitleChanged = F2(
 	function (a, b) {
 		return {$: 'TitleChanged', a: a, b: b};
@@ -7630,7 +7690,9 @@ var $author$project$Main$editCard = function (item) {
 									[
 										$elm$html$Html$Attributes$class('green btn finish-edit'),
 										$fapian$elm_html_aria$Html$Attributes$Aria$role('button'),
-										$fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel('Bestätigen')
+										$fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel('Bestätigen'),
+										$elm$html$Html$Events$onClick(
+										$author$project$Main$FinishEditing(item.id))
 									]),
 								_List_fromArray(
 									[

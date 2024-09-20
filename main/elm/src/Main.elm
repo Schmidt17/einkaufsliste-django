@@ -81,6 +81,7 @@ type Msg
     | FilterClicked String
     | CardClicked String
     | CancelEditing String
+    | FinishEditing String
     | AddNewCardClicked
     | AddNewCard UUID.UUID
     | TitleChanged String String
@@ -88,6 +89,7 @@ type Msg
     | SortResponseReceived (List String) (Result Http.Error (List Int))
     | DoneResponseReceived (Result Http.Error Bool)
     | ReceivedMQTTMessage String
+    | ItemPosted String (Result Http.Error PostResponse)
 
 
 itemsUrl : String -> String
@@ -108,6 +110,21 @@ sortUrl =
 getItems : String -> Cmd Msg
 getItems apiKey =
     Http.get { url = itemsUrl apiKey, expect = Http.expectString ItemsReceived }
+
+
+type alias PostResponse =
+    { success : Bool
+    , newId : String
+    }
+
+
+postItem : String -> ItemData -> Cmd Msg
+postItem apiKey item =
+    Http.post
+        { url = itemsUrl apiKey
+        , body = Http.jsonBody (Encode.object [ ( "itemData", Encode.object [ ( "title", Encode.string item.title ), ( "tags", Encode.list Encode.string item.tags ) ] ) ])
+        , expect = Http.expectJson (ItemPosted item.id) (Decode.map2 PostResponse (Decode.field "success" Decode.bool) (Decode.field "newId" Decode.string))
+        }
 
 
 httpUpdate : { url : String, body : Http.Body, expect : Http.Expect msg } -> Cmd msg
@@ -203,6 +220,18 @@ update msg model =
                 Nothing ->
                     ( model, Cmd.none )
 
+        FinishEditing itemId ->
+            let
+                maybeItem =
+                    Dict.get itemId model.items
+            in
+            case maybeItem of
+                Just item ->
+                    ( { model | items = Dict.update itemId toggleEdit model.items }, postItem model.apiKey item )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
         AddNewCardClicked ->
             ( model, Random.generate AddNewCard UUID.generator )
 
@@ -266,6 +295,9 @@ update msg model =
 
                 Nothing ->
                     ( model, Cmd.none )
+
+        _ ->
+            ( model, Cmd.none )
 
 
 updateOverrideOrderIndex : Dict String Int -> String -> ItemData -> ItemData
@@ -513,7 +545,7 @@ editCard item =
             , div [ class "chips chips-autocomplete chips-placeholder", placeholder "Tags" ] []
             , div [ class "card-action valign-wrapper justify-right" ]
                 [ cancelButton item.id
-                , a [ class "green btn finish-edit", Aria.role "button", Aria.ariaLabel "Bestätigen" ] [ i [ class "material-icons" ] [ text "check" ] ]
+                , a [ class "green btn finish-edit", Aria.role "button", Aria.ariaLabel "Bestätigen", onClick (FinishEditing item.id) ] [ i [ class "material-icons" ] [ text "check" ] ]
                 ]
             ]
         ]
