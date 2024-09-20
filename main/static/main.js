@@ -6219,9 +6219,12 @@ var $author$project$Main$init = function (flags) {
 		$author$project$Main$getItems(flags));
 };
 var $elm$json$Json$Decode$string = _Json_decodeString;
-var $elm$core$Platform$Sub$batch = _Platform_batch;
-var $author$project$Main$subscriptions = function (model) {
-	return $elm$core$Platform$Sub$batch(_List_Nil);
+var $author$project$Main$ReceivedMQTTMessage = function (a) {
+	return {$: 'ReceivedMQTTMessage', a: a};
+};
+var $author$project$Main$receiveMQTTMessage = _Platform_incomingPort('receiveMQTTMessage', $elm$json$Json$Decode$string);
+var $author$project$Main$subscriptions = function (_v0) {
+	return $author$project$Main$receiveMQTTMessage($author$project$Main$ReceivedMQTTMessage);
 };
 var $author$project$Main$AddNewCard = function (a) {
 	return {$: 'AddNewCard', a: a};
@@ -6273,6 +6276,24 @@ var $author$project$Main$addNewItem = F2(
 			{done: 0, editing: true, id: newId, orderIndexDefault: newIndex, orderIndexOverride: newIndex, synced: false, tags: _List_Nil, title: ''},
 			dict);
 	});
+var $elm$core$Tuple$pair = F2(
+	function (a, b) {
+		return _Utils_Tuple2(a, b);
+	});
+var $elm$core$Tuple$second = function (_v0) {
+	var y = _v0.b;
+	return y;
+};
+var $elm$core$List$sortBy = _List_sortBy;
+var $author$project$Main$argsort = function (l) {
+	return A2(
+		$elm$core$List$map,
+		$elm$core$Tuple$first,
+		A2(
+			$elm$core$List$sortBy,
+			$elm$core$Tuple$second,
+			A2($elm$core$List$indexedMap, $elm$core$Tuple$pair, l)));
+};
 var $author$project$Main$SortResponseReceived = F2(
 	function (a, b) {
 		return {$: 'SortResponseReceived', a: a, b: b};
@@ -6640,10 +6661,6 @@ var $elm$core$Dict$map = F2(
 	});
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
-var $elm$core$Tuple$pair = F2(
-	function (a, b) {
-		return _Utils_Tuple2(a, b);
-	});
 var $author$project$Main$ItemDataReceived = F4(
 	function (id, title, tags, done) {
 		return {done: done, id: id, tags: tags, title: title};
@@ -6669,9 +6686,41 @@ var $author$project$Main$parseItems = function (rawString) {
 		return _List_Nil;
 	}
 };
+var $author$project$Main$MqttMessage = F2(
+	function (id, status) {
+		return {id: id, status: status};
+	});
+var $author$project$Main$parseMQTTMessage = function (rawString) {
+	var _v0 = A2(
+		$elm$json$Json$Decode$decodeString,
+		A3(
+			$elm$json$Json$Decode$map2,
+			$author$project$Main$MqttMessage,
+			A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string),
+			A2($elm$json$Json$Decode$field, 'status', $elm$json$Json$Decode$int)),
+		rawString);
+	if (_v0.$ === 'Ok') {
+		var mqttData = _v0.a;
+		return $elm$core$Maybe$Just(mqttData);
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
 var $author$project$Main$receivedToItem = F2(
 	function (index, itemReceived) {
 		return {done: itemReceived.done, editing: false, id: itemReceived.id, orderIndexDefault: index, orderIndexOverride: index, synced: true, tags: itemReceived.tags, title: itemReceived.title};
+	});
+var $author$project$Main$setDone = F2(
+	function (newStatus, maybeItem) {
+		if (maybeItem.$ === 'Just') {
+			var item = maybeItem.a;
+			return $elm$core$Maybe$Just(
+				_Utils_update(
+					item,
+					{done: newStatus}));
+		} else {
+			return $elm$core$Maybe$Nothing;
+		}
 	});
 var $elm$core$String$cons = _String_cons;
 var $elm$core$String$fromChar = function (_char) {
@@ -7085,8 +7134,9 @@ var $author$project$Main$update = F2(
 				var payload = msg.b;
 				if (payload.$ === 'Ok') {
 					var sortIndices = payload.a;
+					var newIndices = $author$project$Main$argsort(sortIndices);
 					var idToIndexDict = $elm$core$Dict$fromList(
-						A3($elm$core$List$map2, $elm$core$Tuple$pair, requestedIds, sortIndices));
+						A3($elm$core$List$map2, $elm$core$Tuple$pair, requestedIds, newIndices));
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
@@ -7102,9 +7152,28 @@ var $author$project$Main$update = F2(
 					var httpError = payload.a;
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
-			default:
+			case 'DoneResponseReceived':
 				var success = msg.a;
 				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+			default:
+				var mqttMsg = msg.a;
+				var maybeMqttData = $author$project$Main$parseMQTTMessage(mqttMsg);
+				if (maybeMqttData.$ === 'Just') {
+					var mqttData = maybeMqttData.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								items: A3(
+									$elm$core$Dict$update,
+									mqttData.id,
+									$author$project$Main$setDone(mqttData.status),
+									model.items)
+							}),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				}
 		}
 	});
 var $author$project$Main$AddNewCardClicked = {$: 'AddNewCardClicked'};
@@ -7736,7 +7805,6 @@ var $author$project$Main$isVisible = F2(
 				},
 				item.tags));
 	});
-var $elm$core$List$sortBy = _List_sortBy;
 var $author$project$Main$sortItems = F2(
 	function (useOverrideIndex, items) {
 		return useOverrideIndex ? A2(
