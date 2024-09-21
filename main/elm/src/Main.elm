@@ -47,11 +47,14 @@ type alias ItemData =
     { id : String
     , title : String
     , tags : List String
+    , draftTitle : String
+    , draftTags : List String
     , done : Int
     , orderIndexDefault : Int
     , orderIndexOverride : Int
     , editing : Bool
     , synced : Bool
+    , new : Bool
     }
 
 
@@ -84,7 +87,7 @@ type Msg
     | FinishEditing String
     | AddNewCardClicked
     | AddNewCard UUID.UUID
-    | TitleChanged String String
+    | DraftTitleChanged String String
     | SortButtonClicked
     | SortResponseReceived (List String) (Result Http.Error (List Int))
     | DoneResponseReceived (Result Http.Error Bool)
@@ -211,23 +214,41 @@ update msg model =
             in
             case maybeItem of
                 Just item ->
-                    if item.synced then
-                        ( { model | items = Dict.update itemId toggleEdit model.items }, Cmd.none )
+                    if item.new then
+                        ( { model | items = Dict.remove itemId model.items }, Cmd.none )
 
                     else
-                        ( { model | items = Dict.remove itemId model.items }, Cmd.none )
+                        ( { model | items = Dict.update itemId toggleEdit model.items }, Cmd.none )
 
                 Nothing ->
                     ( model, Cmd.none )
 
         FinishEditing itemId ->
-            let
-                maybeItem =
-                    Dict.get itemId model.items
-            in
-            case maybeItem of
+            case Dict.get itemId model.items of
                 Just item ->
-                    ( { model | items = Dict.update itemId toggleEdit model.items }, postItem model.apiKey item )
+                    let
+                        updatedItem =
+                            { item | title = item.draftTitle, tags = item.draftTags }
+                    in
+                    ( { model
+                        | items =
+                            Dict.update itemId
+                                (\i ->
+                                    case i of
+                                        Just it ->
+                                            Just updatedItem
+
+                                        Nothing ->
+                                            Nothing
+                                )
+                                model.items
+                      }
+                    , if item.new then
+                        postItem model.apiKey updatedItem
+
+                      else
+                        Cmd.none
+                    )
 
                 Nothing ->
                     ( model, Cmd.none )
@@ -238,12 +259,12 @@ update msg model =
         AddNewCard newUUID ->
             let
                 newId =
-                    UUID.toString newUUID
+                    "local-" ++ UUID.toString newUUID
             in
             ( { model | items = addNewItem newId model.items }, Cmd.none )
 
-        TitleChanged itemId newTitle ->
-            ( { model | items = Dict.update itemId (updateTitle newTitle) model.items }, Cmd.none )
+        DraftTitleChanged itemId newTitle ->
+            ( { model | items = Dict.update itemId (updateDraftTitle newTitle) model.items }, Cmd.none )
 
         SortButtonClicked ->
             if model.overrideOrdering then
@@ -296,8 +317,26 @@ update msg model =
                 Nothing ->
                     ( model, Cmd.none )
 
-        _ ->
-            ( model, Cmd.none )
+        ItemPosted oldId postResponsePayload ->
+            case postResponsePayload of
+                Ok postResponse ->
+                    let
+                        maybeOldItem =
+                            Dict.get oldId model.items
+
+                        newItemDict =
+                            case maybeOldItem of
+                                Just oldItem ->
+                                    Dict.remove oldId model.items
+                                        |> Dict.insert postResponse.newId { oldItem | id = postResponse.newId, synced = True, new = False, editing = False }
+
+                                Nothing ->
+                                    model.items
+                    in
+                    ( { model | items = Debug.log "itemsAfter" newItemDict }, Cmd.none )
+
+                Err httpError ->
+                    ( model, Cmd.none )
 
 
 updateOverrideOrderIndex : Dict String Int -> String -> ItemData -> ItemData
@@ -311,6 +350,16 @@ updateOverrideOrderIndex idToIndexDict itemId item =
                 Nothing ->
                     item.orderIndexOverride
     }
+
+
+updateDraftTitle : String -> Maybe ItemData -> Maybe ItemData
+updateDraftTitle newTitle maybeItem =
+    case maybeItem of
+        Just item ->
+            Just { item | draftTitle = newTitle }
+
+        Nothing ->
+            Nothing
 
 
 updateTitle : String -> Maybe ItemData -> Maybe ItemData
@@ -327,7 +376,7 @@ toggleEdit : Maybe ItemData -> Maybe ItemData
 toggleEdit maybeItem =
     case maybeItem of
         Just item ->
-            Just { item | editing = not item.editing }
+            Just { item | editing = not item.editing, draftTitle = item.title, draftTags = item.tags }
 
         Nothing ->
             Nothing
@@ -376,11 +425,14 @@ addNewItem newId dict =
         { id = newId
         , title = ""
         , tags = []
+        , draftTitle = ""
+        , draftTags = []
         , done = 0
         , orderIndexDefault = newIndex
         , orderIndexOverride = newIndex
         , editing = True
         , synced = False
+        , new = True
         }
         dict
 
@@ -541,7 +593,7 @@ editCard item =
             "card s12 item-edit"
         ]
         [ div [ class "card-content" ]
-            [ div [ class "input-field card-title" ] [ input [ placeholder "Neuer Eintrag", type_ "text", value item.title, onInput (TitleChanged item.id) ] [] ]
+            [ div [ class "input-field card-title" ] [ input [ placeholder "Neuer Eintrag", type_ "text", value item.draftTitle, onInput (DraftTitleChanged item.id) ] [] ]
             , div [ class "chips chips-autocomplete chips-placeholder", placeholder "Tags" ] []
             , div [ class "card-action valign-wrapper justify-right" ]
                 [ cancelButton item.id
@@ -668,11 +720,14 @@ receivedToItem index itemReceived =
     { id = itemReceived.id
     , title = itemReceived.title
     , tags = itemReceived.tags
+    , draftTitle = itemReceived.title
+    , draftTags = itemReceived.tags
     , done = itemReceived.done
     , orderIndexDefault = index
     , orderIndexOverride = index
     , editing = False
     , synced = True
+    , new = False
     }
 
 
