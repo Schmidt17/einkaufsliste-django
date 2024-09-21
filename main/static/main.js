@@ -6273,7 +6273,7 @@ var $author$project$Main$addNewItem = F2(
 		return A3(
 			$elm$core$Dict$insert,
 			newId,
-			{done: 0, editing: true, id: newId, orderIndexDefault: newIndex, orderIndexOverride: newIndex, synced: false, tags: _List_Nil, title: ''},
+			{done: 0, draftTags: _List_Nil, draftTitle: '', editing: true, id: newId, _new: true, orderIndexDefault: newIndex, orderIndexOverride: newIndex, synced: false, tags: _List_Nil, title: ''},
 			dict);
 	});
 var $elm$core$Tuple$pair = F2(
@@ -6640,6 +6640,7 @@ var $author$project$Main$itemListToDict = function (items) {
 	return $elm$core$Dict$fromList(
 		$author$project$Main$itemListToAssoc(items));
 };
+var $elm$core$Debug$log = _Debug_log;
 var $elm$core$Dict$map = F2(
 	function (func, dict) {
 		if (dict.$ === 'RBEmpty_elm_builtin') {
@@ -6749,7 +6750,7 @@ var $author$project$Main$postItem = F2(
 	});
 var $author$project$Main$receivedToItem = F2(
 	function (index, itemReceived) {
-		return {done: itemReceived.done, editing: false, id: itemReceived.id, orderIndexDefault: index, orderIndexOverride: index, synced: true, tags: itemReceived.tags, title: itemReceived.title};
+		return {done: itemReceived.done, draftTags: itemReceived.tags, draftTitle: itemReceived.title, editing: false, id: itemReceived.id, _new: false, orderIndexDefault: index, orderIndexOverride: index, synced: true, tags: itemReceived.tags, title: itemReceived.title};
 	});
 var $author$project$Main$setDone = F2(
 	function (newStatus, maybeItem) {
@@ -6913,7 +6914,7 @@ var $author$project$Main$toggleEdit = function (maybeItem) {
 		return $elm$core$Maybe$Just(
 			_Utils_update(
 				item,
-				{editing: !item.editing}));
+				{draftTags: item.tags, draftTitle: item.title, editing: !item.editing}));
 	} else {
 		return $elm$core$Maybe$Nothing;
 	}
@@ -7015,6 +7016,18 @@ var $author$project$Main$updateDoneBackend = F3(
 				url: A2($author$project$Main$updateDoneUrl, apiKey, itemId)
 			});
 	});
+var $author$project$Main$updateDraftTitle = F2(
+	function (newTitle, maybeItem) {
+		if (maybeItem.$ === 'Just') {
+			var item = maybeItem.a;
+			return $elm$core$Maybe$Just(
+				_Utils_update(
+					item,
+					{draftTitle: newTitle}));
+		} else {
+			return $elm$core$Maybe$Nothing;
+		}
+	});
 var $author$project$Main$updateOverrideOrderIndex = F3(
 	function (idToIndexDict, itemId, item) {
 		return _Utils_update(
@@ -7030,18 +7043,6 @@ var $author$project$Main$updateOverrideOrderIndex = F3(
 					}
 				}()
 			});
-	});
-var $author$project$Main$updateTitle = F2(
-	function (newTitle, maybeItem) {
-		if (maybeItem.$ === 'Just') {
-			var item = maybeItem.a;
-			return $elm$core$Maybe$Just(
-				_Utils_update(
-					item,
-					{title: newTitle}));
-		} else {
-			return $elm$core$Maybe$Nothing;
-		}
 	});
 var $author$project$Main$update = F2(
 	function (msg, model) {
@@ -7116,17 +7117,17 @@ var $author$project$Main$update = F2(
 				var maybeItem = A2($elm$core$Dict$get, itemId, model.items);
 				if (maybeItem.$ === 'Just') {
 					var item = maybeItem.a;
-					return item.synced ? _Utils_Tuple2(
+					return item._new ? _Utils_Tuple2(
 						_Utils_update(
 							model,
 							{
-								items: A3($elm$core$Dict$update, itemId, $author$project$Main$toggleEdit, model.items)
+								items: A2($elm$core$Dict$remove, itemId, model.items)
 							}),
 						$elm$core$Platform$Cmd$none) : _Utils_Tuple2(
 						_Utils_update(
 							model,
 							{
-								items: A2($elm$core$Dict$remove, itemId, model.items)
+								items: A3($elm$core$Dict$update, itemId, $author$project$Main$toggleEdit, model.items)
 							}),
 						$elm$core$Platform$Cmd$none);
 				} else {
@@ -7134,16 +7135,30 @@ var $author$project$Main$update = F2(
 				}
 			case 'FinishEditing':
 				var itemId = msg.a;
-				var maybeItem = A2($elm$core$Dict$get, itemId, model.items);
-				if (maybeItem.$ === 'Just') {
-					var item = maybeItem.a;
+				var _v4 = A2($elm$core$Dict$get, itemId, model.items);
+				if (_v4.$ === 'Just') {
+					var item = _v4.a;
+					var updatedItem = _Utils_update(
+						item,
+						{tags: item.draftTags, title: item.draftTitle});
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
 							{
-								items: A3($elm$core$Dict$update, itemId, $author$project$Main$toggleEdit, model.items)
+								items: A3(
+									$elm$core$Dict$update,
+									itemId,
+									function (i) {
+										if (i.$ === 'Just') {
+											var it = i.a;
+											return $elm$core$Maybe$Just(updatedItem);
+										} else {
+											return $elm$core$Maybe$Nothing;
+										}
+									},
+									model.items)
 							}),
-						A2($author$project$Main$postItem, model.apiKey, item));
+						item._new ? A2($author$project$Main$postItem, model.apiKey, updatedItem) : $elm$core$Platform$Cmd$none);
 				} else {
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
@@ -7153,7 +7168,7 @@ var $author$project$Main$update = F2(
 					A2($elm$random$Random$generate, $author$project$Main$AddNewCard, $TSFoster$elm_uuid$UUID$generator));
 			case 'AddNewCard':
 				var newUUID = msg.a;
-				var newId = $TSFoster$elm_uuid$UUID$toString(newUUID);
+				var newId = 'local-' + $TSFoster$elm_uuid$UUID$toString(newUUID);
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
@@ -7161,7 +7176,7 @@ var $author$project$Main$update = F2(
 							items: A2($author$project$Main$addNewItem, newId, model.items)
 						}),
 					$elm$core$Platform$Cmd$none);
-			case 'TitleChanged':
+			case 'DraftTitleChanged':
 				var itemId = msg.a;
 				var newTitle = msg.b;
 				return _Utils_Tuple2(
@@ -7171,7 +7186,7 @@ var $author$project$Main$update = F2(
 							items: A3(
 								$elm$core$Dict$update,
 								itemId,
-								$author$project$Main$updateTitle(newTitle),
+								$author$project$Main$updateDraftTitle(newTitle),
 								model.items)
 						}),
 					$elm$core$Platform$Cmd$none);
@@ -7231,7 +7246,36 @@ var $author$project$Main$update = F2(
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
 			default:
-				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				var oldId = msg.a;
+				var postResponsePayload = msg.b;
+				if (postResponsePayload.$ === 'Ok') {
+					var postResponse = postResponsePayload.a;
+					var maybeOldItem = A2($elm$core$Dict$get, oldId, model.items);
+					var newItemDict = function () {
+						if (maybeOldItem.$ === 'Just') {
+							var oldItem = maybeOldItem.a;
+							return A3(
+								$elm$core$Dict$insert,
+								postResponse.newId,
+								_Utils_update(
+									oldItem,
+									{editing: false, id: postResponse.newId, _new: false, synced: true}),
+								A2($elm$core$Dict$remove, oldId, model.items));
+						} else {
+							return model.items;
+						}
+					}();
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								items: A2($elm$core$Debug$log, 'itemsAfter', newItemDict)
+							}),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					var httpError = postResponsePayload.a;
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				}
 		}
 	});
 var $author$project$Main$AddNewCardClicked = {$: 'AddNewCardClicked'};
@@ -7564,13 +7608,13 @@ var $author$project$Main$headerView = function (model) {
 					]))
 			]));
 };
+var $author$project$Main$DraftTitleChanged = F2(
+	function (a, b) {
+		return {$: 'DraftTitleChanged', a: a, b: b};
+	});
 var $author$project$Main$FinishEditing = function (a) {
 	return {$: 'FinishEditing', a: a};
 };
-var $author$project$Main$TitleChanged = F2(
-	function (a, b) {
-		return {$: 'TitleChanged', a: a, b: b};
-	});
 var $author$project$Main$CancelEditing = function (a) {
 	return {$: 'CancelEditing', a: a};
 };
@@ -7661,9 +7705,9 @@ var $author$project$Main$editCard = function (item) {
 									[
 										$elm$html$Html$Attributes$placeholder('Neuer Eintrag'),
 										$elm$html$Html$Attributes$type_('text'),
-										$elm$html$Html$Attributes$value(item.title),
+										$elm$html$Html$Attributes$value(item.draftTitle),
 										$elm$html$Html$Events$onInput(
-										$author$project$Main$TitleChanged(item.id))
+										$author$project$Main$DraftTitleChanged(item.id))
 									]),
 								_List_Nil)
 							])),
