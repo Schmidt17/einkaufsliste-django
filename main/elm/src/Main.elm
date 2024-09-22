@@ -2,7 +2,7 @@ port module Main exposing (main)
 
 import Browser
 import Dict exposing (Dict)
-import Html exposing (Html, a, br, button, div, h1, header, i, input, label, li, main_, nav, p, span, text, ul)
+import Html exposing (Html, a, br, button, div, h1, header, i, input, label, li, main_, nav, node, p, span, text, ul)
 import Html.Attributes exposing (..)
 import Html.Attributes.Aria as Aria
 import Html.Events exposing (onClick, onInput, onMouseDown, preventDefaultOn)
@@ -450,6 +450,12 @@ addNewItem newId dict =
 -- SUBSCRIPTIONS
 
 
+type alias ChipsInitArgs =
+    { parentSelector : String
+    , tags : List String
+    }
+
+
 port receiveMQTTMessage : (String -> msg) -> Sub msg
 
 
@@ -603,13 +609,25 @@ editCard item =
         ]
         [ div [ class "card-content" ]
             [ div [ class "input-field card-title" ] [ input [ placeholder "Neuer Eintrag", type_ "text", value item.draftTitle, onInput (DraftTitleChanged item.id) ] [] ]
-            , div [ class "chips chips-autocomplete chips-placeholder", placeholder "Tags" ] []
+            , editChipsView item.draftTags
             , div [ class "card-action valign-wrapper justify-right" ]
                 [ cancelButton item.id
                 , a [ class "green btn finish-edit", Aria.role "button", Aria.ariaLabel "Bestätigen", onClick (FinishEditing item.id) ] [ i [ class "material-icons" ] [ text "check" ] ]
                 ]
             ]
         ]
+
+
+editChipsView : List String -> Html Msg
+editChipsView tags =
+    node "custom-chips"
+        [ class "chips chips-autocomplete chips-placeholder", placeholder "Tags" ]
+        (List.map tagElement tags)
+
+
+tagElement : String -> Html Msg
+tagElement tagName =
+    node "chips-tag" [ value tagName ] []
 
 
 cancelButton : String -> Html Msg

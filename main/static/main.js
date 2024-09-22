@@ -7643,6 +7643,34 @@ var $author$project$Main$cancelButton = function (itemId) {
 				$elm$html$Html$text('Abbrechen')
 			]));
 };
+var $elm$virtual_dom$VirtualDom$node = function (tag) {
+	return _VirtualDom_node(
+		_VirtualDom_noScript(tag));
+};
+var $elm$html$Html$node = $elm$virtual_dom$VirtualDom$node;
+var $elm$html$Html$Attributes$placeholder = $elm$html$Html$Attributes$stringProperty('placeholder');
+var $elm$html$Html$Attributes$value = $elm$html$Html$Attributes$stringProperty('value');
+var $author$project$Main$tagElement = function (tagName) {
+	return A3(
+		$elm$html$Html$node,
+		'chips-tag',
+		_List_fromArray(
+			[
+				$elm$html$Html$Attributes$value(tagName)
+			]),
+		_List_Nil);
+};
+var $author$project$Main$editChipsView = function (tags) {
+	return A3(
+		$elm$html$Html$node,
+		'custom-chips',
+		_List_fromArray(
+			[
+				$elm$html$Html$Attributes$class('chips chips-autocomplete chips-placeholder'),
+				$elm$html$Html$Attributes$placeholder('Tags')
+			]),
+		A2($elm$core$List$map, $author$project$Main$tagElement, tags));
+};
 var $elm$html$Html$input = _VirtualDom_node('input');
 var $elm$html$Html$Events$alwaysStop = function (x) {
 	return _Utils_Tuple2(x, true);
@@ -7675,9 +7703,7 @@ var $elm$html$Html$Events$onInput = function (tagger) {
 			$elm$html$Html$Events$alwaysStop,
 			A2($elm$json$Json$Decode$map, tagger, $elm$html$Html$Events$targetValue)));
 };
-var $elm$html$Html$Attributes$placeholder = $elm$html$Html$Attributes$stringProperty('placeholder');
 var $elm$html$Html$Attributes$type_ = $elm$html$Html$Attributes$stringProperty('type');
-var $elm$html$Html$Attributes$value = $elm$html$Html$Attributes$stringProperty('value');
 var $author$project$Main$editCard = function (item) {
 	return A2(
 		$elm$html$Html$div,
@@ -7715,14 +7741,7 @@ var $author$project$Main$editCard = function (item) {
 									]),
 								_List_Nil)
 							])),
-						A2(
-						$elm$html$Html$div,
-						_List_fromArray(
-							[
-								$elm$html$Html$Attributes$class('chips chips-autocomplete chips-placeholder'),
-								$elm$html$Html$Attributes$placeholder('Tags')
-							]),
-						_List_Nil),
+						$author$project$Main$editChipsView(item.draftTags),
 						A2(
 						$elm$html$Html$div,
 						_List_fromArray(

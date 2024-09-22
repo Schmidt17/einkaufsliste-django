@@ -18,14 +18,34 @@
     <div id="app"></div>
 
     <script type="text/javascript" src="{% static 'materialize.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'CustomChips.js' %}"></script>
     <script type="text/javascript" src="{% static 'paho_mqtt.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'main.js' %}"></script>
 
     <script>
+
+
         const app = Elm.Main.init({
             node: document.getElementById('app'),
             flags: "{{ api_key }}"
         });
+
+        // can be called from Elm to initialize materialize js input chips
+        function initializeMaterializeInputChips(args) {
+        console.log(args);
+            const parent = document.querySelector(args.parentSelector);
+            const chipsContainer = parent.querySelector('.chips');
+
+            M.chips.init(chipsContainer, {
+                placeholder: 'Tags',
+                autocompleteOptions: {
+                  data: [],
+                  limit: Infinity,
+                  minLength: 1
+                },
+                data: []
+            });
+        }
 
         // to be called when a MQTT message arrives
         function onMessageArrived(message) {
