@@ -356,7 +356,16 @@ updateDraftTitle : String -> Maybe ItemData -> Maybe ItemData
 updateDraftTitle newTitle maybeItem =
     case maybeItem of
         Just item ->
-            Just { item | draftTitle = newTitle }
+            Just
+                { item
+                    | draftTitle = newTitle
+                    , synced =
+                        if newTitle /= item.title then
+                            False
+
+                        else
+                            item.synced
+                }
 
         Nothing ->
             Nothing

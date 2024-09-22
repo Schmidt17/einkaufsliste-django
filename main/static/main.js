@@ -7016,6 +7016,7 @@ var $author$project$Main$updateDoneBackend = F3(
 				url: A2($author$project$Main$updateDoneUrl, apiKey, itemId)
 			});
 	});
+var $elm$core$Basics$neq = _Utils_notEqual;
 var $author$project$Main$updateDraftTitle = F2(
 	function (newTitle, maybeItem) {
 		if (maybeItem.$ === 'Just') {
@@ -7023,7 +7024,10 @@ var $author$project$Main$updateDraftTitle = F2(
 			return $elm$core$Maybe$Just(
 				_Utils_update(
 					item,
-					{draftTitle: newTitle}));
+					{
+						draftTitle: newTitle,
+						synced: (!_Utils_eq(newTitle, item.title)) ? false : item.synced
+					}));
 		} else {
 			return $elm$core$Maybe$Nothing;
 		}
