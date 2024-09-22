@@ -5,7 +5,7 @@ import Dict exposing (Dict)
 import Html exposing (Html, a, br, button, div, h1, header, i, input, label, li, main_, nav, node, p, span, text, ul)
 import Html.Attributes exposing (..)
 import Html.Attributes.Aria as Aria
-import Html.Events exposing (onClick, onInput, onMouseDown, preventDefaultOn)
+import Html.Events exposing (on, onClick, onInput, onMouseDown, preventDefaultOn)
 import Html.Events.Extra.Mouse exposing (onWithOptions)
 import Html.Events.Extra.Touch exposing (onStart)
 import Http
@@ -93,6 +93,7 @@ type Msg
     | DoneResponseReceived (Result Http.Error Bool)
     | ReceivedMQTTMessage String
     | ItemPosted String (Result Http.Error PostResponse)
+    | DraftTagsChanged String (List String)
 
 
 itemsUrl : String -> String
@@ -333,10 +334,13 @@ update msg model =
                                 Nothing ->
                                     model.items
                     in
-                    ( { model | items = Debug.log "itemsAfter" newItemDict }, Cmd.none )
+                    ( { model | items = newItemDict }, Cmd.none )
 
                 Err httpError ->
                     ( model, Cmd.none )
+
+        DraftTagsChanged itemId newTagList ->
+            ( { model | items = Dict.update itemId (updateDraftTags newTagList) model.items }, Cmd.none )
 
 
 updateOverrideOrderIndex : Dict String Int -> String -> ItemData -> ItemData
@@ -369,6 +373,39 @@ updateDraftTitle newTitle maybeItem =
 
         Nothing ->
             Nothing
+
+
+updateDraftTags : List String -> Maybe ItemData -> Maybe ItemData
+updateDraftTags newDraftTags maybeItem =
+    case maybeItem of
+        Just item ->
+            Just
+                { item
+                    | draftTags = newDraftTags
+                    , synced =
+                        if listEqual newDraftTags item.tags then
+                            item.synced
+
+                        else
+                            False
+                }
+
+        Nothing ->
+            Nothing
+
+
+listEqual : List comparable -> List comparable -> Bool
+listEqual listA listB =
+    let
+        sortedA =
+            List.sort listA
+
+        sortedB =
+            List.sort listB
+    in
+    List.map2 Tuple.pair sortedA sortedB
+        |> List.map (\x -> Tuple.first x == Tuple.second x)
+        |> List.foldr (&&) (List.length listA == List.length listB)
 
 
 updateTitle : String -> Maybe ItemData -> Maybe ItemData
@@ -609,7 +646,7 @@ editCard item =
         ]
         [ div [ class "card-content" ]
             [ div [ class "input-field card-title" ] [ input [ placeholder "Neuer Eintrag", type_ "text", value item.draftTitle, onInput (DraftTitleChanged item.id) ] [] ]
-            , editChipsView item.draftTags
+            , editChipsView item
             , div [ class "card-action valign-wrapper justify-right" ]
                 [ cancelButton item.id
                 , a [ class "green btn finish-edit", Aria.role "button", Aria.ariaLabel "Bestätigen", onClick (FinishEditing item.id) ] [ i [ class "material-icons" ] [ text "check" ] ]
@@ -618,11 +655,17 @@ editCard item =
         ]
 
 
-editChipsView : List String -> Html Msg
-editChipsView tags =
+editChipsView : ItemData -> Html Msg
+editChipsView item =
     node "custom-chips"
-        [ class "chips chips-autocomplete chips-placeholder", placeholder "Tags" ]
-        (List.map tagElement tags)
+        [ class "chips chips-autocomplete chips-placeholder"
+        , placeholder "Tags"
+        , on "tagsChanged" <|
+            Decode.map (DraftTagsChanged item.id) <|
+                Decode.at [ "detail", "tags" ] <|
+                    Decode.list Decode.string
+        ]
+        (List.map tagElement item.draftTags)
 
 
 tagElement : String -> Html Msg

@@ -6640,7 +6640,6 @@ var $author$project$Main$itemListToDict = function (items) {
 	return $elm$core$Dict$fromList(
 		$author$project$Main$itemListToAssoc(items));
 };
-var $elm$core$Debug$log = _Debug_log;
 var $elm$core$Dict$map = F2(
 	function (func, dict) {
 		if (dict.$ === 'RBEmpty_elm_builtin') {
@@ -7016,6 +7015,41 @@ var $author$project$Main$updateDoneBackend = F3(
 				url: A2($author$project$Main$updateDoneUrl, apiKey, itemId)
 			});
 	});
+var $elm$core$List$sort = function (xs) {
+	return A2($elm$core$List$sortBy, $elm$core$Basics$identity, xs);
+};
+var $author$project$Main$listEqual = F2(
+	function (listA, listB) {
+		var sortedB = $elm$core$List$sort(listB);
+		var sortedA = $elm$core$List$sort(listA);
+		return A3(
+			$elm$core$List$foldr,
+			$elm$core$Basics$and,
+			_Utils_eq(
+				$elm$core$List$length(listA),
+				$elm$core$List$length(listB)),
+			A2(
+				$elm$core$List$map,
+				function (x) {
+					return _Utils_eq(x.a, x.b);
+				},
+				A3($elm$core$List$map2, $elm$core$Tuple$pair, sortedA, sortedB)));
+	});
+var $author$project$Main$updateDraftTags = F2(
+	function (newDraftTags, maybeItem) {
+		if (maybeItem.$ === 'Just') {
+			var item = maybeItem.a;
+			return $elm$core$Maybe$Just(
+				_Utils_update(
+					item,
+					{
+						draftTags: newDraftTags,
+						synced: A2($author$project$Main$listEqual, newDraftTags, item.tags) ? item.synced : false
+					}));
+		} else {
+			return $elm$core$Maybe$Nothing;
+		}
+	});
 var $elm$core$Basics$neq = _Utils_notEqual;
 var $author$project$Main$updateDraftTitle = F2(
 	function (newTitle, maybeItem) {
@@ -7249,7 +7283,7 @@ var $author$project$Main$update = F2(
 				} else {
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
-			default:
+			case 'ItemPosted':
 				var oldId = msg.a;
 				var postResponsePayload = msg.b;
 				if (postResponsePayload.$ === 'Ok') {
@@ -7272,14 +7306,26 @@ var $author$project$Main$update = F2(
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
-							{
-								items: A2($elm$core$Debug$log, 'itemsAfter', newItemDict)
-							}),
+							{items: newItemDict}),
 						$elm$core$Platform$Cmd$none);
 				} else {
 					var httpError = postResponsePayload.a;
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
+			default:
+				var itemId = msg.a;
+				var newTagList = msg.b;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							items: A3(
+								$elm$core$Dict$update,
+								itemId,
+								$author$project$Main$updateDraftTags(newTagList),
+								model.items)
+						}),
+					$elm$core$Platform$Cmd$none);
 		}
 	});
 var $author$project$Main$AddNewCardClicked = {$: 'AddNewCardClicked'};
@@ -7643,6 +7689,14 @@ var $author$project$Main$cancelButton = function (itemId) {
 				$elm$html$Html$text('Abbrechen')
 			]));
 };
+var $author$project$Main$DraftTagsChanged = F2(
+	function (a, b) {
+		return {$: 'DraftTagsChanged', a: a, b: b};
+	});
+var $elm$json$Json$Decode$at = F2(
+	function (fields, decoder) {
+		return A3($elm$core$List$foldr, $elm$json$Json$Decode$field, decoder, fields);
+	});
 var $elm$virtual_dom$VirtualDom$node = function (tag) {
 	return _VirtualDom_node(
 		_VirtualDom_noScript(tag));
@@ -7660,16 +7714,27 @@ var $author$project$Main$tagElement = function (tagName) {
 			]),
 		_List_Nil);
 };
-var $author$project$Main$editChipsView = function (tags) {
+var $author$project$Main$editChipsView = function (item) {
 	return A3(
 		$elm$html$Html$node,
 		'custom-chips',
 		_List_fromArray(
 			[
 				$elm$html$Html$Attributes$class('chips chips-autocomplete chips-placeholder'),
-				$elm$html$Html$Attributes$placeholder('Tags')
+				$elm$html$Html$Attributes$placeholder('Tags'),
+				A2(
+				$elm$html$Html$Events$on,
+				'tagsChanged',
+				A2(
+					$elm$json$Json$Decode$map,
+					$author$project$Main$DraftTagsChanged(item.id),
+					A2(
+						$elm$json$Json$Decode$at,
+						_List_fromArray(
+							['detail', 'tags']),
+						$elm$json$Json$Decode$list($elm$json$Json$Decode$string))))
 			]),
-		A2($elm$core$List$map, $author$project$Main$tagElement, tags));
+		A2($elm$core$List$map, $author$project$Main$tagElement, item.draftTags));
 };
 var $elm$html$Html$input = _VirtualDom_node('input');
 var $elm$html$Html$Events$alwaysStop = function (x) {
@@ -7684,10 +7749,6 @@ var $elm$html$Html$Events$stopPropagationOn = F2(
 			$elm$virtual_dom$VirtualDom$on,
 			event,
 			$elm$virtual_dom$VirtualDom$MayStopPropagation(decoder));
-	});
-var $elm$json$Json$Decode$at = F2(
-	function (fields, decoder) {
-		return A3($elm$core$List$foldr, $elm$json$Json$Decode$field, decoder, fields);
 	});
 var $elm$html$Html$Events$targetValue = A2(
 	$elm$json$Json$Decode$at,
@@ -7741,7 +7802,7 @@ var $author$project$Main$editCard = function (item) {
 									]),
 								_List_Nil)
 							])),
-						$author$project$Main$editChipsView(item.draftTags),
+						$author$project$Main$editChipsView(item),
 						A2(
 						$elm$html$Html$div,
 						_List_fromArray(

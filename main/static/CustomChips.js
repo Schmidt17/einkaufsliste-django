@@ -6,28 +6,45 @@ class CustomChips extends HTMLElement {
     }
 
     connectedCallback() {
-        this.setAttribute("changes", 0);
+        this.tags = [];
+        this.updateTags();
 
         this.initChips();
+
+        this.setAttribute("changes", 0);
     }
 
     attributeChangedCallback(name, oldValue, newValue) {
-        console.log(`${name} - old: ${oldValue}, new: ${newValue}`);
+        if (name == "changes") {
+            this.updateTagsFromMaterializeChips();
+            this.dispatchEvent(new CustomEvent('tagsChanged', {detail: {tags : this.tags}}))
+        }
+    }
+
+    updateTags() {
+        const tagElements = this.querySelectorAll('chips-tag');
+        const tagList = [...tagElements];
+        this.tags = tagList.map((elt) => elt.value);
+    }
+
+    updateTagsFromMaterializeChips() {
+        let chipsInstance = M.Chips.getInstance(this.chipsDiv);
+        let tagsData = chipsInstance.chipsData;
+        this.tags = tagsData.map((elt) => elt.tag);
     }
 
     initChips() {
-        const tagElements = this.querySelectorAll('chips-tag');
-        const tagList = [...tagElements];
-        const tags = tagList.map((elt) => Object({tag : elt.value}));
 
-        const chipsDiv = document.createElement('div');
-        chipsDiv.classList = this.classList;
-        chipsDiv.placeholder = this.placeholder;
+        const tags = this.tags.map((value) => Object({tag : value}));
 
-        this.appendChild(chipsDiv);
+        this.chipsDiv = document.createElement('div');
+        this.chipsDiv.classList = this.classList;
+        this.chipsDiv.placeholder = this.placeholder;
+
+        this.appendChild(this.chipsDiv);
 
         const thisElement = this;
-        M.Chips.init(chipsDiv, {
+        M.Chips.init(this.chipsDiv, {
             placeholder: 'Tags',
             data: tags,
             onChipAdd: function(e, chip) {
