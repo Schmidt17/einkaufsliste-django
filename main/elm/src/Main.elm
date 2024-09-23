@@ -2,10 +2,10 @@ port module Main exposing (main)
 
 import Browser
 import Dict exposing (Dict)
-import Html exposing (Html, a, br, button, div, h1, header, i, input, label, li, main_, nav, p, span, text, ul)
+import Html exposing (Html, a, br, button, div, h1, header, i, input, label, li, main_, nav, node, p, span, text, ul)
 import Html.Attributes exposing (..)
 import Html.Attributes.Aria as Aria
-import Html.Events exposing (onClick, onInput, onMouseDown, preventDefaultOn)
+import Html.Events exposing (on, onClick, onInput, onMouseDown, preventDefaultOn)
 import Html.Events.Extra.Mouse exposing (onWithOptions)
 import Html.Events.Extra.Touch exposing (onStart)
 import Http
@@ -93,6 +93,7 @@ type Msg
     | DoneResponseReceived (Result Http.Error Bool)
     | ReceivedMQTTMessage String
     | ItemPosted String (Result Http.Error PostResponse)
+    | DraftTagsChanged String (List String)
 
 
 itemsUrl : String -> String
@@ -179,7 +180,7 @@ update msg model =
                         items =
                             itemListToDict (List.indexedMap receivedToItem (parseItems rawString))
                     in
-                    ( { model | items = items, filterTags = initTags ([ "No tags" ] ++ Set.toList (uniqueTags (Dict.values items))) }, Cmd.none )
+                    ( { model | items = items, filterTags = initTags (getFilterTags items) }, Cmd.none )
 
                 Err httpError ->
                     ( model, Cmd.none )
@@ -229,9 +230,8 @@ update msg model =
                     let
                         updatedItem =
                             { item | title = item.draftTitle, tags = item.draftTags }
-                    in
-                    ( { model
-                        | items =
+
+                        newItems =
                             Dict.update itemId
                                 (\i ->
                                     case i of
@@ -242,6 +242,25 @@ update msg model =
                                             Nothing
                                 )
                                 model.items
+
+                        newFilters =
+                            getFilterTags newItems
+
+                        oldFilters =
+                            List.map .tag model.filterTags
+
+                        filterTagsDecimated =
+                            List.filter (\x -> List.member x.tag newFilters) model.filterTags
+
+                        additionalFilters =
+                            List.filter (\x -> not (List.member x oldFilters)) newFilters
+
+                        filterTagsAdded =
+                            filterTagsDecimated ++ List.map (\x -> { tag = x, isActive = False }) additionalFilters
+                    in
+                    ( { model
+                        | items = newItems
+                        , filterTags = filterTagsAdded
                       }
                     , if item.new then
                         postItem model.apiKey updatedItem
@@ -333,10 +352,13 @@ update msg model =
                                 Nothing ->
                                     model.items
                     in
-                    ( { model | items = Debug.log "itemsAfter" newItemDict }, Cmd.none )
+                    ( { model | items = newItemDict }, Cmd.none )
 
                 Err httpError ->
                     ( model, Cmd.none )
+
+        DraftTagsChanged itemId newTagList ->
+            ( { model | items = Dict.update itemId (updateDraftTags newTagList) model.items }, Cmd.none )
 
 
 updateOverrideOrderIndex : Dict String Int -> String -> ItemData -> ItemData
@@ -356,10 +378,52 @@ updateDraftTitle : String -> Maybe ItemData -> Maybe ItemData
 updateDraftTitle newTitle maybeItem =
     case maybeItem of
         Just item ->
-            Just { item | draftTitle = newTitle }
+            Just
+                { item
+                    | draftTitle = newTitle
+                    , synced =
+                        if newTitle /= item.title then
+                            False
+
+                        else
+                            item.synced
+                }
 
         Nothing ->
             Nothing
+
+
+updateDraftTags : List String -> Maybe ItemData -> Maybe ItemData
+updateDraftTags newDraftTags maybeItem =
+    case maybeItem of
+        Just item ->
+            Just
+                { item
+                    | draftTags = newDraftTags
+                    , synced =
+                        if listEqual newDraftTags item.tags then
+                            item.synced
+
+                        else
+                            False
+                }
+
+        Nothing ->
+            Nothing
+
+
+listEqual : List comparable -> List comparable -> Bool
+listEqual listA listB =
+    let
+        sortedA =
+            List.sort listA
+
+        sortedB =
+            List.sort listB
+    in
+    List.map2 Tuple.pair sortedA sortedB
+        |> List.map (\x -> Tuple.first x == Tuple.second x)
+        |> List.foldr (&&) (List.length listA == List.length listB)
 
 
 updateTitle : String -> Maybe ItemData -> Maybe ItemData
@@ -441,6 +505,12 @@ addNewItem newId dict =
 -- SUBSCRIPTIONS
 
 
+type alias ChipsInitArgs =
+    { parentSelector : String
+    , tags : List String
+    }
+
+
 port receiveMQTTMessage : (String -> msg) -> Sub msg
 
 
@@ -490,7 +560,7 @@ headerView model =
         [ nav [ Aria.ariaLabel "Header", style "height" "auto" ]
             [ div [ class "nav-wrapper", style "display" "flex" ]
                 [ div [ class "chips-wrapper filter-chips", Aria.ariaLabel "Filterbereich", Aria.role "navigation" ]
-                    (List.map filterTagChip model.filterTags)
+                    (List.map filterTagChip (sortFilterTags model.filterTags))
                 , ul [ id "nav-mobile" ]
                     [ li [] [ sortButton model.overrideOrdering ]
                     , li []
@@ -594,13 +664,31 @@ editCard item =
         ]
         [ div [ class "card-content" ]
             [ div [ class "input-field card-title" ] [ input [ placeholder "Neuer Eintrag", type_ "text", value item.draftTitle, onInput (DraftTitleChanged item.id) ] [] ]
-            , div [ class "chips chips-autocomplete chips-placeholder", placeholder "Tags" ] []
+            , editChipsView item
             , div [ class "card-action valign-wrapper justify-right" ]
                 [ cancelButton item.id
                 , a [ class "green btn finish-edit", Aria.role "button", Aria.ariaLabel "Bestätigen", onClick (FinishEditing item.id) ] [ i [ class "material-icons" ] [ text "check" ] ]
                 ]
             ]
         ]
+
+
+editChipsView : ItemData -> Html Msg
+editChipsView item =
+    node "custom-chips"
+        [ class "chips chips-autocomplete chips-placeholder"
+        , placeholder "Tags"
+        , on "tagsChanged" <|
+            Decode.map (DraftTagsChanged item.id) <|
+                Decode.at [ "detail", "tags" ] <|
+                    Decode.list Decode.string
+        ]
+        (List.map tagElement item.draftTags)
+
+
+tagElement : String -> Html Msg
+tagElement tagName =
+    node "chips-tag" [ value tagName ] []
 
 
 cancelButton : String -> Html Msg
@@ -771,6 +859,21 @@ maybeActiveTag filterTag =
 activeFilters : List FilterTag -> List String
 activeFilters filterTags =
     List.filterMap maybeActiveTag filterTags
+
+
+getFilterTags : Dict String ItemData -> List String
+getFilterTags items =
+    [ "No tags" ] ++ Set.toList (uniqueTags (Dict.values items))
+
+
+sortFilterTags : List FilterTag -> List FilterTag
+sortFilterTags filterTags =
+    case filterTags of
+        noTags :: rest ->
+            noTags :: List.sortBy .tag rest
+
+        [] ->
+            []
 
 
 itemListToDict : List ItemData -> Dict String ItemData
