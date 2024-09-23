@@ -560,7 +560,7 @@ headerView model =
         [ nav [ Aria.ariaLabel "Header", style "height" "auto" ]
             [ div [ class "nav-wrapper", style "display" "flex" ]
                 [ div [ class "chips-wrapper filter-chips", Aria.ariaLabel "Filterbereich", Aria.role "navigation" ]
-                    (List.map filterTagChip model.filterTags)
+                    (List.map filterTagChip (sortFilterTags model.filterTags))
                 , ul [ id "nav-mobile" ]
                     [ li [] [ sortButton model.overrideOrdering ]
                     , li []
@@ -864,6 +864,16 @@ activeFilters filterTags =
 getFilterTags : Dict String ItemData -> List String
 getFilterTags items =
     [ "No tags" ] ++ Set.toList (uniqueTags (Dict.values items))
+
+
+sortFilterTags : List FilterTag -> List FilterTag
+sortFilterTags filterTags =
+    case filterTags of
+        noTags :: rest ->
+            noTags :: List.sortBy .tag rest
+
+        [] ->
+            []
 
 
 itemListToDict : List ItemData -> Dict String ItemData

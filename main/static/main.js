@@ -7641,6 +7641,23 @@ var $author$project$Main$sortButton = function (isActive) {
 					]))
 			]));
 };
+var $author$project$Main$sortFilterTags = function (filterTags) {
+	if (filterTags.b) {
+		var noTags = filterTags.a;
+		var rest = filterTags.b;
+		return A2(
+			$elm$core$List$cons,
+			noTags,
+			A2(
+				$elm$core$List$sortBy,
+				function ($) {
+					return $.tag;
+				},
+				rest));
+	} else {
+		return _List_Nil;
+	}
+};
 var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
 var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $elm$html$Html$ul = _VirtualDom_node('ul');
@@ -7679,7 +7696,10 @@ var $author$project$Main$headerView = function (model) {
 										$fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel('Filterbereich'),
 										$fapian$elm_html_aria$Html$Attributes$Aria$role('navigation')
 									]),
-								A2($elm$core$List$map, $author$project$Main$filterTagChip, model.filterTags)),
+								A2(
+									$elm$core$List$map,
+									$author$project$Main$filterTagChip,
+									$author$project$Main$sortFilterTags(model.filterTags))),
 								A2(
 								$elm$html$Html$ul,
 								_List_fromArray(
