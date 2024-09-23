@@ -6385,6 +6385,17 @@ var $author$project$Main$callSortAPI = function (items) {
 			url: $author$project$Main$sortUrl
 		});
 };
+var $elm$core$List$filter = F2(
+	function (isGood, list) {
+		return A3(
+			$elm$core$List$foldr,
+			F2(
+				function (x, xs) {
+					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
+				}),
+			_List_Nil,
+			list);
+	});
 var $elm$core$Dict$fromList = function (assocs) {
 	return A3(
 		$elm$core$List$foldl,
@@ -6616,6 +6627,51 @@ var $TSFoster$elm_uuid$UUID$generator = A2(
 		$TSFoster$elm_uuid$UUID$toVersion(4),
 		$TSFoster$elm_uuid$UUID$toVariant1),
 	A5($elm$random$Random$map4, $TSFoster$elm_uuid$UUID$UUID, $TSFoster$elm_uuid$UUID$randomU32, $TSFoster$elm_uuid$UUID$randomU32, $TSFoster$elm_uuid$UUID$randomU32, $TSFoster$elm_uuid$UUID$randomU32));
+var $elm$core$List$append = F2(
+	function (xs, ys) {
+		if (!ys.b) {
+			return xs;
+		} else {
+			return A3($elm$core$List$foldr, $elm$core$List$cons, ys, xs);
+		}
+	});
+var $elm$core$List$concat = function (lists) {
+	return A3($elm$core$List$foldr, $elm$core$List$append, _List_Nil, lists);
+};
+var $elm$core$List$concatMap = F2(
+	function (f, list) {
+		return $elm$core$List$concat(
+			A2($elm$core$List$map, f, list));
+	});
+var $author$project$Main$allTags = $elm$core$List$concatMap(
+	function ($) {
+		return $.tags;
+	});
+var $elm$core$Set$Set_elm_builtin = function (a) {
+	return {$: 'Set_elm_builtin', a: a};
+};
+var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
+var $elm$core$Set$insert = F2(
+	function (key, _v0) {
+		var dict = _v0.a;
+		return $elm$core$Set$Set_elm_builtin(
+			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
+	});
+var $elm$core$Set$fromList = function (list) {
+	return A3($elm$core$List$foldl, $elm$core$Set$insert, $elm$core$Set$empty, list);
+};
+var $author$project$Main$uniqueTags = function (items) {
+	return $elm$core$Set$fromList(
+		$author$project$Main$allTags(items));
+};
+var $author$project$Main$getFilterTags = function (items) {
+	return _Utils_ap(
+		_List_fromArray(
+			['No tags']),
+		$elm$core$Set$toList(
+			$author$project$Main$uniqueTags(
+				$elm$core$Dict$values(items))));
+};
 var $author$project$Main$FilterTag = F2(
 	function (tag, isActive) {
 		return {isActive: isActive, tag: tag};
@@ -6659,8 +6715,39 @@ var $elm$core$Dict$map = F2(
 				A2($elm$core$Dict$map, func, right));
 		}
 	});
+var $elm$core$List$any = F2(
+	function (isOkay, list) {
+		any:
+		while (true) {
+			if (!list.b) {
+				return false;
+			} else {
+				var x = list.a;
+				var xs = list.b;
+				if (isOkay(x)) {
+					return true;
+				} else {
+					var $temp$isOkay = isOkay,
+						$temp$list = xs;
+					isOkay = $temp$isOkay;
+					list = $temp$list;
+					continue any;
+				}
+			}
+		}
+	});
+var $elm$core$List$member = F2(
+	function (x, xs) {
+		return A2(
+			$elm$core$List$any,
+			function (a) {
+				return _Utils_eq(a, x);
+			},
+			xs);
+	});
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $elm$core$Basics$not = _Basics_not;
 var $author$project$Main$ItemDataReceived = F4(
 	function (id, title, tags, done) {
 		return {done: done, id: id, tags: tags, title: title};
@@ -6906,7 +6993,6 @@ var $author$project$Main$toggleDone = function (maybeItem) {
 		return $elm$core$Maybe$Nothing;
 	}
 };
-var $elm$core$Basics$not = _Basics_not;
 var $author$project$Main$toggleEdit = function (maybeItem) {
 	if (maybeItem.$ === 'Just') {
 		var item = maybeItem.a;
@@ -6931,43 +7017,6 @@ var $author$project$Main$toggleTag = F2(
 			toggle(tag),
 			tagList);
 	});
-var $elm$core$List$append = F2(
-	function (xs, ys) {
-		if (!ys.b) {
-			return xs;
-		} else {
-			return A3($elm$core$List$foldr, $elm$core$List$cons, ys, xs);
-		}
-	});
-var $elm$core$List$concat = function (lists) {
-	return A3($elm$core$List$foldr, $elm$core$List$append, _List_Nil, lists);
-};
-var $elm$core$List$concatMap = F2(
-	function (f, list) {
-		return $elm$core$List$concat(
-			A2($elm$core$List$map, f, list));
-	});
-var $author$project$Main$allTags = $elm$core$List$concatMap(
-	function ($) {
-		return $.tags;
-	});
-var $elm$core$Set$Set_elm_builtin = function (a) {
-	return {$: 'Set_elm_builtin', a: a};
-};
-var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
-var $elm$core$Set$insert = F2(
-	function (key, _v0) {
-		var dict = _v0.a;
-		return $elm$core$Set$Set_elm_builtin(
-			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
-	});
-var $elm$core$Set$fromList = function (list) {
-	return A3($elm$core$List$foldl, $elm$core$Set$insert, $elm$core$Set$empty, list);
-};
-var $author$project$Main$uniqueTags = function (items) {
-	return $elm$core$Set$fromList(
-		$author$project$Main$allTags(items));
-};
 var $author$project$Main$DoneResponseReceived = function (a) {
 	return {$: 'DoneResponseReceived', a: a};
 };
@@ -7103,12 +7152,7 @@ var $author$project$Main$update = F2(
 							model,
 							{
 								filterTags: $author$project$Main$initTags(
-									_Utils_ap(
-										_List_fromArray(
-											['No tags']),
-										$elm$core$Set$toList(
-											$author$project$Main$uniqueTags(
-												$elm$core$Dict$values(items))))),
+									$author$project$Main$getFilterTags(items)),
 								items: items
 							}),
 						$elm$core$Platform$Cmd$none);
@@ -7179,23 +7223,49 @@ var $author$project$Main$update = F2(
 					var updatedItem = _Utils_update(
 						item,
 						{tags: item.draftTags, title: item.draftTitle});
+					var oldFilters = A2(
+						$elm$core$List$map,
+						function ($) {
+							return $.tag;
+						},
+						model.filterTags);
+					var newItems = A3(
+						$elm$core$Dict$update,
+						itemId,
+						function (i) {
+							if (i.$ === 'Just') {
+								var it = i.a;
+								return $elm$core$Maybe$Just(updatedItem);
+							} else {
+								return $elm$core$Maybe$Nothing;
+							}
+						},
+						model.items);
+					var newFilters = $author$project$Main$getFilterTags(newItems);
+					var filterTagsDecimated = A2(
+						$elm$core$List$filter,
+						function (x) {
+							return A2($elm$core$List$member, x.tag, newFilters);
+						},
+						model.filterTags);
+					var additionalFilters = A2(
+						$elm$core$List$filter,
+						function (x) {
+							return !A2($elm$core$List$member, x, oldFilters);
+						},
+						newFilters);
+					var filterTagsAdded = _Utils_ap(
+						filterTagsDecimated,
+						A2(
+							$elm$core$List$map,
+							function (x) {
+								return {isActive: false, tag: x};
+							},
+							additionalFilters));
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
-							{
-								items: A3(
-									$elm$core$Dict$update,
-									itemId,
-									function (i) {
-										if (i.$ === 'Just') {
-											var it = i.a;
-											return $elm$core$Maybe$Just(updatedItem);
-										} else {
-											return $elm$core$Maybe$Nothing;
-										}
-									},
-									model.items)
-							}),
+							{filterTags: filterTagsAdded, items: newItems}),
 						item._new ? A2($author$project$Main$postItem, model.apiKey, updatedItem) : $elm$core$Platform$Cmd$none);
 				} else {
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
@@ -7934,53 +8004,12 @@ var $author$project$Main$itemCard = function (itemData) {
 var $author$project$Main$cardView = function (itemData) {
 	return itemData.editing ? $author$project$Main$editCard(itemData) : $author$project$Main$itemCard(itemData);
 };
-var $elm$core$List$filter = F2(
-	function (isGood, list) {
-		return A3(
-			$elm$core$List$foldr,
-			F2(
-				function (x, xs) {
-					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
-				}),
-			_List_Nil,
-			list);
-	});
 var $author$project$Main$maybeActiveTag = function (filterTag) {
 	return filterTag.isActive ? $elm$core$Maybe$Just(filterTag.tag) : $elm$core$Maybe$Nothing;
 };
 var $author$project$Main$activeFilters = function (filterTags) {
 	return A2($elm$core$List$filterMap, $author$project$Main$maybeActiveTag, filterTags);
 };
-var $elm$core$List$any = F2(
-	function (isOkay, list) {
-		any:
-		while (true) {
-			if (!list.b) {
-				return false;
-			} else {
-				var x = list.a;
-				var xs = list.b;
-				if (isOkay(x)) {
-					return true;
-				} else {
-					var $temp$isOkay = isOkay,
-						$temp$list = xs;
-					isOkay = $temp$isOkay;
-					list = $temp$list;
-					continue any;
-				}
-			}
-		}
-	});
-var $elm$core$List$member = F2(
-	function (x, xs) {
-		return A2(
-			$elm$core$List$any,
-			function (a) {
-				return _Utils_eq(a, x);
-			},
-			xs);
-	});
 var $author$project$Main$isVisible = F2(
 	function (model, item) {
 		var filters = $author$project$Main$activeFilters(model.filterTags);

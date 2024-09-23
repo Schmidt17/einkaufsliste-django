@@ -180,7 +180,7 @@ update msg model =
                         items =
                             itemListToDict (List.indexedMap receivedToItem (parseItems rawString))
                     in
-                    ( { model | items = items, filterTags = initTags ([ "No tags" ] ++ Set.toList (uniqueTags (Dict.values items))) }, Cmd.none )
+                    ( { model | items = items, filterTags = initTags (getFilterTags items) }, Cmd.none )
 
                 Err httpError ->
                     ( model, Cmd.none )
@@ -230,9 +230,8 @@ update msg model =
                     let
                         updatedItem =
                             { item | title = item.draftTitle, tags = item.draftTags }
-                    in
-                    ( { model
-                        | items =
+
+                        newItems =
                             Dict.update itemId
                                 (\i ->
                                     case i of
@@ -243,6 +242,25 @@ update msg model =
                                             Nothing
                                 )
                                 model.items
+
+                        newFilters =
+                            getFilterTags newItems
+
+                        oldFilters =
+                            List.map .tag model.filterTags
+
+                        filterTagsDecimated =
+                            List.filter (\x -> List.member x.tag newFilters) model.filterTags
+
+                        additionalFilters =
+                            List.filter (\x -> not (List.member x oldFilters)) newFilters
+
+                        filterTagsAdded =
+                            filterTagsDecimated ++ List.map (\x -> { tag = x, isActive = False }) additionalFilters
+                    in
+                    ( { model
+                        | items = newItems
+                        , filterTags = filterTagsAdded
                       }
                     , if item.new then
                         postItem model.apiKey updatedItem
@@ -841,6 +859,11 @@ maybeActiveTag filterTag =
 activeFilters : List FilterTag -> List String
 activeFilters filterTags =
     List.filterMap maybeActiveTag filterTags
+
+
+getFilterTags : Dict String ItemData -> List String
+getFilterTags items =
+    [ "No tags" ] ++ Set.toList (uniqueTags (Dict.values items))
 
 
 itemListToDict : List ItemData -> Dict String ItemData
