@@ -54,6 +54,11 @@ class CustomChips extends HTMLElement {
                 thisElement.incrementChanges();
             }
         });
+
+        this.chipsInput = this.chipsDiv.querySelector('input');
+        this.chipsInput.addEventListener("input", function() {
+            thisElement.dispatchEvent(new CustomEvent('inputChanged', {detail: {remainingText : thisElement.chipsInput.value}}));
+        });
     }
 
     incrementChanges() {

@@ -49,6 +49,7 @@ type alias ItemData =
     , tags : List String
     , draftTitle : String
     , draftTags : List String
+    , draftTagsInput : String
     , done : Int
     , orderIndexDefault : Int
     , orderIndexOverride : Int
@@ -95,6 +96,7 @@ type Msg
     | ReceivedMQTTMessage String
     | ItemPosted String (Result Http.Error PostResponse)
     | DraftTagsChanged String (List String)
+    | DraftTagsInputChanged String String
 
 
 itemsUrl : String -> String
@@ -247,8 +249,22 @@ update msg model =
 
                     else
                         let
+                            remainingText =
+                                String.trim item.draftTagsInput
+
                             updatedItem =
-                                { item | title = String.trim item.draftTitle, tags = item.draftTags }
+                                { item
+                                    | title = String.trim item.draftTitle
+                                    , tags =
+                                        item.draftTags
+                                            ++ (if remainingText == "" then
+                                                    []
+
+                                                else
+                                                    [ remainingText ]
+                                               )
+                                    , draftTagsInput = ""
+                                }
 
                             newItems =
                                 Dict.update itemId
@@ -345,7 +361,13 @@ update msg model =
                                 )
                                 model.items
                     in
-                    ( { model | items = newItemDict }, callSortAPI (Dict.values newItemDict) )
+                    ( { model | items = newItemDict }
+                    , if model.overrideOrdering then
+                        callSortAPI (Dict.values newItemDict)
+
+                      else
+                        Cmd.none
+                    )
 
                 Err httpError ->
                     ( model, Cmd.none )
@@ -392,13 +414,22 @@ update msg model =
                                 Nothing ->
                                     model.items
                     in
-                    ( { model | items = newItemDict }, callSortAPI (Dict.values newItemDict) )
+                    ( { model | items = newItemDict }
+                    , if model.overrideOrdering then
+                        callSortAPI (Dict.values newItemDict)
+
+                      else
+                        Cmd.none
+                    )
 
                 Err httpError ->
                     ( model, Cmd.none )
 
         DraftTagsChanged itemId newTagList ->
             ( { model | items = Dict.update itemId (updateDraftTags newTagList) model.items }, Cmd.none )
+
+        DraftTagsInputChanged itemId remainingText ->
+            ( { model | items = Dict.update itemId (updateDraftTagsInput remainingText) model.items }, Cmd.none )
 
 
 updateOverrideOrderIndex : Dict String Int -> String -> ItemData -> ItemData
@@ -442,6 +473,25 @@ updateDraftTags newDraftTags maybeItem =
                     | draftTags = newDraftTags
                     , synced =
                         if listEqual newDraftTags item.tags then
+                            item.synced
+
+                        else
+                            False
+                }
+
+        Nothing ->
+            Nothing
+
+
+updateDraftTagsInput : String -> Maybe ItemData -> Maybe ItemData
+updateDraftTagsInput newText maybeItem =
+    case maybeItem of
+        Just item ->
+            Just
+                { item
+                    | draftTagsInput = newText
+                    , synced =
+                        if String.trim newText == "" then
                             item.synced
 
                         else
@@ -531,6 +581,7 @@ addNewItem newId dict =
         , tags = []
         , draftTitle = ""
         , draftTags = []
+        , draftTagsInput = ""
         , done = 0
         , orderIndexDefault = newIndex
         , orderIndexOverride = newIndex
@@ -722,6 +773,10 @@ editChipsView item =
             Decode.map (DraftTagsChanged item.id) <|
                 Decode.at [ "detail", "tags" ] <|
                     Decode.list Decode.string
+        , on "inputChanged" <|
+            Decode.map (DraftTagsInputChanged item.id) <|
+                Decode.at [ "detail", "remainingText" ] <|
+                    Decode.string
         ]
         (List.map tagElement item.draftTags)
 
@@ -851,6 +906,7 @@ receivedToItem index itemReceived =
     , tags = itemReceived.tags
     , draftTitle = itemReceived.title
     , draftTags = itemReceived.tags
+    , draftTagsInput = ""
     , done = itemReceived.done
     , orderIndexDefault = index
     , orderIndexOverride = index
