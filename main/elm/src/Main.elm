@@ -91,6 +91,7 @@ type Msg
     | SortButtonClicked
     | SortResponseReceived (List String) (Result Http.Error (List Int))
     | DoneResponseReceived (Result Http.Error Bool)
+    | UpdateResponseReceived String (Result Http.Error Bool)
     | ReceivedMQTTMessage String
     | ItemPosted String (Result Http.Error PostResponse)
     | DraftTagsChanged String (List String)
@@ -99,6 +100,11 @@ type Msg
 itemsUrl : String -> String
 itemsUrl apiKey =
     "https://picluster.a-h.wtf/einkaufsliste/api/v1/items?k=" ++ apiKey
+
+
+itemsUpdateUrl : String -> String -> String
+itemsUpdateUrl apiKey itemId =
+    "https://picluster.a-h.wtf/einkaufsliste/api/v1/items/" ++ itemId ++ "?k=" ++ apiKey
 
 
 updateDoneUrl : String -> String -> String
@@ -128,6 +134,15 @@ postItem apiKey item =
         { url = itemsUrl apiKey
         , body = Http.jsonBody (Encode.object [ ( "itemData", Encode.object [ ( "title", Encode.string item.title ), ( "tags", Encode.list Encode.string item.tags ) ] ) ])
         , expect = Http.expectJson (ItemPosted item.id) (Decode.map2 PostResponse (Decode.field "success" Decode.bool) (Decode.field "newId" Decode.string))
+        }
+
+
+updateItem : String -> ItemData -> Cmd Msg
+updateItem apiKey item =
+    httpUpdate
+        { url = itemsUpdateUrl apiKey item.id
+        , body = Http.jsonBody (Encode.object [ ( "itemData", Encode.object [ ( "title", Encode.string item.title ), ( "tags", Encode.list Encode.string item.tags ) ] ) ])
+        , expect = Http.expectJson (UpdateResponseReceived item.id) (Decode.field "success" Decode.bool)
         }
 
 
@@ -227,47 +242,51 @@ update msg model =
         FinishEditing itemId ->
             case Dict.get itemId model.items of
                 Just item ->
-                    let
-                        updatedItem =
-                            { item | title = item.draftTitle, tags = item.draftTags }
+                    if item.synced then
+                        ( { model | items = Dict.update itemId toggleEdit model.items }, Cmd.none )
 
-                        newItems =
-                            Dict.update itemId
-                                (\i ->
-                                    case i of
-                                        Just it ->
-                                            Just updatedItem
+                    else
+                        let
+                            updatedItem =
+                                { item | title = item.draftTitle, tags = item.draftTags }
 
-                                        Nothing ->
-                                            Nothing
-                                )
-                                model.items
+                            newItems =
+                                Dict.update itemId
+                                    (\i ->
+                                        case i of
+                                            Just it ->
+                                                Just updatedItem
 
-                        newFilters =
-                            getFilterTags newItems
+                                            Nothing ->
+                                                Nothing
+                                    )
+                                    model.items
 
-                        oldFilters =
-                            List.map .tag model.filterTags
+                            newFilters =
+                                getFilterTags newItems
 
-                        filterTagsDecimated =
-                            List.filter (\x -> List.member x.tag newFilters) model.filterTags
+                            oldFilters =
+                                List.map .tag model.filterTags
 
-                        additionalFilters =
-                            List.filter (\x -> not (List.member x oldFilters)) newFilters
+                            filterTagsDecimated =
+                                List.filter (\x -> List.member x.tag newFilters) model.filterTags
 
-                        filterTagsAdded =
-                            filterTagsDecimated ++ List.map (\x -> { tag = x, isActive = False }) additionalFilters
-                    in
-                    ( { model
-                        | items = newItems
-                        , filterTags = filterTagsAdded
-                      }
-                    , if item.new then
-                        postItem model.apiKey updatedItem
+                            additionalFilters =
+                                List.filter (\x -> not (List.member x oldFilters)) newFilters
 
-                      else
-                        Cmd.none
-                    )
+                            filterTagsAdded =
+                                filterTagsDecimated ++ List.map (\x -> { tag = x, isActive = False }) additionalFilters
+                        in
+                        ( { model
+                            | items = newItems
+                            , filterTags = filterTagsAdded
+                          }
+                        , if item.new then
+                            postItem model.apiKey updatedItem
+
+                          else
+                            updateItem model.apiKey updatedItem
+                        )
 
                 Nothing ->
                     ( model, Cmd.none )
@@ -309,6 +328,27 @@ update msg model =
 
         DoneResponseReceived success ->
             ( model, Cmd.none )
+
+        UpdateResponseReceived itemId successPayload ->
+            case successPayload of
+                Ok success ->
+                    let
+                        newItemDict =
+                            Dict.update itemId
+                                (\maybeItem ->
+                                    case maybeItem of
+                                        Just item ->
+                                            Just { item | synced = True, editing = False }
+
+                                        Nothing ->
+                                            Nothing
+                                )
+                                model.items
+                    in
+                    ( { model | items = newItemDict }, Cmd.none )
+
+                Err httpError ->
+                    ( model, Cmd.none )
 
         ReceivedMQTTMessage mqttMsg ->
             let
