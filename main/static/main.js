@@ -7358,7 +7358,8 @@ var $author$project$Main$update = F2(
 				var payload = msg.b;
 				if (payload.$ === 'Ok') {
 					var sortIndices = payload.a;
-					var newIndices = $author$project$Main$argsort(sortIndices);
+					var newIndices = $author$project$Main$argsort(
+						$elm$core$List$reverse(sortIndices));
 					var idToIndexDict = $elm$core$Dict$fromList(
 						A3($elm$core$List$map2, $elm$core$Tuple$pair, requestedIds, newIndices));
 					return _Utils_Tuple2(
@@ -7403,7 +7404,8 @@ var $author$project$Main$update = F2(
 						_Utils_update(
 							model,
 							{items: newItemDict}),
-						$elm$core$Platform$Cmd$none);
+						$author$project$Main$callSortAPI(
+							$elm$core$Dict$values(newItemDict)));
 				} else {
 					var httpError = successPayload.a;
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
@@ -7452,7 +7454,8 @@ var $author$project$Main$update = F2(
 						_Utils_update(
 							model,
 							{items: newItemDict}),
-						$elm$core$Platform$Cmd$none);
+						$author$project$Main$callSortAPI(
+							$elm$core$Dict$values(newItemDict)));
 				} else {
 					var httpError = postResponsePayload.a;
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
@@ -8122,12 +8125,13 @@ var $author$project$Main$isVisible = F2(
 	});
 var $author$project$Main$sortItems = F2(
 	function (useOverrideIndex, items) {
-		return useOverrideIndex ? A2(
-			$elm$core$List$sortBy,
-			function ($) {
-				return $.orderIndexOverride;
-			},
-			items) : $elm$core$List$reverse(
+		return useOverrideIndex ? $elm$core$List$reverse(
+			A2(
+				$elm$core$List$sortBy,
+				function ($) {
+					return $.orderIndexOverride;
+				},
+				items)) : $elm$core$List$reverse(
 			A2(
 				$elm$core$List$sortBy,
 				function ($) {

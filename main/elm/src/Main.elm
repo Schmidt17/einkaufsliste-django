@@ -316,7 +316,7 @@ update msg model =
                 Ok sortIndices ->
                     let
                         newIndices =
-                            argsort sortIndices
+                            argsort (List.reverse sortIndices)
 
                         idToIndexDict =
                             Dict.fromList (List.map2 Tuple.pair requestedIds newIndices)
@@ -345,7 +345,7 @@ update msg model =
                                 )
                                 model.items
                     in
-                    ( { model | items = newItemDict }, Cmd.none )
+                    ( { model | items = newItemDict }, callSortAPI (Dict.values newItemDict) )
 
                 Err httpError ->
                     ( model, Cmd.none )
@@ -392,7 +392,7 @@ update msg model =
                                 Nothing ->
                                     model.items
                     in
-                    ( { model | items = newItemDict }, Cmd.none )
+                    ( { model | items = newItemDict }, callSortAPI (Dict.values newItemDict) )
 
                 Err httpError ->
                     ( model, Cmd.none )
@@ -787,6 +787,7 @@ sortItems : Bool -> List ItemData -> List ItemData
 sortItems useOverrideIndex items =
     if useOverrideIndex then
         List.sortBy .orderIndexOverride items
+            |> List.reverse
 
     else
         List.sortBy .orderIndexDefault items
