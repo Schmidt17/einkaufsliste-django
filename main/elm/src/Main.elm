@@ -530,7 +530,7 @@ toggleEdit : Maybe ItemData -> Maybe ItemData
 toggleEdit maybeItem =
     case maybeItem of
         Just item ->
-            Just { item | editing = not item.editing, draftTitle = item.title, draftTags = item.tags }
+            Just { item | editing = not item.editing, draftTitle = item.title, draftTags = item.tags, draftTagsInput = "" }
 
         Nothing ->
             Nothing
