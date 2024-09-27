@@ -7115,6 +7115,42 @@ var $author$project$Main$updateDraftTitle = F2(
 			return $elm$core$Maybe$Nothing;
 		}
 	});
+var $author$project$Main$UpdateResponseReceived = F2(
+	function (a, b) {
+		return {$: 'UpdateResponseReceived', a: a, b: b};
+	});
+var $author$project$Main$itemsUpdateUrl = F2(
+	function (apiKey, itemId) {
+		return 'https://picluster.a-h.wtf/einkaufsliste/api/v1/items/' + (itemId + ('?k=' + apiKey));
+	});
+var $author$project$Main$updateItem = F2(
+	function (apiKey, item) {
+		return $author$project$Main$httpUpdate(
+			{
+				body: $elm$http$Http$jsonBody(
+					$elm$json$Json$Encode$object(
+						_List_fromArray(
+							[
+								_Utils_Tuple2(
+								'itemData',
+								$elm$json$Json$Encode$object(
+									_List_fromArray(
+										[
+											_Utils_Tuple2(
+											'title',
+											$elm$json$Json$Encode$string(item.title)),
+											_Utils_Tuple2(
+											'tags',
+											A2($elm$json$Json$Encode$list, $elm$json$Json$Encode$string, item.tags))
+										])))
+							]))),
+				expect: A2(
+					$elm$http$Http$expectJson,
+					$author$project$Main$UpdateResponseReceived(item.id),
+					A2($elm$json$Json$Decode$field, 'success', $elm$json$Json$Decode$bool)),
+				url: A2($author$project$Main$itemsUpdateUrl, apiKey, item.id)
+			});
+	});
 var $author$project$Main$updateOverrideOrderIndex = F3(
 	function (idToIndexDict, itemId, item) {
 		return _Utils_update(
@@ -7220,53 +7256,63 @@ var $author$project$Main$update = F2(
 				var _v4 = A2($elm$core$Dict$get, itemId, model.items);
 				if (_v4.$ === 'Just') {
 					var item = _v4.a;
-					var updatedItem = _Utils_update(
-						item,
-						{tags: item.draftTags, title: item.draftTitle});
-					var oldFilters = A2(
-						$elm$core$List$map,
-						function ($) {
-							return $.tag;
-						},
-						model.filterTags);
-					var newItems = A3(
-						$elm$core$Dict$update,
-						itemId,
-						function (i) {
-							if (i.$ === 'Just') {
-								var it = i.a;
-								return $elm$core$Maybe$Just(updatedItem);
-							} else {
-								return $elm$core$Maybe$Nothing;
-							}
-						},
-						model.items);
-					var newFilters = $author$project$Main$getFilterTags(newItems);
-					var filterTagsDecimated = A2(
-						$elm$core$List$filter,
-						function (x) {
-							return A2($elm$core$List$member, x.tag, newFilters);
-						},
-						model.filterTags);
-					var additionalFilters = A2(
-						$elm$core$List$filter,
-						function (x) {
-							return !A2($elm$core$List$member, x, oldFilters);
-						},
-						newFilters);
-					var filterTagsAdded = _Utils_ap(
-						filterTagsDecimated,
-						A2(
+					if (item.synced) {
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									items: A3($elm$core$Dict$update, itemId, $author$project$Main$toggleEdit, model.items)
+								}),
+							$elm$core$Platform$Cmd$none);
+					} else {
+						var updatedItem = _Utils_update(
+							item,
+							{tags: item.draftTags, title: item.draftTitle});
+						var oldFilters = A2(
 							$elm$core$List$map,
-							function (x) {
-								return {isActive: false, tag: x};
+							function ($) {
+								return $.tag;
 							},
-							additionalFilters));
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{filterTags: filterTagsAdded, items: newItems}),
-						item._new ? A2($author$project$Main$postItem, model.apiKey, updatedItem) : $elm$core$Platform$Cmd$none);
+							model.filterTags);
+						var newItems = A3(
+							$elm$core$Dict$update,
+							itemId,
+							function (i) {
+								if (i.$ === 'Just') {
+									var it = i.a;
+									return $elm$core$Maybe$Just(updatedItem);
+								} else {
+									return $elm$core$Maybe$Nothing;
+								}
+							},
+							model.items);
+						var newFilters = $author$project$Main$getFilterTags(newItems);
+						var filterTagsDecimated = A2(
+							$elm$core$List$filter,
+							function (x) {
+								return A2($elm$core$List$member, x.tag, newFilters);
+							},
+							model.filterTags);
+						var additionalFilters = A2(
+							$elm$core$List$filter,
+							function (x) {
+								return !A2($elm$core$List$member, x, oldFilters);
+							},
+							newFilters);
+						var filterTagsAdded = _Utils_ap(
+							filterTagsDecimated,
+							A2(
+								$elm$core$List$map,
+								function (x) {
+									return {isActive: false, tag: x};
+								},
+								additionalFilters));
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{filterTags: filterTagsAdded, items: newItems}),
+							item._new ? A2($author$project$Main$postItem, model.apiKey, updatedItem) : A2($author$project$Main$updateItem, model.apiKey, updatedItem));
+					}
 				} else {
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
@@ -7333,6 +7379,35 @@ var $author$project$Main$update = F2(
 			case 'DoneResponseReceived':
 				var success = msg.a;
 				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+			case 'UpdateResponseReceived':
+				var itemId = msg.a;
+				var successPayload = msg.b;
+				if (successPayload.$ === 'Ok') {
+					var success = successPayload.a;
+					var newItemDict = A3(
+						$elm$core$Dict$update,
+						itemId,
+						function (maybeItem) {
+							if (maybeItem.$ === 'Just') {
+								var item = maybeItem.a;
+								return $elm$core$Maybe$Just(
+									_Utils_update(
+										item,
+										{editing: false, synced: true}));
+							} else {
+								return $elm$core$Maybe$Nothing;
+							}
+						},
+						model.items);
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{items: newItemDict}),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					var httpError = successPayload.a;
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				}
 			case 'ReceivedMQTTMessage':
 				var mqttMsg = msg.a;
 				var maybeMqttData = $author$project$Main$parseMQTTMessage(mqttMsg);
