@@ -248,7 +248,7 @@ update msg model =
                     else
                         let
                             updatedItem =
-                                { item | title = item.draftTitle, tags = item.draftTags }
+                                { item | title = String.trim item.draftTitle, tags = item.draftTags }
 
                             newItems =
                                 Dict.update itemId
