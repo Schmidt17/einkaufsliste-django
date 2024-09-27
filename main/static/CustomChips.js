@@ -48,6 +48,7 @@ class CustomChips extends HTMLElement {
             placeholder: 'Tags',
             data: tags,
             onChipAdd: function(e, chip) {
+                thisElement.dispatchEvent(new CustomEvent('inputChanged', {detail: {remainingText : ""}}));
                 thisElement.incrementChanges();
             },
             onChipDelete: function(e, chip) {
