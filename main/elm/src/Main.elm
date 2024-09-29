@@ -97,6 +97,7 @@ type Msg
     | ItemPosted String (Result Http.Error PostResponse)
     | DraftTagsChanged String (List String)
     | DraftTagsInputChanged String String
+    | DeleteCard String
 
 
 itemsUrl : String -> String
@@ -431,6 +432,9 @@ update msg model =
         DraftTagsInputChanged itemId remainingText ->
             ( { model | items = Dict.update itemId (updateDraftTagsInput remainingText) model.items }, Cmd.none )
 
+        DeleteCard itemId ->
+            ( { model | items = Dict.remove itemId model.items }, Cmd.none )
+
 
 updateOverrideOrderIndex : Dict String Int -> String -> ItemData -> ItemData
 updateOverrideOrderIndex idToIndexDict itemId item =
@@ -754,13 +758,20 @@ editCard item =
             "card s12 item-edit"
         ]
         [ div [ class "card-content" ]
-            [ div [ class "input-field card-title" ] [ input [ placeholder "Neuer Eintrag", type_ "text", value item.draftTitle, onInput (DraftTitleChanged item.id) ] [] ]
-            , editChipsView item
-            , div [ class "card-action valign-wrapper justify-right" ]
-                [ cancelButton item.id
-                , a [ class "green btn finish-edit", Aria.role "button", Aria.ariaLabel "Bestätigen", onClick (FinishEditing item.id) ] [ i [ class "material-icons" ] [ text "check" ] ]
-                ]
-            ]
+            ((if item.new then
+                []
+
+              else
+                [ deleteCardButton item.id ]
+             )
+                ++ [ div [ class "input-field card-title" ] [ input [ placeholder "Neuer Eintrag", type_ "text", value item.draftTitle, onInput (DraftTitleChanged item.id) ] [] ]
+                   , editChipsView item
+                   , div [ class "card-action valign-wrapper justify-right" ]
+                        [ cancelButton item.id
+                        , a [ class "green btn finish-edit", Aria.role "button", Aria.ariaLabel "Bestätigen", onClick (FinishEditing item.id) ] [ i [ class "material-icons" ] [ text "check" ] ]
+                        ]
+                   ]
+            )
         ]
 
 
@@ -795,6 +806,18 @@ cancelButton itemId =
         , Aria.role "button"
         ]
         [ text "Abbrechen" ]
+
+
+deleteCardButton : String -> Html Msg
+deleteCardButton itemId =
+    a
+        [ href ""
+        , onWithOptions "click" { preventDefault = True, stopPropagation = True } (\event -> DeleteCard itemId)
+        , class "delete-btn right"
+        , Aria.role "button"
+        , Aria.ariaLabel "Löschen"
+        ]
+        [ i [ class "material-icons grey-text right-align" ] [ text "delete" ] ]
 
 
 filterTagChip : FilterTag -> Html Msg

@@ -784,11 +784,11 @@ function _Debug_crash_UNUSED(identifier, fact1, fact2, fact3, fact4)
 
 function _Debug_regionToString(region)
 {
-	if (region.bN.aq === region.b4.aq)
+	if (region.bO.aq === region.b4.aq)
 	{
-		return 'on line ' + region.bN.aq;
+		return 'on line ' + region.bO.aq;
 	}
-	return 'on lines ' + region.bN.aq + ' through ' + region.b4.aq;
+	return 'on lines ' + region.bO.aq + ' through ' + region.b4.aq;
 }
 
 
@@ -2720,8 +2720,8 @@ var _VirtualDom_mapEventRecord = F2(function(func, record)
 {
 	return {
 		o: func(record.o),
-		bO: record.bO,
-		bF: record.bF
+		a0: record.a0,
+		aY: record.aY
 	}
 });
 
@@ -2990,10 +2990,10 @@ function _VirtualDom_makeCallback(eventNode, initialHandler)
 
 		var value = result.a;
 		var message = !tag ? value : tag < 3 ? value.a : value.o;
-		var stopPropagation = tag == 1 ? value.b : tag == 3 && value.bO;
+		var stopPropagation = tag == 1 ? value.b : tag == 3 && value.a0;
 		var currentEventNode = (
 			stopPropagation && event.stopPropagation(),
-			(tag == 2 ? value.b : tag == 3 && value.bF) && event.preventDefault(),
+			(tag == 2 ? value.b : tag == 3 && value.aY) && event.preventDefault(),
 			eventNode
 		);
 		var tagger;
@@ -3983,7 +3983,7 @@ var _Browser_document = _Debugger_document || F4(function(impl, flagDecoder, deb
 		impl.dt,
 		impl.dj,
 		function(sendToApp, initialModel) {
-			var divertHrefToApp = impl.bL && impl.bL(sendToApp)
+			var divertHrefToApp = impl.bM && impl.bM(sendToApp)
 			var view = impl.dv;
 			var title = _VirtualDom_doc.title;
 			var bodyNode = _VirtualDom_doc.body;
@@ -3992,7 +3992,7 @@ var _Browser_document = _Debugger_document || F4(function(impl, flagDecoder, deb
 			{
 				_VirtualDom_divertHrefToApp = divertHrefToApp;
 				var doc = view(model);
-				var nextNode = _VirtualDom_node('body')(_List_Nil)(doc.ac);
+				var nextNode = _VirtualDom_node('body')(_List_Nil)(doc.ad);
 				var patches = _VirtualDom_diff(currNode, nextNode);
 				bodyNode = _VirtualDom_applyPatches(bodyNode, currNode, patches, sendToApp);
 				currNode = nextNode;
@@ -4058,7 +4058,7 @@ function _Browser_application(impl)
 	var key = function() { key.a(onUrlChange(_Browser_getUrl())); };
 
 	return _Browser_document({
-		bL: function(sendToApp)
+		bM: function(sendToApp)
 		{
 			key.a = sendToApp;
 			_Browser_window.addEventListener('popstate', key);
@@ -4390,15 +4390,15 @@ var _Http_toTask = F3(function(router, toTask, request)
 		$elm$core$Maybe$isJust(request.ds) && _Http_track(router, xhr, request.ds.a);
 
 		try {
-			xhr.open(request.cY, request.aa, true);
+			xhr.open(request.cY, request.ab, true);
 		} catch (e) {
-			return done($elm$http$Http$BadUrl_(request.aa));
+			return done($elm$http$Http$BadUrl_(request.ab));
 		}
 
 		_Http_configureRequest(xhr, request);
 
-		request.ac.a && xhr.setRequestHeader('Content-Type', request.ac.a);
-		xhr.send(request.ac.b);
+		request.ad.a && xhr.setRequestHeader('Content-Type', request.ad.a);
+		xhr.send(request.ad.b);
 
 		return function() { xhr.c = true; xhr.abort(); };
 	});
@@ -4436,7 +4436,7 @@ function _Http_toResponse(toBody, xhr)
 function _Http_toMetadata(xhr)
 {
 	return {
-		aa: xhr.responseURL,
+		ab: xhr.responseURL,
 		dh: xhr.status,
 		di: xhr.statusText,
 		cO: _Http_parseHeaders(xhr.getAllResponseHeaders())
@@ -6162,13 +6162,13 @@ var $elm$http$Http$cmdMap = F2(
 			return $elm$http$Http$Request(
 				{
 					cy: r.cy,
-					ac: r.ac,
+					ad: r.ad,
 					T: A2(_Http_mapExpect, func, r.T),
 					cO: r.cO,
 					cY: r.cY,
 					dq: r.dq,
 					ds: r.ds,
-					aa: r.aa
+					ab: r.ab
 				});
 		}
 	});
@@ -6191,11 +6191,11 @@ var $elm$http$Http$subscription = _Platform_leaf('Http');
 var $elm$http$Http$request = function (r) {
 	return $elm$http$Http$command(
 		$elm$http$Http$Request(
-			{cy: false, ac: r.ac, T: r.T, cO: r.cO, cY: r.cY, dq: r.dq, ds: r.ds, aa: r.aa}));
+			{cy: false, ad: r.ad, T: r.T, cO: r.cO, cY: r.cY, dq: r.dq, ds: r.ds, ab: r.ab}));
 };
 var $elm$http$Http$get = function (r) {
 	return $elm$http$Http$request(
-		{ac: $elm$http$Http$emptyBody, T: r.T, cO: _List_Nil, cY: 'GET', dq: $elm$core$Maybe$Nothing, ds: $elm$core$Maybe$Nothing, aa: r.aa});
+		{ad: $elm$http$Http$emptyBody, T: r.T, cO: _List_Nil, cY: 'GET', dq: $elm$core$Maybe$Nothing, ds: $elm$core$Maybe$Nothing, ab: r.ab});
 };
 var $author$project$Main$itemsUrl = function (apiKey) {
 	return 'https://picluster.a-h.wtf/einkaufsliste/api/v1/items?k=' + apiKey;
@@ -6204,7 +6204,7 @@ var $author$project$Main$getItems = function (apiKey) {
 	return $elm$http$Http$get(
 		{
 			T: $elm$http$Http$expectString($author$project$Main$ItemsReceived),
-			aa: $author$project$Main$itemsUrl(apiKey)
+			ab: $author$project$Main$itemsUrl(apiKey)
 		});
 };
 var $author$project$Main$init = function (flags) {
@@ -6267,7 +6267,7 @@ var $author$project$Main$addNewItem = F2(
 		return A3(
 			$elm$core$Dict$insert,
 			newId,
-			{s: 0, Q: _List_Nil, R: '', S: '', I: true, b: newId, ag: true, at: newIndex, ah: newIndex, v: false, h: _List_Nil, p: ''},
+			{s: 0, Q: _List_Nil, R: '', S: '', I: true, b: newId, Z: true, at: newIndex, ah: newIndex, v: false, h: _List_Nil, p: ''},
 			dict);
 	});
 var $elm$core$Tuple$pair = F2(
@@ -6336,7 +6336,7 @@ var $elm$json$Json$Encode$object = function (pairs) {
 };
 var $elm$http$Http$post = function (r) {
 	return $elm$http$Http$request(
-		{ac: r.ac, T: r.T, cO: _List_Nil, cY: 'POST', dq: $elm$core$Maybe$Nothing, ds: $elm$core$Maybe$Nothing, aa: r.aa});
+		{ad: r.ad, T: r.T, cO: _List_Nil, cY: 'POST', dq: $elm$core$Maybe$Nothing, ds: $elm$core$Maybe$Nothing, ab: r.ab});
 };
 var $elm$json$Json$Decode$field = _Json_decodeField;
 var $elm$json$Json$Decode$int = _Json_decodeInt;
@@ -6350,7 +6350,7 @@ var $elm$json$Json$Encode$string = _Json_wrap;
 var $author$project$Main$callSortAPI = function (items) {
 	return $elm$http$Http$post(
 		{
-			ac: $elm$http$Http$jsonBody(
+			ad: $elm$http$Http$jsonBody(
 				$elm$json$Json$Encode$object(
 					_List_fromArray(
 						[
@@ -6376,7 +6376,7 @@ var $author$project$Main$callSortAPI = function (items) {
 						},
 						items)),
 				$author$project$Main$sortAPIResponseDecoder),
-			aa: $author$project$Main$sortUrl
+			ab: $author$project$Main$sortUrl
 		});
 };
 var $elm$core$List$filter = F2(
@@ -6654,7 +6654,7 @@ var $author$project$Main$getFilterTags = function (items) {
 };
 var $author$project$Main$FilterTag = F2(
 	function (tag, isActive) {
-		return {ae: isActive, K: tag};
+		return {af: isActive, K: tag};
 	});
 var $author$project$Main$initTags = function (tagNames) {
 	return A2(
@@ -6780,13 +6780,13 @@ var $author$project$Main$ItemPosted = F2(
 	});
 var $author$project$Main$PostResponse = F2(
 	function (success, newId) {
-		return {br: newId, dk: success};
+		return {bt: newId, dk: success};
 	});
 var $author$project$Main$postItem = F2(
 	function (apiKey, item) {
 		return $elm$http$Http$post(
 			{
-				ac: $elm$http$Http$jsonBody(
+				ad: $elm$http$Http$jsonBody(
 					$elm$json$Json$Encode$object(
 						_List_fromArray(
 							[
@@ -6811,12 +6811,12 @@ var $author$project$Main$postItem = F2(
 						$author$project$Main$PostResponse,
 						A2($elm$json$Json$Decode$field, 'success', $elm$json$Json$Decode$bool),
 						A2($elm$json$Json$Decode$field, 'newId', $elm$json$Json$Decode$string))),
-				aa: $author$project$Main$itemsUrl(apiKey)
+				ab: $author$project$Main$itemsUrl(apiKey)
 			});
 	});
 var $author$project$Main$receivedToItem = F2(
 	function (index, itemReceived) {
-		return {s: itemReceived.s, Q: itemReceived.h, R: '', S: itemReceived.p, I: false, b: itemReceived.b, ag: false, at: index, ah: index, v: true, h: itemReceived.h, p: itemReceived.p};
+		return {s: itemReceived.s, Q: itemReceived.h, R: '', S: itemReceived.p, I: false, b: itemReceived.b, Z: false, at: index, ah: index, v: true, h: itemReceived.h, p: itemReceived.p};
 	});
 var $author$project$Main$setDone = F2(
 	function (newStatus, maybeItem) {
@@ -6990,7 +6990,7 @@ var $author$project$Main$toggleTag = F2(
 			function (tagToMatch, filterTag) {
 				return _Utils_eq(tagToMatch, filterTag.K) ? _Utils_update(
 					filterTag,
-					{ae: !filterTag.ae}) : filterTag;
+					{af: !filterTag.af}) : filterTag;
 			});
 		return A2(
 			$elm$core$List$map,
@@ -7009,7 +7009,7 @@ var $elm$http$Http$header = $elm$http$Http$Header;
 var $author$project$Main$httpUpdate = function (options) {
 	return $elm$http$Http$request(
 		{
-			ac: options.ac,
+			ad: options.ad,
 			T: options.T,
 			cO: _List_fromArray(
 				[
@@ -7018,7 +7018,7 @@ var $author$project$Main$httpUpdate = function (options) {
 			cY: 'UPDATE',
 			dq: $elm$core$Maybe$Nothing,
 			ds: $elm$core$Maybe$Nothing,
-			aa: options.aa
+			ab: options.ab
 		});
 };
 var $elm$json$Json$Encode$int = _Json_wrap;
@@ -7030,7 +7030,7 @@ var $author$project$Main$updateDoneBackend = F3(
 	function (apiKey, itemId, doneStatus) {
 		return $author$project$Main$httpUpdate(
 			{
-				ac: $elm$http$Http$jsonBody(
+				ad: $elm$http$Http$jsonBody(
 					$elm$json$Json$Encode$object(
 						_List_fromArray(
 							[
@@ -7042,7 +7042,7 @@ var $author$project$Main$updateDoneBackend = F3(
 					$elm$http$Http$expectJson,
 					$author$project$Main$DoneResponseReceived,
 					A2($elm$json$Json$Decode$field, 'success', $elm$json$Json$Decode$bool)),
-				aa: A2($author$project$Main$updateDoneUrl, apiKey, itemId)
+				ab: A2($author$project$Main$updateDoneUrl, apiKey, itemId)
 			});
 	});
 var $elm$core$List$sort = function (xs) {
@@ -7123,7 +7123,7 @@ var $author$project$Main$updateItem = F2(
 	function (apiKey, item) {
 		return $author$project$Main$httpUpdate(
 			{
-				ac: $elm$http$Http$jsonBody(
+				ad: $elm$http$Http$jsonBody(
 					$elm$json$Json$Encode$object(
 						_List_fromArray(
 							[
@@ -7144,7 +7144,7 @@ var $author$project$Main$updateItem = F2(
 					$elm$http$Http$expectJson,
 					$author$project$Main$UpdateResponseReceived(item.b),
 					A2($elm$json$Json$Decode$field, 'success', $elm$json$Json$Decode$bool)),
-				aa: A2($author$project$Main$itemsUpdateUrl, apiKey, item.b)
+				ab: A2($author$project$Main$itemsUpdateUrl, apiKey, item.b)
 			});
 	});
 var $author$project$Main$updateOverrideOrderIndex = F3(
@@ -7231,7 +7231,7 @@ var $author$project$Main$update = F2(
 				var maybeItem = A2($elm$core$Dict$get, itemId, model.a);
 				if (!maybeItem.$) {
 					var item = maybeItem.a;
-					return item.ag ? _Utils_Tuple2(
+					return item.Z ? _Utils_Tuple2(
 						_Utils_update(
 							model,
 							{
@@ -7308,14 +7308,14 @@ var $author$project$Main$update = F2(
 							A2(
 								$elm$core$List$map,
 								function (x) {
-									return {ae: false, K: x};
+									return {af: false, K: x};
 								},
 								additionalFilters));
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
 								{J: filterTagsAdded, a: newItems}),
-							item.ag ? A2($author$project$Main$postItem, model.al, updatedItem) : A2($author$project$Main$updateItem, model.al, updatedItem));
+							item.Z ? A2($author$project$Main$postItem, model.al, updatedItem) : A2($author$project$Main$updateItem, model.al, updatedItem));
 					}
 				} else {
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
@@ -7445,10 +7445,10 @@ var $author$project$Main$update = F2(
 							var oldItem = maybeOldItem.a;
 							return A3(
 								$elm$core$Dict$insert,
-								postResponse.br,
+								postResponse.bt,
 								_Utils_update(
 									oldItem,
-									{I: false, b: postResponse.br, ag: false, v: true}),
+									{I: false, b: postResponse.bt, Z: false, v: true}),
 								A2($elm$core$Dict$remove, oldId, model.a));
 						} else {
 							return model.a;
@@ -7478,7 +7478,7 @@ var $author$project$Main$update = F2(
 								model.a)
 						}),
 					$elm$core$Platform$Cmd$none);
-			default:
+			case 17:
 				var itemId = msg.a;
 				var remainingText = msg.b;
 				return _Utils_Tuple2(
@@ -7490,6 +7490,15 @@ var $author$project$Main$update = F2(
 								itemId,
 								$author$project$Main$updateDraftTagsInput(remainingText),
 								model.a)
+						}),
+					$elm$core$Platform$Cmd$none);
+			default:
+				var itemId = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							a: A2($elm$core$Dict$remove, itemId, model.a)
 						}),
 					$elm$core$Platform$Cmd$none);
 		}
@@ -7578,7 +7587,7 @@ var $author$project$Main$filterTagChip = function (filterTag) {
 			[
 				$elm$html$Html$Attributes$class(
 				'chip green-text green lighten-5' + function () {
-					var _v0 = filterTag.ae;
+					var _v0 = filterTag.af;
 					if (_v0) {
 						return ' darken-1 white-text';
 					} else {
@@ -7700,8 +7709,8 @@ var $mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$onWithOptions = F3(
 				function (ev) {
 					return {
 						o: tag(ev),
-						bF: options.bF,
-						bO: options.bO
+						aY: options.aY,
+						a0: options.a0
 					};
 				},
 				$mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$eventDecoder));
@@ -7715,7 +7724,7 @@ var $author$project$Main$sortButton = function (isActive) {
 				A3(
 				$mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$onWithOptions,
 				'click',
-				{bF: true, bO: true},
+				{aY: true, a0: true},
 				function (event) {
 					return $author$project$Main$SortButtonClicked;
 				}),
@@ -7863,7 +7872,7 @@ var $author$project$Main$cancelButton = function (itemId) {
 				A3(
 				$mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$onWithOptions,
 				'click',
-				{bF: true, bO: true},
+				{aY: true, a0: true},
 				function (event) {
 					return $author$project$Main$CancelEditing(itemId);
 				}),
@@ -7873,6 +7882,40 @@ var $author$project$Main$cancelButton = function (itemId) {
 		_List_fromArray(
 			[
 				$elm$html$Html$text('Abbrechen')
+			]));
+};
+var $author$project$Main$DeleteCard = function (a) {
+	return {$: 18, a: a};
+};
+var $author$project$Main$deleteCardButton = function (itemId) {
+	return A2(
+		$elm$html$Html$a,
+		_List_fromArray(
+			[
+				$elm$html$Html$Attributes$href(''),
+				A3(
+				$mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$onWithOptions,
+				'click',
+				{aY: true, a0: true},
+				function (event) {
+					return $author$project$Main$DeleteCard(itemId);
+				}),
+				$elm$html$Html$Attributes$class('delete-btn right'),
+				$fapian$elm_html_aria$Html$Attributes$Aria$role('button'),
+				$fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel('Löschen')
+			]),
+		_List_fromArray(
+			[
+				A2(
+				$elm$html$Html$i,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$class('material-icons grey-text right-align')
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text('delete')
+					]))
 			]));
 };
 var $author$project$Main$DraftTagsChanged = F2(
@@ -7981,63 +8024,68 @@ var $author$project$Main$editCard = function (item) {
 					[
 						$elm$html$Html$Attributes$class('card-content')
 					]),
-				_List_fromArray(
-					[
-						A2(
-						$elm$html$Html$div,
-						_List_fromArray(
-							[
-								$elm$html$Html$Attributes$class('input-field card-title')
-							]),
-						_List_fromArray(
-							[
-								A2(
-								$elm$html$Html$input,
-								_List_fromArray(
-									[
-										$elm$html$Html$Attributes$placeholder('Neuer Eintrag'),
-										$elm$html$Html$Attributes$type_('text'),
-										$elm$html$Html$Attributes$value(item.S),
-										$elm$html$Html$Events$onInput(
-										$author$project$Main$DraftTitleChanged(item.b))
-									]),
-								_List_Nil)
-							])),
-						$author$project$Main$editChipsView(item),
-						A2(
-						$elm$html$Html$div,
-						_List_fromArray(
-							[
-								$elm$html$Html$Attributes$class('card-action valign-wrapper justify-right')
-							]),
-						_List_fromArray(
-							[
-								$author$project$Main$cancelButton(item.b),
-								A2(
-								$elm$html$Html$a,
-								_List_fromArray(
-									[
-										$elm$html$Html$Attributes$class('green btn finish-edit'),
-										$fapian$elm_html_aria$Html$Attributes$Aria$role('button'),
-										$fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel('Bestätigen'),
-										$elm$html$Html$Events$onClick(
-										$author$project$Main$FinishEditing(item.b))
-									]),
-								_List_fromArray(
-									[
-										A2(
-										$elm$html$Html$i,
-										_List_fromArray(
-											[
-												$elm$html$Html$Attributes$class('material-icons')
-											]),
-										_List_fromArray(
-											[
-												$elm$html$Html$text('check')
-											]))
-									]))
-							]))
-					]))
+				_Utils_ap(
+					item.Z ? _List_Nil : _List_fromArray(
+						[
+							$author$project$Main$deleteCardButton(item.b)
+						]),
+					_List_fromArray(
+						[
+							A2(
+							$elm$html$Html$div,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$class('input-field card-title')
+								]),
+							_List_fromArray(
+								[
+									A2(
+									$elm$html$Html$input,
+									_List_fromArray(
+										[
+											$elm$html$Html$Attributes$placeholder('Neuer Eintrag'),
+											$elm$html$Html$Attributes$type_('text'),
+											$elm$html$Html$Attributes$value(item.S),
+											$elm$html$Html$Events$onInput(
+											$author$project$Main$DraftTitleChanged(item.b))
+										]),
+									_List_Nil)
+								])),
+							$author$project$Main$editChipsView(item),
+							A2(
+							$elm$html$Html$div,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$class('card-action valign-wrapper justify-right')
+								]),
+							_List_fromArray(
+								[
+									$author$project$Main$cancelButton(item.b),
+									A2(
+									$elm$html$Html$a,
+									_List_fromArray(
+										[
+											$elm$html$Html$Attributes$class('green btn finish-edit'),
+											$fapian$elm_html_aria$Html$Attributes$Aria$role('button'),
+											$fapian$elm_html_aria$Html$Attributes$Aria$ariaLabel('Bestätigen'),
+											$elm$html$Html$Events$onClick(
+											$author$project$Main$FinishEditing(item.b))
+										]),
+									_List_fromArray(
+										[
+											A2(
+											$elm$html$Html$i,
+											_List_fromArray(
+												[
+													$elm$html$Html$Attributes$class('material-icons')
+												]),
+											_List_fromArray(
+												[
+													$elm$html$Html$text('check')
+												]))
+										]))
+								]))
+						])))
 			]));
 };
 var $author$project$Main$CardClicked = function (a) {
@@ -8067,7 +8115,7 @@ var $author$project$Main$editButton = function (item) {
 				A3(
 				$mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$onWithOptions,
 				'click',
-				{bF: true, bO: true},
+				{aY: true, a0: true},
 				function (event) {
 					return $author$project$Main$EditCardClicked(item.b);
 				}),
@@ -8136,7 +8184,7 @@ var $author$project$Main$cardView = function (itemData) {
 	return itemData.I ? $author$project$Main$editCard(itemData) : $author$project$Main$itemCard(itemData);
 };
 var $author$project$Main$maybeActiveTag = function (filterTag) {
-	return filterTag.ae ? $elm$core$Maybe$Just(filterTag.K) : $elm$core$Maybe$Nothing;
+	return filterTag.af ? $elm$core$Maybe$Just(filterTag.K) : $elm$core$Maybe$Nothing;
 };
 var $author$project$Main$activeFilters = function (filterTags) {
 	return A2($elm$core$List$filterMap, $author$project$Main$maybeActiveTag, filterTags);
