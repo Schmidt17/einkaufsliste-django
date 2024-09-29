@@ -2,7 +2,7 @@ port module Main exposing (main)
 
 import Browser
 import Dict exposing (Dict)
-import Html exposing (Html, a, br, button, div, h1, header, i, input, label, li, main_, nav, node, p, span, text, ul)
+import Html exposing (Html, a, br, button, div, h1, h4, header, i, input, label, li, main_, nav, node, p, span, text, ul)
 import Html.Attributes exposing (..)
 import Html.Attributes.Aria as Aria
 import Html.Events exposing (on, onClick, onInput, onMouseDown, preventDefaultOn)
@@ -99,6 +99,7 @@ type Msg
     | DraftTagsChanged String (List String)
     | DraftTagsInputChanged String String
     | DeleteCard String
+    | DeleteAllDone
 
 
 itemsUrl : String -> String
@@ -395,6 +396,13 @@ update msg model =
 
                 Err httpError ->
                     ( model, Cmd.none )
+
+        DeleteAllDone ->
+            let
+                doneIds =
+                    List.map .id (List.filter (\item -> item.done == 1) (Dict.values model.items))
+            in
+            ( model, Cmd.batch (List.map (deleteItem model.apiKey) doneIds) )
 
         DeleteResponseReceived itemId successPayload ->
             case successPayload of
@@ -701,6 +709,7 @@ headerView model =
                     ]
                 ]
             ]
+        , delAllModal
         ]
 
 
@@ -724,6 +733,23 @@ sortButton isActive =
                 )
             ]
             [ text "sort" ]
+        ]
+
+
+delAllModal : Html Msg
+delAllModal =
+    node "custom-modal"
+        []
+        [ div [ id "delConfirmModal", class "modal" ]
+            [ div [ class "modal-content" ]
+                [ h4 [] [ text "Sicher?" ]
+                , p [] [ text "Alle abgehakten löschen?" ]
+                ]
+            , div [ class "modal-footer" ]
+                [ a [ href "#!", class "modal-close waves-effect waves-green btn-flat" ] [ text "Abbrechen" ]
+                , a [ href "#!", class "modal-close waves-effect waves-green btn-flat", onClick DeleteAllDone ] [ text "Löschen" ]
+                ]
+            ]
         ]
 
 
