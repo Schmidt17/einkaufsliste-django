@@ -639,7 +639,7 @@ view model =
         [ headerView model
         , main_ [ Aria.ariaLabel "Listenbereich" ]
             [ itemCardsView model
-            , addCardButton model
+            , addCardButton
             ]
         ]
 
@@ -872,8 +872,8 @@ sortItems useOverrideIndex items =
             |> List.reverse
 
 
-addCardButton : Model -> Html Msg
-addCardButton model =
+addCardButton : Html Msg
+addCardButton =
     div [ class "fixed-action-btn center-horizontally" ]
         [ a
             [ class "btn-floating btn-large waves-effect red"
