@@ -2,7 +2,7 @@ port module Main exposing (main)
 
 import Browser
 import Dict exposing (Dict)
-import Html exposing (Html, a, br, button, div, h1, header, i, input, label, li, main_, nav, node, p, span, text, ul)
+import Html exposing (Html, a, br, button, div, h1, h4, header, i, input, label, li, main_, nav, node, p, span, text, ul)
 import Html.Attributes exposing (..)
 import Html.Attributes.Aria as Aria
 import Html.Events exposing (on, onClick, onInput, onMouseDown, preventDefaultOn)
@@ -93,10 +93,13 @@ type Msg
     | SortResponseReceived (List String) (Result Http.Error (List Int))
     | DoneResponseReceived (Result Http.Error Bool)
     | UpdateResponseReceived String (Result Http.Error Bool)
+    | DeleteResponseReceived String (Result Http.Error Bool)
     | ReceivedMQTTMessage String
     | ItemPosted String (Result Http.Error PostResponse)
     | DraftTagsChanged String (List String)
     | DraftTagsInputChanged String String
+    | DeleteCard String
+    | DeleteAllDone
 
 
 itemsUrl : String -> String
@@ -104,8 +107,8 @@ itemsUrl apiKey =
     "https://picluster.a-h.wtf/einkaufsliste/api/v1/items?k=" ++ apiKey
 
 
-itemsUpdateUrl : String -> String -> String
-itemsUpdateUrl apiKey itemId =
+itemUrl : String -> String -> String
+itemUrl apiKey itemId =
     "https://picluster.a-h.wtf/einkaufsliste/api/v1/items/" ++ itemId ++ "?k=" ++ apiKey
 
 
@@ -139,10 +142,19 @@ postItem apiKey item =
         }
 
 
+deleteItem : String -> String -> Cmd Msg
+deleteItem apiKey itemId =
+    httpDelete
+        { url = itemUrl apiKey itemId
+        , body = Http.emptyBody
+        , expect = Http.expectJson (DeleteResponseReceived itemId) (Decode.field "success" Decode.bool)
+        }
+
+
 updateItem : String -> ItemData -> Cmd Msg
 updateItem apiKey item =
     httpUpdate
-        { url = itemsUpdateUrl apiKey item.id
+        { url = itemUrl apiKey item.id
         , body = Http.jsonBody (Encode.object [ ( "itemData", Encode.object [ ( "title", Encode.string item.title ), ( "tags", Encode.list Encode.string item.tags ) ] ) ])
         , expect = Http.expectJson (UpdateResponseReceived item.id) (Decode.field "success" Decode.bool)
         }
@@ -152,6 +164,19 @@ httpUpdate : { url : String, body : Http.Body, expect : Http.Expect msg } -> Cmd
 httpUpdate options =
     Http.request
         { method = "UPDATE"
+        , headers = [ Http.header "Content-Type" "application/json" ]
+        , url = options.url
+        , body = options.body
+        , expect = options.expect
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
+httpDelete : { url : String, body : Http.Body, expect : Http.Expect msg } -> Cmd msg
+httpDelete options =
+    Http.request
+        { method = "DELETE"
         , headers = [ Http.header "Content-Type" "application/json" ]
         , url = options.url
         , body = options.body
@@ -372,6 +397,25 @@ update msg model =
                 Err httpError ->
                     ( model, Cmd.none )
 
+        DeleteAllDone ->
+            let
+                doneIds =
+                    List.map .id (List.filter (\item -> item.done == 1) (Dict.values model.items))
+            in
+            ( model, Cmd.batch (List.map (deleteItem model.apiKey) doneIds) )
+
+        DeleteResponseReceived itemId successPayload ->
+            case successPayload of
+                Ok success ->
+                    if success then
+                        ( { model | items = Dict.remove itemId model.items }, Cmd.none )
+
+                    else
+                        ( model, Cmd.none )
+
+                Err httpError ->
+                    ( model, Cmd.none )
+
         ReceivedMQTTMessage mqttMsg ->
             let
                 maybeMqttData =
@@ -430,6 +474,9 @@ update msg model =
 
         DraftTagsInputChanged itemId remainingText ->
             ( { model | items = Dict.update itemId (updateDraftTagsInput remainingText) model.items }, Cmd.none )
+
+        DeleteCard itemId ->
+            ( model, deleteItem model.apiKey itemId )
 
 
 updateOverrideOrderIndex : Dict String Int -> String -> ItemData -> ItemData
@@ -635,7 +682,7 @@ view model =
         [ headerView model
         , main_ [ Aria.ariaLabel "Listenbereich" ]
             [ itemCardsView model
-            , addCardButton model
+            , addCardButton
             ]
         ]
 
@@ -662,6 +709,7 @@ headerView model =
                     ]
                 ]
             ]
+        , delAllModal
         ]
 
 
@@ -685,6 +733,23 @@ sortButton isActive =
                 )
             ]
             [ text "sort" ]
+        ]
+
+
+delAllModal : Html Msg
+delAllModal =
+    node "custom-modal"
+        []
+        [ div [ id "delConfirmModal", class "modal" ]
+            [ div [ class "modal-content" ]
+                [ h4 [] [ text "Sicher?" ]
+                , p [] [ text "Alle abgehakten löschen?" ]
+                ]
+            , div [ class "modal-footer" ]
+                [ a [ href "#!", class "modal-close waves-effect waves-green btn-flat" ] [ text "Abbrechen" ]
+                , a [ href "#!", class "modal-close waves-effect waves-green btn-flat", onClick DeleteAllDone ] [ text "Löschen" ]
+                ]
+            ]
         ]
 
 
@@ -754,13 +819,20 @@ editCard item =
             "card s12 item-edit"
         ]
         [ div [ class "card-content" ]
-            [ div [ class "input-field card-title" ] [ input [ placeholder "Neuer Eintrag", type_ "text", value item.draftTitle, onInput (DraftTitleChanged item.id) ] [] ]
-            , editChipsView item
-            , div [ class "card-action valign-wrapper justify-right" ]
-                [ cancelButton item.id
-                , a [ class "green btn finish-edit", Aria.role "button", Aria.ariaLabel "Bestätigen", onClick (FinishEditing item.id) ] [ i [ class "material-icons" ] [ text "check" ] ]
-                ]
-            ]
+            ((if item.new then
+                []
+
+              else
+                [ deleteCardButton item.id ]
+             )
+                ++ [ div [ class "input-field card-title" ] [ input [ placeholder "Neuer Eintrag", type_ "text", value item.draftTitle, onInput (DraftTitleChanged item.id) ] [] ]
+                   , editChipsView item
+                   , div [ class "card-action valign-wrapper justify-right" ]
+                        [ cancelButton item.id
+                        , a [ class "green btn finish-edit", Aria.role "button", Aria.ariaLabel "Bestätigen", onClick (FinishEditing item.id) ] [ i [ class "material-icons" ] [ text "check" ] ]
+                        ]
+                   ]
+            )
         ]
 
 
@@ -795,6 +867,18 @@ cancelButton itemId =
         , Aria.role "button"
         ]
         [ text "Abbrechen" ]
+
+
+deleteCardButton : String -> Html Msg
+deleteCardButton itemId =
+    a
+        [ href ""
+        , onWithOptions "click" { preventDefault = True, stopPropagation = True } (\event -> DeleteCard itemId)
+        , class "delete-btn right"
+        , Aria.role "button"
+        , Aria.ariaLabel "Löschen"
+        ]
+        [ i [ class "material-icons grey-text right-align" ] [ text "delete" ] ]
 
 
 filterTagChip : FilterTag -> Html Msg
@@ -849,8 +933,8 @@ sortItems useOverrideIndex items =
             |> List.reverse
 
 
-addCardButton : Model -> Html Msg
-addCardButton model =
+addCardButton : Html Msg
+addCardButton =
     div [ class "fixed-action-btn center-horizontally" ]
         [ a
             [ class "btn-floating btn-large waves-effect red"
