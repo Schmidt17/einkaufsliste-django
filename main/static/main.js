@@ -5413,7 +5413,7 @@ var $elm$core$Task$perform = F2(
 var $elm$browser$Browser$element = _Browser_element;
 var $author$project$Main$Model = F4(
 	function (items, overrideOrdering, filterTags, apiKey) {
-		return {T: apiKey, M: filterTags, a: items, R: overrideOrdering};
+		return {T: apiKey, M: filterTags, a: items, N: overrideOrdering};
 	});
 var $elm$core$Dict$RBEmpty_elm_builtin = {$: -2};
 var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
@@ -6213,12 +6213,22 @@ var $author$project$Main$init = function (flags) {
 		$author$project$Main$getItems(flags));
 };
 var $elm$json$Json$Decode$string = _Json_decodeString;
-var $author$project$Main$ReceivedMQTTMessage = function (a) {
+var $author$project$Main$ReceivedMQTTMessageDoneStatus = function (a) {
 	return {$: 15, a: a};
 };
-var $author$project$Main$receiveMQTTMessage = _Platform_incomingPort('receiveMQTTMessage', $elm$json$Json$Decode$string);
+var $author$project$Main$ReceivedMQTTMessageNewItem = function (a) {
+	return {$: 16, a: a};
+};
+var $elm$core$Platform$Sub$batch = _Platform_batch;
+var $author$project$Main$receiveMQTTMessageDoneStatus = _Platform_incomingPort('receiveMQTTMessageDoneStatus', $elm$json$Json$Decode$string);
+var $author$project$Main$receiveMQTTMessageNewItem = _Platform_incomingPort('receiveMQTTMessageNewItem', $elm$json$Json$Decode$string);
 var $author$project$Main$subscriptions = function (_v0) {
-	return $author$project$Main$receiveMQTTMessage($author$project$Main$ReceivedMQTTMessage);
+	return $elm$core$Platform$Sub$batch(
+		_List_fromArray(
+			[
+				$author$project$Main$receiveMQTTMessageDoneStatus($author$project$Main$ReceivedMQTTMessageDoneStatus),
+				$author$project$Main$receiveMQTTMessageNewItem($author$project$Main$ReceivedMQTTMessageNewItem)
+			]));
 };
 var $author$project$Main$AddNewCard = function (a) {
 	return {$: 8, a: a};
@@ -6269,6 +6279,25 @@ var $author$project$Main$addNewItem = F2(
 			newId,
 			{r: 0, U: _List_Nil, V: '', W: '', L: true, b: newId, ab: true, at: newIndex, ai: newIndex, v: false, h: _List_Nil, p: ''},
 			dict);
+	});
+var $author$project$Main$receivedToItem = F2(
+	function (index, itemReceived) {
+		return {r: itemReceived.r, U: itemReceived.h, V: '', W: itemReceived.p, L: false, b: itemReceived.b, ab: false, at: index, ai: index, v: true, h: itemReceived.h, p: itemReceived.p};
+	});
+var $author$project$Main$addReceivedItem = F2(
+	function (itemDataReceived, dict) {
+		var newIndex = function () {
+			var _v0 = $author$project$Main$maxOrderIndex(
+				$elm$core$Dict$values(dict));
+			if (!_v0.$) {
+				var maxIndex = _v0.a;
+				return maxIndex + 1;
+			} else {
+				return 0;
+			}
+		}();
+		var itemData = A2($author$project$Main$receivedToItem, newIndex, itemDataReceived);
+		return A3($elm$core$Dict$insert, itemData.b, itemData, dict);
 	});
 var $elm$core$Tuple$pair = F2(
 	function (a, b) {
@@ -6696,7 +6725,7 @@ var $author$project$Main$getFilterTags = function (items) {
 };
 var $author$project$Main$FilterTag = F2(
 	function (tag, isActive) {
-		return {ag: isActive, N: tag};
+		return {ag: isActive, O: tag};
 	});
 var $author$project$Main$initTags = function (tagNames) {
 	return A2(
@@ -6794,16 +6823,16 @@ var $author$project$Main$parseItems = function (rawString) {
 		return _List_Nil;
 	}
 };
-var $author$project$Main$MqttMessage = F2(
+var $author$project$Main$MqttMessageDoneStatus = F2(
 	function (id, status) {
 		return {b: id, cw: status};
 	});
-var $author$project$Main$parseMQTTMessage = function (rawString) {
+var $author$project$Main$parseMQTTMessageDoneStatus = function (rawString) {
 	var _v0 = A2(
 		$elm$json$Json$Decode$decodeString,
 		A3(
 			$elm$json$Json$Decode$map2,
-			$author$project$Main$MqttMessage,
+			$author$project$Main$MqttMessageDoneStatus,
 			A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string),
 			A2($elm$json$Json$Decode$field, 'status', $elm$json$Json$Decode$bool)),
 		rawString);
@@ -6814,9 +6843,18 @@ var $author$project$Main$parseMQTTMessage = function (rawString) {
 		return $elm$core$Maybe$Nothing;
 	}
 };
+var $author$project$Main$parseMQTTMessageNewItem = function (rawString) {
+	var _v0 = A2($elm$json$Json$Decode$decodeString, $author$project$Main$jsonParseItemData, rawString);
+	if (!_v0.$) {
+		var itemDataReceived = _v0.a;
+		return $elm$core$Maybe$Just(itemDataReceived);
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
 var $author$project$Main$ItemPosted = F2(
 	function (a, b) {
-		return {$: 16, a: a, b: b};
+		return {$: 17, a: a, b: b};
 	});
 var $author$project$Main$PostResponse = F2(
 	function (success, newId) {
@@ -6853,10 +6891,6 @@ var $author$project$Main$postItem = F2(
 						A2($elm$json$Json$Decode$field, 'newId', $elm$json$Json$Decode$string))),
 				G: $author$project$Main$itemsUrl(apiKey)
 			});
-	});
-var $author$project$Main$receivedToItem = F2(
-	function (index, itemReceived) {
-		return {r: itemReceived.r, U: itemReceived.h, V: '', W: itemReceived.p, L: false, b: itemReceived.b, ab: false, at: index, ai: index, v: true, h: itemReceived.h, p: itemReceived.p};
 	});
 var $author$project$Main$setDone = F2(
 	function (newStatus, maybeItem) {
@@ -7028,7 +7062,7 @@ var $author$project$Main$toggleTag = F2(
 	function (tag, tagList) {
 		var toggle = F2(
 			function (tagToMatch, filterTag) {
-				return _Utils_eq(tagToMatch, filterTag.N) ? _Utils_update(
+				return _Utils_eq(tagToMatch, filterTag.O) ? _Utils_update(
 					filterTag,
 					{ag: !filterTag.ag}) : filterTag;
 			});
@@ -7306,7 +7340,7 @@ var $author$project$Main$update = F2(
 						var oldFilters = A2(
 							$elm$core$List$map,
 							function ($) {
-								return $.N;
+								return $.O;
 							},
 							model.M);
 						var newItems = A3(
@@ -7325,7 +7359,7 @@ var $author$project$Main$update = F2(
 						var filterTagsDecimated = A2(
 							$elm$core$List$filter,
 							function (x) {
-								return A2($elm$core$List$member, x.N, newFilters);
+								return A2($elm$core$List$member, x.O, newFilters);
 							},
 							model.M);
 						var additionalFilters = A2(
@@ -7339,7 +7373,7 @@ var $author$project$Main$update = F2(
 							A2(
 								$elm$core$List$map,
 								function (x) {
-									return {ag: false, N: x};
+									return {ag: false, O: x};
 								},
 								additionalFilters));
 						return _Utils_Tuple2(
@@ -7380,10 +7414,10 @@ var $author$project$Main$update = F2(
 						}),
 					$elm$core$Platform$Cmd$none);
 			case 10:
-				return model.R ? _Utils_Tuple2(
+				return model.N ? _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{R: false}),
+						{N: false}),
 					$elm$core$Platform$Cmd$none) : _Utils_Tuple2(
 					model,
 					$author$project$Main$callSortAPI(
@@ -7405,7 +7439,7 @@ var $author$project$Main$update = F2(
 									$elm$core$Dict$map,
 									$author$project$Main$updateOverrideOrderIndex(idToIndexDict),
 									model.a),
-								R: true
+								N: true
 							}),
 						$elm$core$Platform$Cmd$none);
 				} else {
@@ -7439,13 +7473,13 @@ var $author$project$Main$update = F2(
 						_Utils_update(
 							model,
 							{a: newItemDict}),
-						model.R ? $author$project$Main$callSortAPI(
+						model.N ? $author$project$Main$callSortAPI(
 							$elm$core$Dict$values(newItemDict)) : $elm$core$Platform$Cmd$none);
 				} else {
 					var httpError = successPayload.a;
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
-			case 20:
+			case 21:
 				var doneIds = A2(
 					$elm$core$List$map,
 					function ($) {
@@ -7482,7 +7516,7 @@ var $author$project$Main$update = F2(
 				}
 			case 15:
 				var mqttMsg = msg.a;
-				var maybeMqttData = $author$project$Main$parseMQTTMessage(mqttMsg);
+				var maybeMqttData = $author$project$Main$parseMQTTMessageDoneStatus(mqttMsg);
 				if (!maybeMqttData.$) {
 					var mqttData = maybeMqttData.a;
 					return _Utils_Tuple2(
@@ -7501,6 +7535,23 @@ var $author$project$Main$update = F2(
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
 			case 16:
+				var mqttMsg = msg.a;
+				var maybeReceivedItem = $author$project$Main$parseMQTTMessageNewItem(mqttMsg);
+				var newItems = function () {
+					if (!maybeReceivedItem.$) {
+						var receivedItem = maybeReceivedItem.a;
+						return A2($author$project$Main$addReceivedItem, receivedItem, model.a);
+					} else {
+						return model.a;
+					}
+				}();
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{a: newItems}),
+					model.N ? $author$project$Main$callSortAPI(
+						$elm$core$Dict$values(newItems)) : $elm$core$Platform$Cmd$none);
+			case 17:
 				var oldId = msg.a;
 				var postResponsePayload = msg.b;
 				if (!postResponsePayload.$) {
@@ -7524,13 +7575,13 @@ var $author$project$Main$update = F2(
 						_Utils_update(
 							model,
 							{a: newItemDict}),
-						model.R ? $author$project$Main$callSortAPI(
+						model.N ? $author$project$Main$callSortAPI(
 							$elm$core$Dict$values(newItemDict)) : $elm$core$Platform$Cmd$none);
 				} else {
 					var httpError = postResponsePayload.a;
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
-			case 17:
+			case 18:
 				var itemId = msg.a;
 				var newTagList = msg.b;
 				return _Utils_Tuple2(
@@ -7544,7 +7595,7 @@ var $author$project$Main$update = F2(
 								model.a)
 						}),
 					$elm$core$Platform$Cmd$none);
-			case 18:
+			case 19:
 				var itemId = msg.a;
 				var remainingText = msg.b;
 				return _Utils_Tuple2(
@@ -7637,7 +7688,7 @@ var $author$project$Main$addCardButton = A2(
 						]))
 				]))
 		]));
-var $author$project$Main$DeleteAllDone = {$: 20};
+var $author$project$Main$DeleteAllDone = {$: 21};
 var $elm$html$Html$h4 = _VirtualDom_node('h4');
 var $elm$html$Html$Attributes$href = function (url) {
 	return A2(
@@ -7742,11 +7793,11 @@ var $author$project$Main$filterTagChip = function (filterTag) {
 					}
 				}()),
 				$elm$html$Html$Events$onClick(
-				$author$project$Main$FilterClicked(filterTag.N))
+				$author$project$Main$FilterClicked(filterTag.O))
 			]),
 		_List_fromArray(
 			[
-				$elm$html$Html$text(filterTag.N)
+				$elm$html$Html$text(filterTag.O)
 			]));
 };
 var $elm$html$Html$header = _VirtualDom_node('header');
@@ -7896,7 +7947,7 @@ var $author$project$Main$sortFilterTags = function (filterTags) {
 			A2(
 				$elm$core$List$sortBy,
 				function ($) {
-					return $.N;
+					return $.O;
 				},
 				rest));
 	} else {
@@ -7958,7 +8009,7 @@ var $author$project$Main$headerView = function (model) {
 										_List_Nil,
 										_List_fromArray(
 											[
-												$author$project$Main$sortButton(model.R)
+												$author$project$Main$sortButton(model.N)
 											])),
 										A2(
 										$elm$html$Html$li,
@@ -8026,7 +8077,7 @@ var $author$project$Main$cancelButton = function (itemId) {
 			]));
 };
 var $author$project$Main$DeleteCard = function (a) {
-	return {$: 19, a: a};
+	return {$: 20, a: a};
 };
 var $author$project$Main$deleteCardButton = function (itemId) {
 	return A2(
@@ -8061,11 +8112,11 @@ var $author$project$Main$deleteCardButton = function (itemId) {
 };
 var $author$project$Main$DraftTagsChanged = F2(
 	function (a, b) {
-		return {$: 17, a: a, b: b};
+		return {$: 18, a: a, b: b};
 	});
 var $author$project$Main$DraftTagsInputChanged = F2(
 	function (a, b) {
-		return {$: 18, a: a, b: b};
+		return {$: 19, a: a, b: b};
 	});
 var $elm$json$Json$Decode$at = F2(
 	function (fields, decoder) {
@@ -8320,7 +8371,7 @@ var $author$project$Main$cardView = function (itemData) {
 	return itemData.L ? $author$project$Main$editCard(itemData) : $author$project$Main$itemCard(itemData);
 };
 var $author$project$Main$maybeActiveTag = function (filterTag) {
-	return filterTag.ag ? $elm$core$Maybe$Just(filterTag.N) : $elm$core$Maybe$Nothing;
+	return filterTag.ag ? $elm$core$Maybe$Just(filterTag.O) : $elm$core$Maybe$Nothing;
 };
 var $author$project$Main$activeFilters = function (filterTags) {
 	return A2($elm$core$List$filterMap, $author$project$Main$maybeActiveTag, filterTags);
@@ -8359,7 +8410,7 @@ var $author$project$Main$sortItems = F2(
 var $author$project$Main$itemsToShow = function (model) {
 	return A2(
 		$author$project$Main$sortItems,
-		model.R,
+		model.N,
 		A2(
 			$elm$core$List$filter,
 			$author$project$Main$isVisible(model),
