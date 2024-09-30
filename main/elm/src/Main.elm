@@ -59,7 +59,7 @@ type alias ItemData =
     }
 
 
-type alias MqttMessage =
+type alias MqttMessageDoneStatus =
     { id : String
     , status : Bool
     }
@@ -94,7 +94,8 @@ type Msg
     | DoneResponseReceived (Result Http.Error Bool)
     | UpdateResponseReceived String (Result Http.Error Bool)
     | DeleteResponseReceived String (Result Http.Error Bool)
-    | ReceivedMQTTMessage String
+    | ReceivedMQTTMessageDoneStatus String
+    | ReceivedMQTTMessageNewItem String
     | ItemPosted String (Result Http.Error PostResponse)
     | DraftTagsChanged String (List String)
     | DraftTagsInputChanged String String
@@ -416,10 +417,10 @@ update msg model =
                 Err httpError ->
                     ( model, Cmd.none )
 
-        ReceivedMQTTMessage mqttMsg ->
+        ReceivedMQTTMessageDoneStatus mqttMsg ->
             let
                 maybeMqttData =
-                    parseMQTTMessage mqttMsg
+                    parseMQTTMessageDoneStatus mqttMsg
             in
             case maybeMqttData of
                 Just mqttData ->
@@ -441,6 +442,27 @@ update msg model =
 
                 Nothing ->
                     ( model, Cmd.none )
+
+        ReceivedMQTTMessageNewItem mqttMsg ->
+            let
+                maybeReceivedItem =
+                    parseMQTTMessageNewItem mqttMsg
+
+                newItems =
+                    case maybeReceivedItem of
+                        Just receivedItem ->
+                            addReceivedItem receivedItem model.items
+
+                        Nothing ->
+                            model.items
+            in
+            ( { model | items = newItems }
+            , if model.overrideOrdering then
+                callSortAPI (Dict.values newItems)
+
+              else
+                Cmd.none
+            )
 
         ItemPosted oldId postResponsePayload ->
             case postResponsePayload of
@@ -639,6 +661,23 @@ addNewItem newId dict =
         dict
 
 
+addReceivedItem : ItemDataReceived -> Dict String ItemData -> Dict String ItemData
+addReceivedItem itemDataReceived dict =
+    let
+        newIndex =
+            case maxOrderIndex (Dict.values dict) of
+                Just maxIndex ->
+                    maxIndex + 1
+
+                Nothing ->
+                    0
+
+        itemData =
+            receivedToItem newIndex itemDataReceived
+    in
+    Dict.insert itemData.id itemData dict
+
+
 
 -- SUBSCRIPTIONS
 
@@ -649,19 +688,35 @@ type alias ChipsInitArgs =
     }
 
 
-port receiveMQTTMessage : (String -> msg) -> Sub msg
+port receiveMQTTMessageDoneStatus : (String -> msg) -> Sub msg
+
+
+port receiveMQTTMessageNewItem : (String -> msg) -> Sub msg
 
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    receiveMQTTMessage ReceivedMQTTMessage
+    Sub.batch
+        [ receiveMQTTMessageDoneStatus ReceivedMQTTMessageDoneStatus
+        , receiveMQTTMessageNewItem ReceivedMQTTMessageNewItem
+        ]
 
 
-parseMQTTMessage : String -> Maybe MqttMessage
-parseMQTTMessage rawString =
-    case Decode.decodeString (Decode.map2 MqttMessage (Decode.field "id" Decode.string) (Decode.field "status" Decode.bool)) rawString of
+parseMQTTMessageDoneStatus : String -> Maybe MqttMessageDoneStatus
+parseMQTTMessageDoneStatus rawString =
+    case Decode.decodeString (Decode.map2 MqttMessageDoneStatus (Decode.field "id" Decode.string) (Decode.field "status" Decode.bool)) rawString of
         Ok mqttData ->
             Just mqttData
+
+        Err _ ->
+            Nothing
+
+
+parseMQTTMessageNewItem : String -> Maybe ItemDataReceived
+parseMQTTMessageNewItem rawString =
+    case Decode.decodeString jsonParseItemData rawString of
+        Ok itemDataReceived ->
+            Just itemDataReceived
 
         Err _ ->
             Nothing

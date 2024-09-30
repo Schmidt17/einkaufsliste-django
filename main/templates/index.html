@@ -56,15 +56,22 @@
         // to be called when a MQTT message arrives
         function onMessageArrived(message) {
           const msg_string = message.payloadString;
-          app.ports.receiveMQTTMessage.send(msg_string);
+          const msg_topic = message.destinationName;
+
+          console.log(msg_topic);
+
+          if (msg_topic == done_topic) {
+            app.ports.receiveMQTTMessageDoneStatus.send(msg_string);
+          } else if (msg_topic == newItem_topic) {
+            app.ports.receiveMQTTMessageNewItem.send(msg_string);
+          }
         }
 
         // called when the client has connected
         function onConnectSuccess() {
           // Once a connection has been made, subscribe to the needed channels
           client.subscribe(done_topic, {qos: 1});
-
-          // client.subscribe(topic_newItem, {qos: 1});
+          client.subscribe(newItem_topic, {qos: 1});
         }
 
         // called when the connection process has failed
@@ -94,6 +101,7 @@
         const mqtt_host = "broker.hivemq.com";
         const mqtt_port = 8884;
         const done_topic = "einkaufsliste_doneUpdates";
+        const newItem_topic = "einkaufsliste_newItem";
 
         // create a MQTT client instance
         const client = new Paho.MQTT.Client(mqtt_host, mqtt_port, "");
