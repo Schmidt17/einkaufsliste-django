@@ -7603,7 +7603,7 @@ var $author$project$Main$update = F2(
 							$author$project$Main$filterTagNames(items)));
 					var newModel = _Utils_update(
 						model,
-						{v: newFilterTags, a: items});
+						{v: newFilterTags, a: items, z: false});
 					return _Utils_Tuple2(
 						newModel,
 						$author$project$Main$writeToLocalStorage(
@@ -7735,11 +7735,15 @@ var $author$project$Main$update = F2(
 								A2(
 									$elm$core$List$cons,
 									item.W ? A2($author$project$Main$postItem, model.N, updatedItem) : A2($author$project$Main$updateItem, model.N, updatedItem),
-									_List_fromArray(
-										[
-											$author$project$Main$writeToLocalStorage(
-											$author$project$Main$encodeModel(newModel))
-										]))));
+									A2(
+										$elm$core$List$cons,
+										model.z ? $author$project$Main$callSortAPI(
+											$elm$core$Dict$values(newItems)) : $elm$core$Platform$Cmd$none,
+										_List_fromArray(
+											[
+												$author$project$Main$writeToLocalStorage(
+												$author$project$Main$encodeModel(newModel))
+											])))));
 					}
 				} else {
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
@@ -7845,16 +7849,8 @@ var $author$project$Main$update = F2(
 						{a: newItemDict});
 					return _Utils_Tuple2(
 						newModel,
-						$elm$core$Platform$Cmd$batch(
-							A2(
-								$elm$core$List$cons,
-								model.z ? $author$project$Main$callSortAPI(
-									$elm$core$Dict$values(newItemDict)) : $elm$core$Platform$Cmd$none,
-								_List_fromArray(
-									[
-										$author$project$Main$writeToLocalStorage(
-										$author$project$Main$encodeModel(newModel))
-									]))));
+						$author$project$Main$writeToLocalStorage(
+							$author$project$Main$encodeModel(newModel)));
 				} else {
 					var httpError = successPayload.a;
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
@@ -7977,16 +7973,8 @@ var $author$project$Main$update = F2(
 						{a: newItems});
 					return _Utils_Tuple2(
 						newModel,
-						$elm$core$Platform$Cmd$batch(
-							A2(
-								$elm$core$List$cons,
-								model.z ? $author$project$Main$callSortAPI(
-									$elm$core$Dict$values(newItems)) : $elm$core$Platform$Cmd$none,
-								_List_fromArray(
-									[
-										$author$project$Main$writeToLocalStorage(
-										$author$project$Main$encodeModel(newModel))
-									]))));
+						$author$project$Main$writeToLocalStorage(
+							$author$project$Main$encodeModel(newModel)));
 				} else {
 					var httpError = postResponsePayload.a;
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
