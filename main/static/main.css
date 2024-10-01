@@ -57,3 +57,7 @@ i.add-list-trigger {
     justify-content: space-between;
     align-items: center;
 }
+
+.desync-icon {
+    margin-right: 1rem;
+}

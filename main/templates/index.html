@@ -29,12 +29,32 @@
     <script type="text/javascript" src="{% static 'main.js' %}"></script>
 
     <script>
+        const localStorageKeyModel = 'einkaufsliste:model';
+        function getLocalStorage() {
+            let localData = localStorage.getItem(localStorageKeyModel)
 
+            if (localData === null) {
+                return null
+            } else {
+                return localData
+            }
+        }
+
+        function setLocalStorage(model) {
+            localStorage.setItem(localStorageKeyModel, JSON.stringify(model))
+        }
+
+        const flags = {
+            apiKey: "{{ api_key }}",
+            localStore: JSON.parse(getLocalStorage())
+        }
 
         const app = Elm.Main.init({
             node: document.getElementById('app'),
-            flags: "{{ api_key }}"
+            flags: flags
         });
+
+        app.ports.writeToLocalStorage.subscribe(setLocalStorage);
 
         // can be called from Elm to initialize materialize js input chips
         function initializeMaterializeInputChips(args) {

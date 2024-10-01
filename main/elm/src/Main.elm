@@ -69,9 +69,115 @@ type alias MqttMessageDoneStatus =
 -- INIT
 
 
-init : String -> ( Model, Cmd Msg )
+init : Decode.Value -> ( Model, Cmd Msg )
 init flags =
-    ( Model Dict.empty False [] flags, getItems flags )
+    let
+        apiKey =
+            case apiKeyFromFlags flags of
+                Just decodedApiKey ->
+                    decodedApiKey
+
+                Nothing ->
+                    ""
+
+        items =
+            case itemsFromLocalStorage flags of
+                Just itemDict ->
+                    itemDict
+
+                Nothing ->
+                    Dict.empty
+
+        filterTags =
+            case filterTagsFromLocalStorage flags of
+                Just filterTagList ->
+                    filterTagList
+
+                Nothing ->
+                    []
+
+        overrideOrdering =
+            case overrideOrderingFromLocalStorage flags of
+                Just overrideOrderingFlag ->
+                    overrideOrderingFlag
+
+                Nothing ->
+                    False
+    in
+    ( { items = items, overrideOrdering = overrideOrdering, filterTags = filterTags, apiKey = apiKey }
+    , getItems apiKey
+    )
+
+
+apiKeyFromFlags : Decode.Value -> Maybe String
+apiKeyFromFlags flags =
+    case Decode.decodeValue (Decode.field "apiKey" Decode.string) flags of
+        Ok apiKey ->
+            Just apiKey
+
+        Err _ ->
+            Nothing
+
+
+itemsFromLocalStorage : Decode.Value -> Maybe (Dict String ItemData)
+itemsFromLocalStorage flags =
+    case Decode.decodeValue (Decode.at [ "localStore", "items" ] (Decode.dict itemDataDecoder)) flags of
+        Ok data ->
+            Just data
+
+        Err _ ->
+            Nothing
+
+
+itemDataDecoder : Decode.Decoder ItemData
+itemDataDecoder =
+    Decode.succeed ItemData
+        |> required "id" Decode.string
+        |> required "title" Decode.string
+        |> required "tags" (Decode.list Decode.string)
+        |> required "draftTitle" Decode.string
+        |> required "draftTags" (Decode.list Decode.string)
+        |> required "draftTagsInput" Decode.string
+        |> required "done" Decode.int
+        |> required "orderIndexDefault" Decode.int
+        |> required "orderIndexOverride" Decode.int
+        |> required "editing" Decode.bool
+        |> required "synced" Decode.bool
+        |> required "new" Decode.bool
+
+
+filterTagsFromLocalStorage : Decode.Value -> Maybe (List FilterTag)
+filterTagsFromLocalStorage flags =
+    case Decode.decodeValue (Decode.at [ "localStore", "filterTags" ] (Decode.list filterTagDecoder)) flags of
+        Ok data ->
+            Just data
+
+        Err _ ->
+            Nothing
+
+
+filterTagDecoder : Decode.Decoder FilterTag
+filterTagDecoder =
+    Decode.map2 FilterTag (Decode.field "tag" Decode.string) (Decode.field "isActive" Decode.bool)
+
+
+overrideOrderingFromLocalStorage : Decode.Value -> Maybe Bool
+overrideOrderingFromLocalStorage flags =
+    case Decode.decodeValue (Decode.at [ "localStore", "overrideOrdering" ] Decode.bool) flags of
+        Ok data ->
+            Just data
+
+        Err _ ->
+            Nothing
+
+
+decodeApply =
+    Decode.map2 (|>)
+
+
+required : String -> Decode.Decoder a -> Decode.Decoder (a -> b) -> Decode.Decoder b
+required fieldName itemDecoder functionDecoder =
+    decodeApply (Decode.field fieldName itemDecoder) functionDecoder
 
 
 
@@ -205,9 +311,27 @@ callSortAPI items =
         }
 
 
-initTags : List String -> List FilterTag
-initTags tagNames =
+filterTagsFromNames : List String -> List FilterTag
+filterTagsFromNames tagNames =
     List.map (\tag -> FilterTag tag False) tagNames
+
+
+mergeFilterTags : List FilterTag -> List FilterTag -> List FilterTag
+mergeFilterTags oldTags newTags =
+    let
+        oldNames =
+            List.map .tag oldTags
+
+        newNames =
+            List.map .tag newTags
+
+        additionalTags =
+            List.filter (\tag -> not (List.member tag.tag oldNames)) newTags
+
+        tagsToKeep =
+            List.filter (\tag -> List.member tag.tag newNames) oldTags
+    in
+    tagsToKeep ++ additionalTags
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -222,14 +346,24 @@ update msg model =
                     let
                         items =
                             itemListToDict (List.indexedMap receivedToItem (parseItems rawString))
+
+                        newFilterTags =
+                            mergeFilterTags model.filterTags (filterTagsFromNames (filterTagNames items))
+
+                        newModel =
+                            { model | items = items, filterTags = newFilterTags }
                     in
-                    ( { model | items = items, filterTags = initTags (getFilterTags items) }, Cmd.none )
+                    ( newModel, writeToLocalStorage (encodeModel newModel) )
 
                 Err httpError ->
                     ( model, Cmd.none )
 
         FilterClicked tag ->
-            ( { model | filterTags = toggleTag tag model.filterTags }, Cmd.none )
+            let
+                newModel =
+                    { model | filterTags = toggleTag tag model.filterTags }
+            in
+            ( newModel, writeToLocalStorage (encodeModel newModel) )
 
         CardClicked itemId ->
             let
@@ -238,18 +372,29 @@ update msg model =
 
                 maybeItem =
                     Dict.get itemId newItems
-            in
-            ( { model | items = newItems }
-            , case maybeItem of
-                Just item ->
-                    updateDoneBackend model.apiKey itemId item.done
 
-                Nothing ->
-                    Cmd.none
+                newModel =
+                    { model | items = newItems }
+            in
+            ( newModel
+            , Cmd.batch
+                ((case maybeItem of
+                    Just item ->
+                        updateDoneBackend model.apiKey itemId item.done
+
+                    Nothing ->
+                        Cmd.none
+                 )
+                    :: [ writeToLocalStorage (encodeModel newModel) ]
+                )
             )
 
         EditCardClicked itemId ->
-            ( { model | items = Dict.update itemId toggleEdit model.items }, Cmd.none )
+            let
+                newModel =
+                    { model | items = Dict.update itemId toggleEdit model.items }
+            in
+            ( newModel, writeToLocalStorage (encodeModel newModel) )
 
         CancelEditing itemId ->
             let
@@ -258,11 +403,15 @@ update msg model =
             in
             case maybeItem of
                 Just item ->
-                    if item.new then
-                        ( { model | items = Dict.remove itemId model.items }, Cmd.none )
+                    let
+                        newModel =
+                            if item.new then
+                                { model | items = Dict.remove itemId model.items }
 
-                    else
-                        ( { model | items = Dict.update itemId toggleEdit model.items }, Cmd.none )
+                            else
+                                { model | items = Dict.update itemId toggleEdit model.items }
+                    in
+                    ( newModel, writeToLocalStorage (encodeModel newModel) )
 
                 Nothing ->
                     ( model, Cmd.none )
@@ -271,7 +420,11 @@ update msg model =
             case Dict.get itemId model.items of
                 Just item ->
                     if item.synced then
-                        ( { model | items = Dict.update itemId toggleEdit model.items }, Cmd.none )
+                        let
+                            newModel =
+                                { model | items = Dict.update itemId toggleEdit model.items }
+                        in
+                        ( newModel, writeToLocalStorage (encodeModel newModel) )
 
                     else
                         let
@@ -305,29 +458,24 @@ update msg model =
                                     model.items
 
                             newFilters =
-                                getFilterTags newItems
+                                mergeFilterTags model.filterTags (filterTagsFromNames (filterTagNames newItems))
 
-                            oldFilters =
-                                List.map .tag model.filterTags
-
-                            filterTagsDecimated =
-                                List.filter (\x -> List.member x.tag newFilters) model.filterTags
-
-                            additionalFilters =
-                                List.filter (\x -> not (List.member x oldFilters)) newFilters
-
-                            filterTagsAdded =
-                                filterTagsDecimated ++ List.map (\x -> { tag = x, isActive = False }) additionalFilters
+                            newModel =
+                                { model
+                                    | items = newItems
+                                    , filterTags = newFilters
+                                }
                         in
-                        ( { model
-                            | items = newItems
-                            , filterTags = filterTagsAdded
-                          }
-                        , if item.new then
-                            postItem model.apiKey updatedItem
+                        ( newModel
+                        , Cmd.batch
+                            ((if item.new then
+                                postItem model.apiKey updatedItem
 
-                          else
-                            updateItem model.apiKey updatedItem
+                              else
+                                updateItem model.apiKey updatedItem
+                             )
+                                :: [ writeToLocalStorage (encodeModel newModel) ]
+                            )
                         )
 
                 Nothing ->
@@ -340,15 +488,26 @@ update msg model =
             let
                 newId =
                     "local-" ++ UUID.toString newUUID
+
+                newModel =
+                    { model | items = addNewItem newId model.items }
             in
-            ( { model | items = addNewItem newId model.items }, Cmd.none )
+            ( newModel, writeToLocalStorage (encodeModel newModel) )
 
         DraftTitleChanged itemId newTitle ->
-            ( { model | items = Dict.update itemId (updateDraftTitle newTitle) model.items }, Cmd.none )
+            let
+                newModel =
+                    { model | items = Dict.update itemId (updateDraftTitle newTitle) model.items }
+            in
+            ( newModel, writeToLocalStorage (encodeModel newModel) )
 
         SortButtonClicked ->
             if model.overrideOrdering then
-                ( { model | overrideOrdering = False }, Cmd.none )
+                let
+                    newModel =
+                        { model | overrideOrdering = False }
+                in
+                ( newModel, writeToLocalStorage (encodeModel newModel) )
 
             else
                 ( model, callSortAPI (Dict.values model.items) )
@@ -362,8 +521,11 @@ update msg model =
 
                         idToIndexDict =
                             Dict.fromList (List.map2 Tuple.pair requestedIds newIndices)
+
+                        newModel =
+                            { model | items = Dict.map (updateOverrideOrderIndex idToIndexDict) model.items, overrideOrdering = True }
                     in
-                    ( { model | items = Dict.map (updateOverrideOrderIndex idToIndexDict) model.items, overrideOrdering = True }, Cmd.none )
+                    ( newModel, writeToLocalStorage (encodeModel newModel) )
 
                 Err httpError ->
                     ( model, Cmd.none )
@@ -386,13 +548,20 @@ update msg model =
                                             Nothing
                                 )
                                 model.items
-                    in
-                    ( { model | items = newItemDict }
-                    , if model.overrideOrdering then
-                        callSortAPI (Dict.values newItemDict)
 
-                      else
-                        Cmd.none
+                        newModel =
+                            { model | items = newItemDict }
+                    in
+                    ( newModel
+                    , Cmd.batch
+                        ((if model.overrideOrdering then
+                            callSortAPI (Dict.values newItemDict)
+
+                          else
+                            Cmd.none
+                         )
+                            :: [ writeToLocalStorage (encodeModel newModel) ]
+                        )
                     )
 
                 Err httpError ->
@@ -409,7 +578,17 @@ update msg model =
             case successPayload of
                 Ok success ->
                     if success then
-                        ( { model | items = Dict.remove itemId model.items }, Cmd.none )
+                        let
+                            newItems =
+                                Dict.remove itemId model.items
+
+                            newFilters =
+                                mergeFilterTags model.filterTags (filterTagsFromNames (filterTagNames newItems))
+
+                            newModel =
+                                { model | items = newItems, filterTags = newFilters }
+                        in
+                        ( newModel, writeToLocalStorage (encodeModel newModel) )
 
                     else
                         ( model, Cmd.none )
@@ -424,20 +603,24 @@ update msg model =
             in
             case maybeMqttData of
                 Just mqttData ->
-                    ( { model
-                        | items =
-                            Dict.update mqttData.id
-                                (setDone
-                                    (if mqttData.status then
-                                        1
+                    let
+                        newModel =
+                            { model
+                                | items =
+                                    Dict.update mqttData.id
+                                        (setDone
+                                            (if mqttData.status then
+                                                1
 
-                                     else
-                                        0
-                                    )
-                                )
-                                model.items
-                      }
-                    , Cmd.none
+                                             else
+                                                0
+                                            )
+                                        )
+                                        model.items
+                            }
+                    in
+                    ( newModel
+                    , writeToLocalStorage (encodeModel newModel)
                     )
 
                 Nothing ->
@@ -455,13 +638,20 @@ update msg model =
 
                         Nothing ->
                             model.items
-            in
-            ( { model | items = newItems }
-            , if model.overrideOrdering then
-                callSortAPI (Dict.values newItems)
 
-              else
-                Cmd.none
+                newModel =
+                    { model | items = newItems }
+            in
+            ( newModel
+            , Cmd.batch
+                ((if model.overrideOrdering then
+                    callSortAPI (Dict.values newItems)
+
+                  else
+                    Cmd.none
+                 )
+                    :: [ writeToLocalStorage (encodeModel newModel) ]
+                )
             )
 
         ItemPosted oldId postResponsePayload ->
@@ -471,7 +661,7 @@ update msg model =
                         maybeOldItem =
                             Dict.get oldId model.items
 
-                        newItemDict =
+                        newItems =
                             case maybeOldItem of
                                 Just oldItem ->
                                     Dict.remove oldId model.items
@@ -479,23 +669,38 @@ update msg model =
 
                                 Nothing ->
                                     model.items
-                    in
-                    ( { model | items = newItemDict }
-                    , if model.overrideOrdering then
-                        callSortAPI (Dict.values newItemDict)
 
-                      else
-                        Cmd.none
+                        newModel =
+                            { model | items = newItems }
+                    in
+                    ( newModel
+                    , Cmd.batch
+                        ((if model.overrideOrdering then
+                            callSortAPI (Dict.values newItems)
+
+                          else
+                            Cmd.none
+                         )
+                            :: [ writeToLocalStorage (encodeModel newModel) ]
+                        )
                     )
 
                 Err httpError ->
                     ( model, Cmd.none )
 
         DraftTagsChanged itemId newTagList ->
-            ( { model | items = Dict.update itemId (updateDraftTags newTagList) model.items }, Cmd.none )
+            let
+                newModel =
+                    { model | items = Dict.update itemId (updateDraftTags newTagList) model.items }
+            in
+            ( newModel, writeToLocalStorage (encodeModel newModel) )
 
         DraftTagsInputChanged itemId remainingText ->
-            ( { model | items = Dict.update itemId (updateDraftTagsInput remainingText) model.items }, Cmd.none )
+            let
+                newModel =
+                    { model | items = Dict.update itemId (updateDraftTagsInput remainingText) model.items }
+            in
+            ( newModel, writeToLocalStorage (encodeModel newModel) )
 
         DeleteCard itemId ->
             ( model, deleteItem model.apiKey itemId )
@@ -694,6 +899,9 @@ port receiveMQTTMessageDoneStatus : (String -> msg) -> Sub msg
 port receiveMQTTMessageNewItem : (String -> msg) -> Sub msg
 
 
+port writeToLocalStorage : Encode.Value -> Cmd msg
+
+
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.batch
@@ -837,7 +1045,14 @@ itemCard itemData =
         , onClick (CardClicked itemData.id)
         ]
         [ div [ class "card-content" ]
-            [ editButton itemData
+            [ span [ class "right" ]
+                [ if itemData.synced then
+                    text ""
+
+                  else
+                    desyncIcon
+                , editButton itemData
+                ]
             , span
                 [ class
                     ("card-title"
@@ -865,6 +1080,11 @@ editButton item =
         , Aria.ariaLabel "Bearbeiten"
         ]
         [ i [ class "material-icons grey-text right-align" ] [ text "edit" ] ]
+
+
+desyncIcon : Html Msg
+desyncIcon =
+    i [ class "material-icons grey-text right-align desync-icon" ] [ text "cloud_off" ]
 
 
 editCard : ItemData -> Html Msg
@@ -1097,8 +1317,8 @@ activeFilters filterTags =
     List.filterMap maybeActiveTag filterTags
 
 
-getFilterTags : Dict String ItemData -> List String
-getFilterTags items =
+filterTagNames : Dict String ItemData -> List String
+filterTagNames items =
     [ "No tags" ] ++ Set.toList (uniqueTags (Dict.values items))
 
 
@@ -1137,3 +1357,39 @@ argsort l =
     List.indexedMap Tuple.pair l
         |> List.sortBy Tuple.second
         |> List.map Tuple.first
+
+
+encodeItemData : ItemData -> Encode.Value
+encodeItemData { id, title, tags, draftTitle, draftTags, draftTagsInput, done, orderIndexDefault, orderIndexOverride, editing, synced, new } =
+    Encode.object
+        [ ( "id", Encode.string id )
+        , ( "title", Encode.string title )
+        , ( "tags", Encode.list Encode.string tags )
+        , ( "draftTitle", Encode.string draftTitle )
+        , ( "draftTags", Encode.list Encode.string draftTags )
+        , ( "draftTagsInput", Encode.string draftTagsInput )
+        , ( "done", Encode.int done )
+        , ( "orderIndexDefault", Encode.int orderIndexDefault )
+        , ( "orderIndexOverride", Encode.int orderIndexOverride )
+        , ( "editing", Encode.bool editing )
+        , ( "synced", Encode.bool False )
+        , ( "new", Encode.bool new )
+        ]
+
+
+encodeFilterTag : FilterTag -> Encode.Value
+encodeFilterTag { tag, isActive } =
+    Encode.object
+        [ ( "tag", Encode.string tag )
+        , ( "isActive", Encode.bool isActive )
+        ]
+
+
+encodeModel : Model -> Encode.Value
+encodeModel { items, overrideOrdering, filterTags, apiKey } =
+    Encode.object
+        [ ( "items", Encode.dict identity encodeItemData items )
+        , ( "overrideOrdering", Encode.bool overrideOrdering )
+        , ( "filterTags", Encode.list encodeFilterTag filterTags )
+        , ( "apiKey", Encode.string "" ) --- we don't store the apiKey
+        ]
