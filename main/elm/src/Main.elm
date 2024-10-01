@@ -79,9 +79,6 @@ init flags =
 
                 Nothing ->
                     ""
-
-        localStoreData =
-            Debug.log "localStore" (localStoreModelFromFlags flags)
     in
     ( Model Dict.empty False [] apiKey, getItems apiKey )
 
