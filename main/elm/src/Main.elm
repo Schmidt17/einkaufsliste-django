@@ -443,6 +443,8 @@ update msg model =
                                                     [ remainingText ]
                                                )
                                     , draftTagsInput = ""
+                                    , editing = False
+                                    , new = False
                                 }
 
                             newItems =
@@ -474,7 +476,14 @@ update msg model =
                               else
                                 updateItem model.apiKey updatedItem
                              )
-                                :: [ writeToLocalStorage (encodeModel newModel) ]
+                                :: ((if model.overrideOrdering then
+                                        callSortAPI (Dict.values newItems)
+
+                                     else
+                                        Cmd.none
+                                    )
+                                        :: [ writeToLocalStorage (encodeModel newModel) ]
+                                   )
                             )
                         )
 
@@ -542,7 +551,7 @@ update msg model =
                                 (\maybeItem ->
                                     case maybeItem of
                                         Just item ->
-                                            Just { item | synced = True, editing = False }
+                                            Just { item | synced = True }
 
                                         Nothing ->
                                             Nothing
@@ -553,15 +562,7 @@ update msg model =
                             { model | items = newItemDict }
                     in
                     ( newModel
-                    , Cmd.batch
-                        ((if model.overrideOrdering then
-                            callSortAPI (Dict.values newItemDict)
-
-                          else
-                            Cmd.none
-                         )
-                            :: [ writeToLocalStorage (encodeModel newModel) ]
-                        )
+                    , writeToLocalStorage (encodeModel newModel)
                     )
 
                 Err httpError ->
@@ -665,7 +666,7 @@ update msg model =
                             case maybeOldItem of
                                 Just oldItem ->
                                     Dict.remove oldId model.items
-                                        |> Dict.insert postResponse.newId { oldItem | id = postResponse.newId, synced = True, new = False, editing = False }
+                                        |> Dict.insert postResponse.newId { oldItem | id = postResponse.newId, synced = True }
 
                                 Nothing ->
                                     model.items
@@ -674,15 +675,7 @@ update msg model =
                             { model | items = newItems }
                     in
                     ( newModel
-                    , Cmd.batch
-                        ((if model.overrideOrdering then
-                            callSortAPI (Dict.values newItems)
-
-                          else
-                            Cmd.none
-                         )
-                            :: [ writeToLocalStorage (encodeModel newModel) ]
-                        )
+                    , writeToLocalStorage (encodeModel newModel)
                     )
 
                 Err httpError ->
