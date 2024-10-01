@@ -69,9 +69,41 @@ type alias MqttMessageDoneStatus =
 -- INIT
 
 
-init : String -> ( Model, Cmd Msg )
+init : Decode.Value -> ( Model, Cmd Msg )
 init flags =
-    ( Model Dict.empty False [] flags, getItems flags )
+    let
+        apiKey =
+            case apiKeyFromFlags flags of
+                Just decodedApiKey ->
+                    decodedApiKey
+
+                Nothing ->
+                    ""
+
+        localStoreData =
+            Debug.log "localStore" (localStoreModelFromFlags flags)
+    in
+    ( Model Dict.empty False [] apiKey, getItems apiKey )
+
+
+apiKeyFromFlags : Decode.Value -> Maybe String
+apiKeyFromFlags flags =
+    case Decode.decodeValue (Decode.field "apiKey" Decode.string) flags of
+        Ok apiKey ->
+            Just apiKey
+
+        Err _ ->
+            Nothing
+
+
+localStoreModelFromFlags : Decode.Value -> Maybe String
+localStoreModelFromFlags flags =
+    case Decode.decodeValue (Decode.field "localStore" (Decode.nullable Decode.string)) flags of
+        Ok data ->
+            data
+
+        Err _ ->
+            Nothing
 
 
 
@@ -222,14 +254,21 @@ update msg model =
                     let
                         items =
                             itemListToDict (List.indexedMap receivedToItem (parseItems rawString))
+
+                        newModel =
+                            { model | items = items, filterTags = initTags (getFilterTags items) }
                     in
-                    ( { model | items = items, filterTags = initTags (getFilterTags items) }, Cmd.none )
+                    ( newModel, writeToLocalStorage (encodeModel newModel) )
 
                 Err httpError ->
                     ( model, Cmd.none )
 
         FilterClicked tag ->
-            ( { model | filterTags = toggleTag tag model.filterTags }, Cmd.none )
+            let
+                newModel =
+                    { model | filterTags = toggleTag tag model.filterTags }
+            in
+            ( newModel, writeToLocalStorage (encodeModel newModel) )
 
         CardClicked itemId ->
             let
@@ -694,6 +733,9 @@ port receiveMQTTMessageDoneStatus : (String -> msg) -> Sub msg
 port receiveMQTTMessageNewItem : (String -> msg) -> Sub msg
 
 
+port writeToLocalStorage : Encode.Value -> Cmd msg
+
+
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.batch
@@ -1137,3 +1179,39 @@ argsort l =
     List.indexedMap Tuple.pair l
         |> List.sortBy Tuple.second
         |> List.map Tuple.first
+
+
+encodeItemData : ItemData -> Encode.Value
+encodeItemData { id, title, tags, draftTitle, draftTags, draftTagsInput, done, orderIndexDefault, orderIndexOverride, editing, synced, new } =
+    Encode.object
+        [ ( "id", Encode.string id )
+        , ( "title", Encode.string title )
+        , ( "tags", Encode.list Encode.string tags )
+        , ( "draftTitle", Encode.string draftTitle )
+        , ( "draftTags", Encode.list Encode.string draftTags )
+        , ( "draftTagsInput", Encode.string draftTagsInput )
+        , ( "done", Encode.int done )
+        , ( "orderIndexDefault", Encode.int orderIndexDefault )
+        , ( "orderIndexOverride", Encode.int orderIndexOverride )
+        , ( "editing", Encode.bool editing )
+        , ( "synced", Encode.bool synced )
+        , ( "new", Encode.bool new )
+        ]
+
+
+encodeFilterTag : FilterTag -> Encode.Value
+encodeFilterTag { tag, isActive } =
+    Encode.object
+        [ ( "tag", Encode.string tag )
+        , ( "isActive", Encode.bool isActive )
+        ]
+
+
+encodeModel : Model -> Encode.Value
+encodeModel { items, overrideOrdering, filterTags, apiKey } =
+    Encode.object
+        [ ( "items", Encode.dict identity encodeItemData items )
+        , ( "overrideOrdering", Encode.bool overrideOrdering )
+        , ( "filterTags", Encode.list encodeFilterTag filterTags )
+        , ( "apiKey", Encode.string "" ) --- we don't store the apiKey
+        ]
