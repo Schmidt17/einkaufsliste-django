@@ -351,7 +351,7 @@ update msg model =
                             mergeFilterTags model.filterTags (filterTagsFromNames (filterTagNames items))
 
                         newModel =
-                            { model | items = items, filterTags = newFilterTags }
+                            { model | items = items, filterTags = newFilterTags, overrideOrdering = False }
                     in
                     ( newModel, writeToLocalStorage (encodeModel newModel) )
 
