@@ -79,8 +79,34 @@ init flags =
 
                 Nothing ->
                     ""
+
+        items =
+            case itemsFromLocalStorage flags of
+                Just itemDict ->
+                    itemDict
+
+                Nothing ->
+                    Dict.empty
+
+        filterTags =
+            case filterTagsFromLocalStorage flags of
+                Just filterTagList ->
+                    filterTagList
+
+                Nothing ->
+                    []
+
+        overrideOrdering =
+            case overrideOrderingFromLocalStorage flags of
+                Just overrideOrderingFlag ->
+                    overrideOrderingFlag
+
+                Nothing ->
+                    False
     in
-    ( Model Dict.empty False [] apiKey, getItems apiKey )
+    ( { items = items, overrideOrdering = overrideOrdering, filterTags = filterTags, apiKey = apiKey }
+    , getItems apiKey
+    )
 
 
 apiKeyFromFlags : Decode.Value -> Maybe String
@@ -93,14 +119,65 @@ apiKeyFromFlags flags =
             Nothing
 
 
-localStoreModelFromFlags : Decode.Value -> Maybe String
-localStoreModelFromFlags flags =
-    case Decode.decodeValue (Decode.field "localStore" (Decode.nullable Decode.string)) flags of
+itemsFromLocalStorage : Decode.Value -> Maybe (Dict String ItemData)
+itemsFromLocalStorage flags =
+    case Decode.decodeValue (Decode.at [ "localStore", "items" ] (Decode.dict itemDataDecoder)) flags of
         Ok data ->
-            data
+            Just data
 
         Err _ ->
             Nothing
+
+
+itemDataDecoder : Decode.Decoder ItemData
+itemDataDecoder =
+    Decode.succeed ItemData
+        |> required "id" Decode.string
+        |> required "title" Decode.string
+        |> required "tags" (Decode.list Decode.string)
+        |> required "draftTitle" Decode.string
+        |> required "draftTags" (Decode.list Decode.string)
+        |> required "draftTagsInput" Decode.string
+        |> required "done" Decode.int
+        |> required "orderIndexDefault" Decode.int
+        |> required "orderIndexOverride" Decode.int
+        |> required "editing" Decode.bool
+        |> required "synced" Decode.bool
+        |> required "new" Decode.bool
+
+
+filterTagsFromLocalStorage : Decode.Value -> Maybe (List FilterTag)
+filterTagsFromLocalStorage flags =
+    case Decode.decodeValue (Decode.at [ "localStore", "filterTags" ] (Decode.list filterTagDecoder)) flags of
+        Ok data ->
+            Just data
+
+        Err _ ->
+            Nothing
+
+
+filterTagDecoder : Decode.Decoder FilterTag
+filterTagDecoder =
+    Decode.map2 FilterTag (Decode.field "tag" Decode.string) (Decode.field "isActive" Decode.bool)
+
+
+overrideOrderingFromLocalStorage : Decode.Value -> Maybe Bool
+overrideOrderingFromLocalStorage flags =
+    case Decode.decodeValue (Decode.at [ "localStore", "overrideOrdering" ] Decode.bool) flags of
+        Ok data ->
+            Just data
+
+        Err _ ->
+            Nothing
+
+
+decodeApply =
+    Decode.map2 (|>)
+
+
+required : String -> Decode.Decoder a -> Decode.Decoder (a -> b) -> Decode.Decoder b
+required fieldName itemDecoder functionDecoder =
+    decodeApply (Decode.field fieldName itemDecoder) functionDecoder
 
 
 
@@ -876,7 +953,14 @@ itemCard itemData =
         , onClick (CardClicked itemData.id)
         ]
         [ div [ class "card-content" ]
-            [ editButton itemData
+            [ span [ class "right" ]
+                [ if itemData.synced then
+                    text ""
+
+                  else
+                    desyncIcon
+                , editButton itemData
+                ]
             , span
                 [ class
                     ("card-title"
@@ -904,6 +988,11 @@ editButton item =
         , Aria.ariaLabel "Bearbeiten"
         ]
         [ i [ class "material-icons grey-text right-align" ] [ text "edit" ] ]
+
+
+desyncIcon : Html Msg
+desyncIcon =
+    i [ class "material-icons grey-text right-align desync-icon" ] [ text "cloud_off" ]
 
 
 editCard : ItemData -> Html Msg
@@ -1191,7 +1280,7 @@ encodeItemData { id, title, tags, draftTitle, draftTags, draftTagsInput, done, o
         , ( "orderIndexDefault", Encode.int orderIndexDefault )
         , ( "orderIndexOverride", Encode.int orderIndexOverride )
         , ( "editing", Encode.bool editing )
-        , ( "synced", Encode.bool synced )
+        , ( "synced", Encode.bool False )
         , ( "new", Encode.bool new )
         ]
 

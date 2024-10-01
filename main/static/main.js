@@ -3992,7 +3992,7 @@ var _Browser_document = _Debugger_document || F4(function(impl, flagDecoder, deb
 			{
 				_VirtualDom_divertHrefToApp = divertHrefToApp;
 				var doc = view(model);
-				var nextNode = _VirtualDom_node('body')(_List_Nil)(doc.O);
+				var nextNode = _VirtualDom_node('body')(_List_Nil)(doc.P);
 				var patches = _VirtualDom_diff(currNode, nextNode);
 				bodyNode = _VirtualDom_applyPatches(bodyNode, currNode, patches, sendToApp);
 				currNode = nextNode;
@@ -4380,13 +4380,13 @@ var _Http_toTask = F3(function(router, toTask, request)
 	return _Scheduler_binding(function(callback)
 	{
 		function done(response) {
-			callback(toTask(request.D.a(response)));
+			callback(toTask(request.F.a(response)));
 		}
 
 		var xhr = new XMLHttpRequest();
 		xhr.addEventListener('error', function() { done($elm$http$Http$NetworkError_); });
 		xhr.addEventListener('timeout', function() { done($elm$http$Http$Timeout_); });
-		xhr.addEventListener('load', function() { done(_Http_toResponse(request.D.b, xhr)); });
+		xhr.addEventListener('load', function() { done(_Http_toResponse(request.F.b, xhr)); });
 		$elm$core$Maybe$isJust(request.cz) && _Http_track(router, xhr, request.cz.a);
 
 		try {
@@ -4397,8 +4397,8 @@ var _Http_toTask = F3(function(router, toTask, request)
 
 		_Http_configureRequest(xhr, request);
 
-		request.O.a && xhr.setRequestHeader('Content-Type', request.O.a);
-		xhr.send(request.O.b);
+		request.P.a && xhr.setRequestHeader('Content-Type', request.P.a);
+		xhr.send(request.P.b);
 
 		return function() { xhr.c = true; xhr.abort(); };
 	});
@@ -4414,7 +4414,7 @@ function _Http_configureRequest(xhr, request)
 		xhr.setRequestHeader(headers.a.a, headers.a.b);
 	}
 	xhr.timeout = request.cy.a || 0;
-	xhr.responseType = request.D.d;
+	xhr.responseType = request.F.d;
 	xhr.withCredentials = request.cC;
 }
 
@@ -4535,14 +4535,14 @@ function _Http_track(router, xhr, tracker)
 		if (xhr.c) { return; }
 		_Scheduler_rawSpawn(A2($elm$core$Platform$sendToSelf, router, _Utils_Tuple2(tracker, $elm$http$Http$Sending({
 			dh: event.loaded,
-			z: event.total
+			B: event.total
 		}))));
 	});
 	xhr.addEventListener('progress', function(event) {
 		if (xhr.c) { return; }
 		_Scheduler_rawSpawn(A2($elm$core$Platform$sendToSelf, router, _Utils_Tuple2(tracker, $elm$http$Http$Receiving({
 			dc: event.loaded,
-			z: event.lengthComputable ? $elm$core$Maybe$Just(event.total) : $elm$core$Maybe$Nothing
+			B: event.lengthComputable ? $elm$core$Maybe$Just(event.total) : $elm$core$Maybe$Nothing
 		}))));
 	});
 }
@@ -5411,10 +5411,6 @@ var $elm$core$Task$perform = F2(
 			A2($elm$core$Task$map, toMessage, task));
 	});
 var $elm$browser$Browser$element = _Browser_element;
-var $author$project$Main$Model = F4(
-	function (items, overrideOrdering, filterTags, apiKey) {
-		return {S: apiKey, E: filterTags, a: items, F: overrideOrdering};
-	});
 var $elm$json$Json$Decode$decodeValue = _Json_run;
 var $elm$json$Json$Decode$field = _Json_decodeField;
 var $elm$json$Json$Decode$string = _Json_decodeString;
@@ -5432,6 +5428,37 @@ var $author$project$Main$apiKeyFromFlags = function (flags) {
 };
 var $elm$core$Dict$RBEmpty_elm_builtin = {$: -2};
 var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
+var $elm$json$Json$Decode$at = F2(
+	function (fields, decoder) {
+		return A3($elm$core$List$foldr, $elm$json$Json$Decode$field, decoder, fields);
+	});
+var $author$project$Main$FilterTag = F2(
+	function (tag, isActive) {
+		return {Z: isActive, J: tag};
+	});
+var $elm$json$Json$Decode$bool = _Json_decodeBool;
+var $author$project$Main$filterTagDecoder = A3(
+	$elm$json$Json$Decode$map2,
+	$author$project$Main$FilterTag,
+	A2($elm$json$Json$Decode$field, 'tag', $elm$json$Json$Decode$string),
+	A2($elm$json$Json$Decode$field, 'isActive', $elm$json$Json$Decode$bool));
+var $elm$json$Json$Decode$list = _Json_decodeList;
+var $author$project$Main$filterTagsFromLocalStorage = function (flags) {
+	var _v0 = A2(
+		$elm$json$Json$Decode$decodeValue,
+		A2(
+			$elm$json$Json$Decode$at,
+			_List_fromArray(
+				['localStore', 'filterTags']),
+			$elm$json$Json$Decode$list($author$project$Main$filterTagDecoder)),
+		flags);
+	if (!_v0.$) {
+		var data = _v0.a;
+		return $elm$core$Maybe$Just(data);
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
 var $author$project$Main$ItemsReceived = function (a) {
 	return {$: 1, a: a};
 };
@@ -6177,8 +6204,8 @@ var $elm$http$Http$cmdMap = F2(
 			return $elm$http$Http$Request(
 				{
 					cC: r.cC,
-					O: r.O,
-					D: A2(_Http_mapExpect, func, r.D),
+					P: r.P,
+					F: A2(_Http_mapExpect, func, r.F),
 					b6: r.b6,
 					ca: r.ca,
 					cy: r.cy,
@@ -6206,11 +6233,11 @@ var $elm$http$Http$subscription = _Platform_leaf('Http');
 var $elm$http$Http$request = function (r) {
 	return $elm$http$Http$command(
 		$elm$http$Http$Request(
-			{cC: false, O: r.O, D: r.D, b6: r.b6, ca: r.ca, cy: r.cy, cz: r.cz, K: r.K}));
+			{cC: false, P: r.P, F: r.F, b6: r.b6, ca: r.ca, cy: r.cy, cz: r.cz, K: r.K}));
 };
 var $elm$http$Http$get = function (r) {
 	return $elm$http$Http$request(
-		{O: $elm$http$Http$emptyBody, D: r.D, b6: _List_Nil, ca: 'GET', cy: $elm$core$Maybe$Nothing, cz: $elm$core$Maybe$Nothing, K: r.K});
+		{P: $elm$http$Http$emptyBody, F: r.F, b6: _List_Nil, ca: 'GET', cy: $elm$core$Maybe$Nothing, cz: $elm$core$Maybe$Nothing, K: r.K});
 };
 var $author$project$Main$itemsUrl = function (apiKey) {
 	return 'https://picluster.a-h.wtf/einkaufsliste/api/v1/items?k=' + apiKey;
@@ -6218,11 +6245,172 @@ var $author$project$Main$itemsUrl = function (apiKey) {
 var $author$project$Main$getItems = function (apiKey) {
 	return $elm$http$Http$get(
 		{
-			D: $elm$http$Http$expectString($author$project$Main$ItemsReceived),
+			F: $elm$http$Http$expectString($author$project$Main$ItemsReceived),
 			K: $author$project$Main$itemsUrl(apiKey)
 		});
 };
+var $elm$core$Dict$fromList = function (assocs) {
+	return A3(
+		$elm$core$List$foldl,
+		F2(
+			function (_v0, dict) {
+				var key = _v0.a;
+				var value = _v0.b;
+				return A3($elm$core$Dict$insert, key, value, dict);
+			}),
+		$elm$core$Dict$empty,
+		assocs);
+};
+var $elm$json$Json$Decode$keyValuePairs = _Json_decodeKeyValuePairs;
+var $elm$json$Json$Decode$dict = function (decoder) {
+	return A2(
+		$elm$json$Json$Decode$map,
+		$elm$core$Dict$fromList,
+		$elm$json$Json$Decode$keyValuePairs(decoder));
+};
+var $author$project$Main$ItemData = function (id) {
+	return function (title) {
+		return function (tags) {
+			return function (draftTitle) {
+				return function (draftTags) {
+					return function (draftTagsInput) {
+						return function (done) {
+							return function (orderIndexDefault) {
+								return function (orderIndexOverride) {
+									return function (editing) {
+										return function (synced) {
+											return function (_new) {
+												return {q: done, T: draftTags, U: draftTagsInput, V: draftTitle, D: editing, b: id, W: _new, aj: orderIndexDefault, ae: orderIndexOverride, t: synced, g: tags, l: title};
+											};
+										};
+									};
+								};
+							};
+						};
+					};
+				};
+			};
+		};
+	};
+};
+var $elm$json$Json$Decode$int = _Json_decodeInt;
+var $author$project$Main$decodeApply = $elm$json$Json$Decode$map2($elm$core$Basics$apR);
+var $author$project$Main$required = F3(
+	function (fieldName, itemDecoder, functionDecoder) {
+		return A2(
+			$author$project$Main$decodeApply,
+			A2($elm$json$Json$Decode$field, fieldName, itemDecoder),
+			functionDecoder);
+	});
+var $author$project$Main$itemDataDecoder = A3(
+	$author$project$Main$required,
+	'new',
+	$elm$json$Json$Decode$bool,
+	A3(
+		$author$project$Main$required,
+		'synced',
+		$elm$json$Json$Decode$bool,
+		A3(
+			$author$project$Main$required,
+			'editing',
+			$elm$json$Json$Decode$bool,
+			A3(
+				$author$project$Main$required,
+				'orderIndexOverride',
+				$elm$json$Json$Decode$int,
+				A3(
+					$author$project$Main$required,
+					'orderIndexDefault',
+					$elm$json$Json$Decode$int,
+					A3(
+						$author$project$Main$required,
+						'done',
+						$elm$json$Json$Decode$int,
+						A3(
+							$author$project$Main$required,
+							'draftTagsInput',
+							$elm$json$Json$Decode$string,
+							A3(
+								$author$project$Main$required,
+								'draftTags',
+								$elm$json$Json$Decode$list($elm$json$Json$Decode$string),
+								A3(
+									$author$project$Main$required,
+									'draftTitle',
+									$elm$json$Json$Decode$string,
+									A3(
+										$author$project$Main$required,
+										'tags',
+										$elm$json$Json$Decode$list($elm$json$Json$Decode$string),
+										A3(
+											$author$project$Main$required,
+											'title',
+											$elm$json$Json$Decode$string,
+											A3(
+												$author$project$Main$required,
+												'id',
+												$elm$json$Json$Decode$string,
+												$elm$json$Json$Decode$succeed($author$project$Main$ItemData)))))))))))));
+var $author$project$Main$itemsFromLocalStorage = function (flags) {
+	var _v0 = A2(
+		$elm$json$Json$Decode$decodeValue,
+		A2(
+			$elm$json$Json$Decode$at,
+			_List_fromArray(
+				['localStore', 'items']),
+			$elm$json$Json$Decode$dict($author$project$Main$itemDataDecoder)),
+		flags);
+	if (!_v0.$) {
+		var data = _v0.a;
+		return $elm$core$Maybe$Just(data);
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
+var $author$project$Main$overrideOrderingFromLocalStorage = function (flags) {
+	var _v0 = A2(
+		$elm$json$Json$Decode$decodeValue,
+		A2(
+			$elm$json$Json$Decode$at,
+			_List_fromArray(
+				['localStore', 'overrideOrdering']),
+			$elm$json$Json$Decode$bool),
+		flags);
+	if (!_v0.$) {
+		var data = _v0.a;
+		return $elm$core$Maybe$Just(data);
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
 var $author$project$Main$init = function (flags) {
+	var overrideOrdering = function () {
+		var _v3 = $author$project$Main$overrideOrderingFromLocalStorage(flags);
+		if (!_v3.$) {
+			var overrideOrderingFlag = _v3.a;
+			return overrideOrderingFlag;
+		} else {
+			return false;
+		}
+	}();
+	var items = function () {
+		var _v2 = $author$project$Main$itemsFromLocalStorage(flags);
+		if (!_v2.$) {
+			var itemDict = _v2.a;
+			return itemDict;
+		} else {
+			return $elm$core$Dict$empty;
+		}
+	}();
+	var filterTags = function () {
+		var _v1 = $author$project$Main$filterTagsFromLocalStorage(flags);
+		if (!_v1.$) {
+			var filterTagList = _v1.a;
+			return filterTagList;
+		} else {
+			return _List_Nil;
+		}
+	}();
 	var apiKey = function () {
 		var _v0 = $author$project$Main$apiKeyFromFlags(flags);
 		if (!_v0.$) {
@@ -6233,7 +6421,7 @@ var $author$project$Main$init = function (flags) {
 		}
 	}();
 	return _Utils_Tuple2(
-		A4($author$project$Main$Model, $elm$core$Dict$empty, false, _List_Nil, apiKey),
+		{O: apiKey, y: filterTags, a: items, z: overrideOrdering},
 		$author$project$Main$getItems(apiKey));
 };
 var $author$project$Main$ReceivedMQTTMessageDoneStatus = function (a) {
@@ -6300,12 +6488,12 @@ var $author$project$Main$addNewItem = F2(
 		return A3(
 			$elm$core$Dict$insert,
 			newId,
-			{q: 0, T: _List_Nil, U: '', V: '', B: true, b: newId, W: true, aj: newIndex, ae: newIndex, u: false, g: _List_Nil, l: ''},
+			{q: 0, T: _List_Nil, U: '', V: '', D: true, b: newId, W: true, aj: newIndex, ae: newIndex, t: false, g: _List_Nil, l: ''},
 			dict);
 	});
 var $author$project$Main$receivedToItem = F2(
 	function (index, itemReceived) {
-		return {q: itemReceived.q, T: itemReceived.g, U: '', V: itemReceived.l, B: false, b: itemReceived.b, W: false, aj: index, ae: index, u: true, g: itemReceived.g, l: itemReceived.l};
+		return {q: itemReceived.q, T: itemReceived.g, U: '', V: itemReceived.l, D: false, b: itemReceived.b, W: false, aj: index, ae: index, t: true, g: itemReceived.g, l: itemReceived.l};
 	});
 var $author$project$Main$addReceivedItem = F2(
 	function (itemDataReceived, dict) {
@@ -6389,10 +6577,8 @@ var $elm$json$Json$Encode$object = function (pairs) {
 };
 var $elm$http$Http$post = function (r) {
 	return $elm$http$Http$request(
-		{O: r.O, D: r.D, b6: _List_Nil, ca: 'POST', cy: $elm$core$Maybe$Nothing, cz: $elm$core$Maybe$Nothing, K: r.K});
+		{P: r.P, F: r.F, b6: _List_Nil, ca: 'POST', cy: $elm$core$Maybe$Nothing, cz: $elm$core$Maybe$Nothing, K: r.K});
 };
-var $elm$json$Json$Decode$int = _Json_decodeInt;
-var $elm$json$Json$Decode$list = _Json_decodeList;
 var $author$project$Main$sortAPIResponseDecoder = A2(
 	$elm$json$Json$Decode$field,
 	'sort_indices',
@@ -6402,7 +6588,7 @@ var $elm$json$Json$Encode$string = _Json_wrap;
 var $author$project$Main$callSortAPI = function (items) {
 	return $elm$http$Http$post(
 		{
-			O: $elm$http$Http$jsonBody(
+			P: $elm$http$Http$jsonBody(
 				$elm$json$Json$Encode$object(
 					_List_fromArray(
 						[
@@ -6418,7 +6604,7 @@ var $author$project$Main$callSortAPI = function (items) {
 									},
 									items)))
 						]))),
-			D: A2(
+			F: A2(
 				$elm$http$Http$expectJson,
 				$author$project$Main$SortResponseReceived(
 					A2(
@@ -6435,7 +6621,6 @@ var $author$project$Main$DeleteResponseReceived = F2(
 	function (a, b) {
 		return {$: 14, a: a, b: b};
 	});
-var $elm$json$Json$Decode$bool = _Json_decodeBool;
 var $elm$http$Http$Header = F2(
 	function (a, b) {
 		return {$: 0, a: a, b: b};
@@ -6444,8 +6629,8 @@ var $elm$http$Http$header = $elm$http$Http$Header;
 var $author$project$Main$httpDelete = function (options) {
 	return $elm$http$Http$request(
 		{
-			O: options.O,
-			D: options.D,
+			P: options.P,
+			F: options.F,
 			b6: _List_fromArray(
 				[
 					A2($elm$http$Http$header, 'Content-Type', 'application/json')
@@ -6464,8 +6649,8 @@ var $author$project$Main$deleteItem = F2(
 	function (apiKey, itemId) {
 		return $author$project$Main$httpDelete(
 			{
-				O: $elm$http$Http$emptyBody,
-				D: A2(
+				P: $elm$http$Http$emptyBody,
+				F: A2(
 					$elm$http$Http$expectJson,
 					$author$project$Main$DeleteResponseReceived(itemId),
 					A2($elm$json$Json$Decode$field, 'success', $elm$json$Json$Decode$bool)),
@@ -6539,8 +6724,8 @@ var $author$project$Main$encodeItemData = function (_v0) {
 	var done = _v0.q;
 	var orderIndexDefault = _v0.aj;
 	var orderIndexOverride = _v0.ae;
-	var editing = _v0.B;
-	var synced = _v0.u;
+	var editing = _v0.D;
+	var synced = _v0.t;
 	var _new = _v0.W;
 	return $elm$json$Json$Encode$object(
 		_List_fromArray(
@@ -6577,7 +6762,7 @@ var $author$project$Main$encodeItemData = function (_v0) {
 				$elm$json$Json$Encode$bool(editing)),
 				_Utils_Tuple2(
 				'synced',
-				$elm$json$Json$Encode$bool(synced)),
+				$elm$json$Json$Encode$bool(false)),
 				_Utils_Tuple2(
 				'new',
 				$elm$json$Json$Encode$bool(_new))
@@ -6585,9 +6770,9 @@ var $author$project$Main$encodeItemData = function (_v0) {
 };
 var $author$project$Main$encodeModel = function (_v0) {
 	var items = _v0.a;
-	var overrideOrdering = _v0.F;
-	var filterTags = _v0.E;
-	var apiKey = _v0.S;
+	var overrideOrdering = _v0.z;
+	var filterTags = _v0.y;
+	var apiKey = _v0.O;
 	return $elm$json$Json$Encode$object(
 		_List_fromArray(
 			[
@@ -6616,18 +6801,6 @@ var $elm$core$List$filter = F2(
 			_List_Nil,
 			list);
 	});
-var $elm$core$Dict$fromList = function (assocs) {
-	return A3(
-		$elm$core$List$foldl,
-		F2(
-			function (_v0, dict) {
-				var key = _v0.a;
-				var value = _v0.b;
-				return A3($elm$core$Dict$insert, key, value, dict);
-			}),
-		$elm$core$Dict$empty,
-		assocs);
-};
 var $elm$random$Random$Generate = $elm$core$Basics$identity;
 var $elm$random$Random$Seed = F2(
 	function (a, b) {
@@ -6878,10 +7051,6 @@ var $author$project$Main$getFilterTags = function (items) {
 			$author$project$Main$uniqueTags(
 				$elm$core$Dict$values(items))));
 };
-var $author$project$Main$FilterTag = F2(
-	function (tag, isActive) {
-		return {Z: isActive, J: tag};
-	});
 var $author$project$Main$initTags = function (tagNames) {
 	return A2(
 		$elm$core$List$map,
@@ -7019,7 +7188,7 @@ var $author$project$Main$postItem = F2(
 	function (apiKey, item) {
 		return $elm$http$Http$post(
 			{
-				O: $elm$http$Http$jsonBody(
+				P: $elm$http$Http$jsonBody(
 					$elm$json$Json$Encode$object(
 						_List_fromArray(
 							[
@@ -7036,7 +7205,7 @@ var $author$project$Main$postItem = F2(
 											A2($elm$json$Json$Encode$list, $elm$json$Json$Encode$string, item.g))
 										])))
 							]))),
-				D: A2(
+				F: A2(
 					$elm$http$Http$expectJson,
 					$author$project$Main$ItemPosted(item.b),
 					A3(
@@ -7208,7 +7377,7 @@ var $author$project$Main$toggleEdit = function (maybeItem) {
 		return $elm$core$Maybe$Just(
 			_Utils_update(
 				item,
-				{T: item.g, U: '', V: item.l, B: !item.B}));
+				{T: item.g, U: '', V: item.l, D: !item.D}));
 	} else {
 		return $elm$core$Maybe$Nothing;
 	}
@@ -7233,8 +7402,8 @@ var $author$project$Main$DoneResponseReceived = function (a) {
 var $author$project$Main$httpUpdate = function (options) {
 	return $elm$http$Http$request(
 		{
-			O: options.O,
-			D: options.D,
+			P: options.P,
+			F: options.F,
 			b6: _List_fromArray(
 				[
 					A2($elm$http$Http$header, 'Content-Type', 'application/json')
@@ -7253,7 +7422,7 @@ var $author$project$Main$updateDoneBackend = F3(
 	function (apiKey, itemId, doneStatus) {
 		return $author$project$Main$httpUpdate(
 			{
-				O: $elm$http$Http$jsonBody(
+				P: $elm$http$Http$jsonBody(
 					$elm$json$Json$Encode$object(
 						_List_fromArray(
 							[
@@ -7261,7 +7430,7 @@ var $author$project$Main$updateDoneBackend = F3(
 								'done',
 								$elm$json$Json$Encode$int(doneStatus))
 							]))),
-				D: A2(
+				F: A2(
 					$elm$http$Http$expectJson,
 					$author$project$Main$DoneResponseReceived,
 					A2($elm$json$Json$Decode$field, 'success', $elm$json$Json$Decode$bool)),
@@ -7297,7 +7466,7 @@ var $author$project$Main$updateDraftTags = F2(
 					item,
 					{
 						T: newDraftTags,
-						u: A2($author$project$Main$listEqual, newDraftTags, item.g) ? item.u : false
+						t: A2($author$project$Main$listEqual, newDraftTags, item.g) ? item.t : false
 					}));
 		} else {
 			return $elm$core$Maybe$Nothing;
@@ -7312,7 +7481,7 @@ var $author$project$Main$updateDraftTagsInput = F2(
 					item,
 					{
 						U: newText,
-						u: ($elm$core$String$trim(newText) === '') ? item.u : false
+						t: ($elm$core$String$trim(newText) === '') ? item.t : false
 					}));
 		} else {
 			return $elm$core$Maybe$Nothing;
@@ -7328,7 +7497,7 @@ var $author$project$Main$updateDraftTitle = F2(
 					item,
 					{
 						V: newTitle,
-						u: (!_Utils_eq(newTitle, item.l)) ? false : item.u
+						t: (!_Utils_eq(newTitle, item.l)) ? false : item.t
 					}));
 		} else {
 			return $elm$core$Maybe$Nothing;
@@ -7342,7 +7511,7 @@ var $author$project$Main$updateItem = F2(
 	function (apiKey, item) {
 		return $author$project$Main$httpUpdate(
 			{
-				O: $elm$http$Http$jsonBody(
+				P: $elm$http$Http$jsonBody(
 					$elm$json$Json$Encode$object(
 						_List_fromArray(
 							[
@@ -7359,7 +7528,7 @@ var $author$project$Main$updateItem = F2(
 											A2($elm$json$Json$Encode$list, $elm$json$Json$Encode$string, item.g))
 										])))
 							]))),
-				D: A2(
+				F: A2(
 					$elm$http$Http$expectJson,
 					$author$project$Main$UpdateResponseReceived(item.b),
 					A2($elm$json$Json$Decode$field, 'success', $elm$json$Json$Decode$bool)),
@@ -7389,7 +7558,7 @@ var $author$project$Main$update = F2(
 			case 0:
 				return _Utils_Tuple2(
 					model,
-					$author$project$Main$getItems(model.S));
+					$author$project$Main$getItems(model.O));
 			case 1:
 				var payload = msg.a;
 				if (!payload.$) {
@@ -7402,7 +7571,7 @@ var $author$project$Main$update = F2(
 					var newModel = _Utils_update(
 						model,
 						{
-							E: $author$project$Main$initTags(
+							y: $author$project$Main$initTags(
 								$author$project$Main$getFilterTags(items)),
 							a: items
 						});
@@ -7419,7 +7588,7 @@ var $author$project$Main$update = F2(
 				var newModel = _Utils_update(
 					model,
 					{
-						E: A2($author$project$Main$toggleTag, tag, model.E)
+						y: A2($author$project$Main$toggleTag, tag, model.y)
 					});
 				return _Utils_Tuple2(
 					newModel,
@@ -7436,7 +7605,7 @@ var $author$project$Main$update = F2(
 					function () {
 						if (!maybeItem.$) {
 							var item = maybeItem.a;
-							return A3($author$project$Main$updateDoneBackend, model.S, itemId, item.q);
+							return A3($author$project$Main$updateDoneBackend, model.O, itemId, item.q);
 						} else {
 							return $elm$core$Platform$Cmd$none;
 						}
@@ -7476,7 +7645,7 @@ var $author$project$Main$update = F2(
 				var _v4 = A2($elm$core$Dict$get, itemId, model.a);
 				if (!_v4.$) {
 					var item = _v4.a;
-					if (item.u) {
+					if (item.t) {
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
@@ -7501,7 +7670,7 @@ var $author$project$Main$update = F2(
 							function ($) {
 								return $.J;
 							},
-							model.E);
+							model.y);
 						var newItems = A3(
 							$elm$core$Dict$update,
 							itemId,
@@ -7520,7 +7689,7 @@ var $author$project$Main$update = F2(
 							function (x) {
 								return A2($elm$core$List$member, x.J, newFilters);
 							},
-							model.E);
+							model.y);
 						var additionalFilters = A2(
 							$elm$core$List$filter,
 							function (x) {
@@ -7538,8 +7707,8 @@ var $author$project$Main$update = F2(
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
-								{E: filterTagsAdded, a: newItems}),
-							item.W ? A2($author$project$Main$postItem, model.S, updatedItem) : A2($author$project$Main$updateItem, model.S, updatedItem));
+								{y: filterTagsAdded, a: newItems}),
+							item.W ? A2($author$project$Main$postItem, model.O, updatedItem) : A2($author$project$Main$updateItem, model.O, updatedItem));
 					}
 				} else {
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
@@ -7573,10 +7742,10 @@ var $author$project$Main$update = F2(
 						}),
 					$elm$core$Platform$Cmd$none);
 			case 10:
-				return model.F ? _Utils_Tuple2(
+				return model.z ? _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{F: false}),
+						{z: false}),
 					$elm$core$Platform$Cmd$none) : _Utils_Tuple2(
 					model,
 					$author$project$Main$callSortAPI(
@@ -7598,7 +7767,7 @@ var $author$project$Main$update = F2(
 									$elm$core$Dict$map,
 									$author$project$Main$updateOverrideOrderIndex(idToIndexDict),
 									model.a),
-								F: true
+								z: true
 							}),
 						$elm$core$Platform$Cmd$none);
 				} else {
@@ -7622,7 +7791,7 @@ var $author$project$Main$update = F2(
 								return $elm$core$Maybe$Just(
 									_Utils_update(
 										item,
-										{B: false, u: true}));
+										{D: false, t: true}));
 							} else {
 								return $elm$core$Maybe$Nothing;
 							}
@@ -7632,7 +7801,7 @@ var $author$project$Main$update = F2(
 						_Utils_update(
 							model,
 							{a: newItemDict}),
-						model.F ? $author$project$Main$callSortAPI(
+						model.z ? $author$project$Main$callSortAPI(
 							$elm$core$Dict$values(newItemDict)) : $elm$core$Platform$Cmd$none);
 				} else {
 					var httpError = successPayload.a;
@@ -7655,7 +7824,7 @@ var $author$project$Main$update = F2(
 					$elm$core$Platform$Cmd$batch(
 						A2(
 							$elm$core$List$map,
-							$author$project$Main$deleteItem(model.S),
+							$author$project$Main$deleteItem(model.O),
 							doneIds)));
 			case 14:
 				var itemId = msg.a;
@@ -7708,7 +7877,7 @@ var $author$project$Main$update = F2(
 					_Utils_update(
 						model,
 						{a: newItems}),
-					model.F ? $author$project$Main$callSortAPI(
+					model.z ? $author$project$Main$callSortAPI(
 						$elm$core$Dict$values(newItems)) : $elm$core$Platform$Cmd$none);
 			case 17:
 				var oldId = msg.a;
@@ -7724,7 +7893,7 @@ var $author$project$Main$update = F2(
 								postResponse.bt,
 								_Utils_update(
 									oldItem,
-									{B: false, b: postResponse.bt, W: false, u: true}),
+									{D: false, b: postResponse.bt, W: false, t: true}),
 								A2($elm$core$Dict$remove, oldId, model.a));
 						} else {
 							return model.a;
@@ -7734,7 +7903,7 @@ var $author$project$Main$update = F2(
 						_Utils_update(
 							model,
 							{a: newItemDict}),
-						model.F ? $author$project$Main$callSortAPI(
+						model.z ? $author$project$Main$callSortAPI(
 							$elm$core$Dict$values(newItemDict)) : $elm$core$Platform$Cmd$none);
 				} else {
 					var httpError = postResponsePayload.a;
@@ -7772,7 +7941,7 @@ var $author$project$Main$update = F2(
 				var itemId = msg.a;
 				return _Utils_Tuple2(
 					model,
-					A2($author$project$Main$deleteItem, model.S, itemId));
+					A2($author$project$Main$deleteItem, model.O, itemId));
 		}
 	});
 var $elm$json$Json$Decode$value = _Json_decodeValue;
@@ -8155,7 +8324,7 @@ var $author$project$Main$headerView = function (model) {
 								A2(
 									$elm$core$List$map,
 									$author$project$Main$filterTagChip,
-									$author$project$Main$sortFilterTags(model.E))),
+									$author$project$Main$sortFilterTags(model.y))),
 								A2(
 								$elm$html$Html$ul,
 								_List_fromArray(
@@ -8169,7 +8338,7 @@ var $author$project$Main$headerView = function (model) {
 										_List_Nil,
 										_List_fromArray(
 											[
-												$author$project$Main$sortButton(model.F)
+												$author$project$Main$sortButton(model.z)
 											])),
 										A2(
 										$elm$html$Html$li,
@@ -8277,10 +8446,6 @@ var $author$project$Main$DraftTagsChanged = F2(
 var $author$project$Main$DraftTagsInputChanged = F2(
 	function (a, b) {
 		return {$: 19, a: a, b: b};
-	});
-var $elm$json$Json$Decode$at = F2(
-	function (fields, decoder) {
-		return A3($elm$core$List$foldr, $elm$json$Json$Decode$field, decoder, fields);
 	});
 var $elm$html$Html$Attributes$placeholder = $elm$html$Html$Attributes$stringProperty('placeholder');
 var $elm$html$Html$Attributes$value = $elm$html$Html$Attributes$stringProperty('value');
@@ -8438,6 +8603,16 @@ var $author$project$Main$editCard = function (item) {
 var $author$project$Main$CardClicked = function (a) {
 	return {$: 4, a: a};
 };
+var $author$project$Main$desyncIcon = A2(
+	$elm$html$Html$i,
+	_List_fromArray(
+		[
+			$elm$html$Html$Attributes$class('material-icons grey-text right-align desync-icon')
+		]),
+	_List_fromArray(
+		[
+			$elm$html$Html$text('cloud_off')
+		]));
 var $author$project$Main$displayTagChip = function (tag) {
 	return A2(
 		$elm$html$Html$div,
@@ -8505,7 +8680,17 @@ var $author$project$Main$itemCard = function (itemData) {
 					]),
 				_List_fromArray(
 					[
-						$author$project$Main$editButton(itemData),
+						A2(
+						$elm$html$Html$span,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$class('right')
+							]),
+						_List_fromArray(
+							[
+								itemData.t ? $elm$html$Html$text('') : $author$project$Main$desyncIcon,
+								$author$project$Main$editButton(itemData)
+							])),
 						A2(
 						$elm$html$Html$span,
 						_List_fromArray(
@@ -8528,7 +8713,7 @@ var $author$project$Main$itemCard = function (itemData) {
 			]));
 };
 var $author$project$Main$cardView = function (itemData) {
-	return itemData.B ? $author$project$Main$editCard(itemData) : $author$project$Main$itemCard(itemData);
+	return itemData.D ? $author$project$Main$editCard(itemData) : $author$project$Main$itemCard(itemData);
 };
 var $author$project$Main$maybeActiveTag = function (filterTag) {
 	return filterTag.Z ? $elm$core$Maybe$Just(filterTag.J) : $elm$core$Maybe$Nothing;
@@ -8538,9 +8723,9 @@ var $author$project$Main$activeFilters = function (filterTags) {
 };
 var $author$project$Main$isVisible = F2(
 	function (model, item) {
-		var filters = $author$project$Main$activeFilters(model.E);
+		var filters = $author$project$Main$activeFilters(model.y);
 		var filteringActive = $elm$core$List$length(filters) > 0;
-		return ((!filteringActive) || (item.B || (A2($elm$core$List$member, 'No tags', filters) && (!$elm$core$List$length(item.g))))) ? true : A3(
+		return ((!filteringActive) || (item.D || (A2($elm$core$List$member, 'No tags', filters) && (!$elm$core$List$length(item.g))))) ? true : A3(
 			$elm$core$List$foldl,
 			$elm$core$Basics$or,
 			false,
@@ -8570,7 +8755,7 @@ var $author$project$Main$sortItems = F2(
 var $author$project$Main$itemsToShow = function (model) {
 	return A2(
 		$author$project$Main$sortItems,
-		model.F,
+		model.z,
 		A2(
 			$elm$core$List$filter,
 			$author$project$Main$isVisible(model),

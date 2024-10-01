@@ -46,7 +46,7 @@
 
         const flags = {
             apiKey: "{{ api_key }}",
-            localStore: getLocalStorage()
+            localStore: JSON.parse(getLocalStorage())
         }
 
         const app = Elm.Main.init({
