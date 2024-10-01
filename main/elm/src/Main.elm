@@ -311,9 +311,27 @@ callSortAPI items =
         }
 
 
-initTags : List String -> List FilterTag
-initTags tagNames =
+filterTagsFromNames : List String -> List FilterTag
+filterTagsFromNames tagNames =
     List.map (\tag -> FilterTag tag False) tagNames
+
+
+mergeFilterTags : List FilterTag -> List FilterTag -> List FilterTag
+mergeFilterTags oldTags newTags =
+    let
+        oldNames =
+            List.map .tag oldTags
+
+        newNames =
+            List.map .tag newTags
+
+        additionalTags =
+            List.filter (\tag -> not (List.member tag.tag oldNames)) newTags
+
+        tagsToKeep =
+            List.filter (\tag -> List.member tag.tag newNames) oldTags
+    in
+    tagsToKeep ++ additionalTags
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -329,8 +347,11 @@ update msg model =
                         items =
                             itemListToDict (List.indexedMap receivedToItem (parseItems rawString))
 
+                        newFilterTags =
+                            mergeFilterTags model.filterTags (filterTagsFromNames (filterTagNames items))
+
                         newModel =
-                            { model | items = items, filterTags = initTags (getFilterTags items) }
+                            { model | items = items, filterTags = newFilterTags }
                     in
                     ( newModel, writeToLocalStorage (encodeModel newModel) )
 
@@ -418,7 +439,7 @@ update msg model =
                                     model.items
 
                             newFilters =
-                                getFilterTags newItems
+                                filterTagNames newItems
 
                             oldFilters =
                                 List.map .tag model.filterTags
@@ -1225,8 +1246,8 @@ activeFilters filterTags =
     List.filterMap maybeActiveTag filterTags
 
 
-getFilterTags : Dict String ItemData -> List String
-getFilterTags items =
+filterTagNames : Dict String ItemData -> List String
+filterTagNames items =
     [ "No tags" ] ++ Set.toList (uniqueTags (Dict.values items))
 
 
