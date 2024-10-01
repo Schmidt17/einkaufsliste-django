@@ -372,18 +372,29 @@ update msg model =
 
                 maybeItem =
                     Dict.get itemId newItems
-            in
-            ( { model | items = newItems }
-            , case maybeItem of
-                Just item ->
-                    updateDoneBackend model.apiKey itemId item.done
 
-                Nothing ->
-                    Cmd.none
+                newModel =
+                    { model | items = newItems }
+            in
+            ( newModel
+            , Cmd.batch
+                ((case maybeItem of
+                    Just item ->
+                        updateDoneBackend model.apiKey itemId item.done
+
+                    Nothing ->
+                        Cmd.none
+                 )
+                    :: [ writeToLocalStorage (encodeModel newModel) ]
+                )
             )
 
         EditCardClicked itemId ->
-            ( { model | items = Dict.update itemId toggleEdit model.items }, Cmd.none )
+            let
+                newModel =
+                    { model | items = Dict.update itemId toggleEdit model.items }
+            in
+            ( newModel, writeToLocalStorage (encodeModel newModel) )
 
         CancelEditing itemId ->
             let
@@ -392,11 +403,15 @@ update msg model =
             in
             case maybeItem of
                 Just item ->
-                    if item.new then
-                        ( { model | items = Dict.remove itemId model.items }, Cmd.none )
+                    let
+                        newModel =
+                            if item.new then
+                                { model | items = Dict.remove itemId model.items }
 
-                    else
-                        ( { model | items = Dict.update itemId toggleEdit model.items }, Cmd.none )
+                            else
+                                { model | items = Dict.update itemId toggleEdit model.items }
+                    in
+                    ( newModel, writeToLocalStorage (encodeModel newModel) )
 
                 Nothing ->
                     ( model, Cmd.none )
@@ -405,7 +420,11 @@ update msg model =
             case Dict.get itemId model.items of
                 Just item ->
                     if item.synced then
-                        ( { model | items = Dict.update itemId toggleEdit model.items }, Cmd.none )
+                        let
+                            newModel =
+                                { model | items = Dict.update itemId toggleEdit model.items }
+                        in
+                        ( newModel, writeToLocalStorage (encodeModel newModel) )
 
                     else
                         let
@@ -440,16 +459,23 @@ update msg model =
 
                             newFilters =
                                 mergeFilterTags model.filterTags (filterTagsFromNames (filterTagNames newItems))
-                        in
-                        ( { model
-                            | items = newItems
-                            , filterTags = newFilters
-                          }
-                        , if item.new then
-                            postItem model.apiKey updatedItem
 
-                          else
-                            updateItem model.apiKey updatedItem
+                            newModel =
+                                { model
+                                    | items = newItems
+                                    , filterTags = newFilters
+                                }
+                        in
+                        ( newModel
+                        , Cmd.batch
+                            ((if item.new then
+                                postItem model.apiKey updatedItem
+
+                              else
+                                updateItem model.apiKey updatedItem
+                             )
+                                :: [ writeToLocalStorage (encodeModel newModel) ]
+                            )
                         )
 
                 Nothing ->
@@ -462,15 +488,26 @@ update msg model =
             let
                 newId =
                     "local-" ++ UUID.toString newUUID
+
+                newModel =
+                    { model | items = addNewItem newId model.items }
             in
-            ( { model | items = addNewItem newId model.items }, Cmd.none )
+            ( newModel, writeToLocalStorage (encodeModel newModel) )
 
         DraftTitleChanged itemId newTitle ->
-            ( { model | items = Dict.update itemId (updateDraftTitle newTitle) model.items }, Cmd.none )
+            let
+                newModel =
+                    { model | items = Dict.update itemId (updateDraftTitle newTitle) model.items }
+            in
+            ( newModel, writeToLocalStorage (encodeModel newModel) )
 
         SortButtonClicked ->
             if model.overrideOrdering then
-                ( { model | overrideOrdering = False }, Cmd.none )
+                let
+                    newModel =
+                        { model | overrideOrdering = False }
+                in
+                ( newModel, writeToLocalStorage (encodeModel newModel) )
 
             else
                 ( model, callSortAPI (Dict.values model.items) )
@@ -484,8 +521,11 @@ update msg model =
 
                         idToIndexDict =
                             Dict.fromList (List.map2 Tuple.pair requestedIds newIndices)
+
+                        newModel =
+                            { model | items = Dict.map (updateOverrideOrderIndex idToIndexDict) model.items, overrideOrdering = True }
                     in
-                    ( { model | items = Dict.map (updateOverrideOrderIndex idToIndexDict) model.items, overrideOrdering = True }, Cmd.none )
+                    ( newModel, writeToLocalStorage (encodeModel newModel) )
 
                 Err httpError ->
                     ( model, Cmd.none )
@@ -508,13 +548,20 @@ update msg model =
                                             Nothing
                                 )
                                 model.items
-                    in
-                    ( { model | items = newItemDict }
-                    , if model.overrideOrdering then
-                        callSortAPI (Dict.values newItemDict)
 
-                      else
-                        Cmd.none
+                        newModel =
+                            { model | items = newItemDict }
+                    in
+                    ( newModel
+                    , Cmd.batch
+                        ((if model.overrideOrdering then
+                            callSortAPI (Dict.values newItemDict)
+
+                          else
+                            Cmd.none
+                         )
+                            :: [ writeToLocalStorage (encodeModel newModel) ]
+                        )
                     )
 
                 Err httpError ->
@@ -531,7 +578,17 @@ update msg model =
             case successPayload of
                 Ok success ->
                     if success then
-                        ( { model | items = Dict.remove itemId model.items }, Cmd.none )
+                        let
+                            newItems =
+                                Dict.remove itemId model.items
+
+                            newFilters =
+                                mergeFilterTags model.filterTags (filterTagsFromNames (filterTagNames newItems))
+
+                            newModel =
+                                { model | items = newItems, filterTags = newFilters }
+                        in
+                        ( newModel, writeToLocalStorage (encodeModel newModel) )
 
                     else
                         ( model, Cmd.none )
@@ -546,20 +603,24 @@ update msg model =
             in
             case maybeMqttData of
                 Just mqttData ->
-                    ( { model
-                        | items =
-                            Dict.update mqttData.id
-                                (setDone
-                                    (if mqttData.status then
-                                        1
+                    let
+                        newModel =
+                            { model
+                                | items =
+                                    Dict.update mqttData.id
+                                        (setDone
+                                            (if mqttData.status then
+                                                1
 
-                                     else
-                                        0
-                                    )
-                                )
-                                model.items
-                      }
-                    , Cmd.none
+                                             else
+                                                0
+                                            )
+                                        )
+                                        model.items
+                            }
+                    in
+                    ( newModel
+                    , writeToLocalStorage (encodeModel newModel)
                     )
 
                 Nothing ->
@@ -577,13 +638,20 @@ update msg model =
 
                         Nothing ->
                             model.items
-            in
-            ( { model | items = newItems }
-            , if model.overrideOrdering then
-                callSortAPI (Dict.values newItems)
 
-              else
-                Cmd.none
+                newModel =
+                    { model | items = newItems }
+            in
+            ( newModel
+            , Cmd.batch
+                ((if model.overrideOrdering then
+                    callSortAPI (Dict.values newItems)
+
+                  else
+                    Cmd.none
+                 )
+                    :: [ writeToLocalStorage (encodeModel newModel) ]
+                )
             )
 
         ItemPosted oldId postResponsePayload ->
@@ -593,7 +661,7 @@ update msg model =
                         maybeOldItem =
                             Dict.get oldId model.items
 
-                        newItemDict =
+                        newItems =
                             case maybeOldItem of
                                 Just oldItem ->
                                     Dict.remove oldId model.items
@@ -601,23 +669,38 @@ update msg model =
 
                                 Nothing ->
                                     model.items
-                    in
-                    ( { model | items = newItemDict }
-                    , if model.overrideOrdering then
-                        callSortAPI (Dict.values newItemDict)
 
-                      else
-                        Cmd.none
+                        newModel =
+                            { model | items = newItems }
+                    in
+                    ( newModel
+                    , Cmd.batch
+                        ((if model.overrideOrdering then
+                            callSortAPI (Dict.values newItems)
+
+                          else
+                            Cmd.none
+                         )
+                            :: [ writeToLocalStorage (encodeModel newModel) ]
+                        )
                     )
 
                 Err httpError ->
                     ( model, Cmd.none )
 
         DraftTagsChanged itemId newTagList ->
-            ( { model | items = Dict.update itemId (updateDraftTags newTagList) model.items }, Cmd.none )
+            let
+                newModel =
+                    { model | items = Dict.update itemId (updateDraftTags newTagList) model.items }
+            in
+            ( newModel, writeToLocalStorage (encodeModel newModel) )
 
         DraftTagsInputChanged itemId remainingText ->
-            ( { model | items = Dict.update itemId (updateDraftTagsInput remainingText) model.items }, Cmd.none )
+            let
+                newModel =
+                    { model | items = Dict.update itemId (updateDraftTagsInput remainingText) model.items }
+            in
+            ( newModel, writeToLocalStorage (encodeModel newModel) )
 
         DeleteCard itemId ->
             ( model, deleteItem model.apiKey itemId )

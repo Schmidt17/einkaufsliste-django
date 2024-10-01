@@ -4249,8 +4249,8 @@ function _Browser_getViewport()
 	return {
 		I: _Browser_getScene(),
 		M: {
-			w: _Browser_window.pageXOffset,
-			x: _Browser_window.pageYOffset,
+			x: _Browser_window.pageXOffset,
+			y: _Browser_window.pageYOffset,
 			d: _Browser_doc.documentElement.clientWidth,
 			c: _Browser_doc.documentElement.clientHeight
 		}
@@ -4291,8 +4291,8 @@ function _Browser_getViewportOf(id)
 				c: node.scrollHeight
 			},
 			M: {
-				w: node.scrollLeft,
-				x: node.scrollTop,
+				x: node.scrollLeft,
+				y: node.scrollTop,
 				d: node.clientWidth,
 				c: node.clientHeight
 			}
@@ -4326,14 +4326,14 @@ function _Browser_getElement(id)
 		return {
 			I: _Browser_getScene(),
 			M: {
-				w: x,
-				x: y,
+				x: x,
+				y: y,
 				d: _Browser_doc.documentElement.clientWidth,
 				c: _Browser_doc.documentElement.clientHeight
 			},
 			ap: {
-				w: x + rect.left,
-				x: y + rect.top,
+				x: x + rect.left,
+				y: y + rect.top,
 				d: rect.width,
 				c: rect.height
 			}
@@ -6421,7 +6421,7 @@ var $author$project$Main$init = function (flags) {
 		}
 	}();
 	return _Utils_Tuple2(
-		{O: apiKey, y: filterTags, a: items, z: overrideOrdering},
+		{O: apiKey, v: filterTags, a: items, z: overrideOrdering},
 		$author$project$Main$getItems(apiKey));
 };
 var $author$project$Main$ReceivedMQTTMessageDoneStatus = function (a) {
@@ -6771,7 +6771,7 @@ var $author$project$Main$encodeItemData = function (_v0) {
 var $author$project$Main$encodeModel = function (_v0) {
 	var items = _v0.a;
 	var overrideOrdering = _v0.z;
-	var filterTags = _v0.y;
+	var filterTags = _v0.v;
 	var apiKey = _v0.O;
 	return $elm$json$Json$Encode$object(
 		_List_fromArray(
@@ -7598,12 +7598,12 @@ var $author$project$Main$update = F2(
 							$author$project$Main$parseItems(rawString)));
 					var newFilterTags = A2(
 						$author$project$Main$mergeFilterTags,
-						model.y,
+						model.v,
 						$author$project$Main$filterTagsFromNames(
 							$author$project$Main$filterTagNames(items)));
 					var newModel = _Utils_update(
 						model,
-						{y: newFilterTags, a: items});
+						{v: newFilterTags, a: items});
 					return _Utils_Tuple2(
 						newModel,
 						$author$project$Main$writeToLocalStorage(
@@ -7617,7 +7617,7 @@ var $author$project$Main$update = F2(
 				var newModel = _Utils_update(
 					model,
 					{
-						y: A2($author$project$Main$toggleTag, tag, model.y)
+						v: A2($author$project$Main$toggleTag, tag, model.v)
 					});
 				return _Utils_Tuple2(
 					newModel,
@@ -7626,46 +7626,57 @@ var $author$project$Main$update = F2(
 			case 4:
 				var itemId = msg.a;
 				var newItems = A3($elm$core$Dict$update, itemId, $author$project$Main$toggleDone, model.a);
+				var newModel = _Utils_update(
+					model,
+					{a: newItems});
 				var maybeItem = A2($elm$core$Dict$get, itemId, newItems);
 				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{a: newItems}),
-					function () {
-						if (!maybeItem.$) {
-							var item = maybeItem.a;
-							return A3($author$project$Main$updateDoneBackend, model.O, itemId, item.q);
-						} else {
-							return $elm$core$Platform$Cmd$none;
-						}
-					}());
+					newModel,
+					$elm$core$Platform$Cmd$batch(
+						A2(
+							$elm$core$List$cons,
+							function () {
+								if (!maybeItem.$) {
+									var item = maybeItem.a;
+									return A3($author$project$Main$updateDoneBackend, model.O, itemId, item.q);
+								} else {
+									return $elm$core$Platform$Cmd$none;
+								}
+							}(),
+							_List_fromArray(
+								[
+									$author$project$Main$writeToLocalStorage(
+									$author$project$Main$encodeModel(newModel))
+								]))));
 			case 2:
 				var itemId = msg.a;
+				var newModel = _Utils_update(
+					model,
+					{
+						a: A3($elm$core$Dict$update, itemId, $author$project$Main$toggleEdit, model.a)
+					});
 				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{
-							a: A3($elm$core$Dict$update, itemId, $author$project$Main$toggleEdit, model.a)
-						}),
-					$elm$core$Platform$Cmd$none);
+					newModel,
+					$author$project$Main$writeToLocalStorage(
+						$author$project$Main$encodeModel(newModel)));
 			case 5:
 				var itemId = msg.a;
 				var maybeItem = A2($elm$core$Dict$get, itemId, model.a);
 				if (!maybeItem.$) {
 					var item = maybeItem.a;
-					return item.W ? _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{
-								a: A2($elm$core$Dict$remove, itemId, model.a)
-							}),
-						$elm$core$Platform$Cmd$none) : _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{
-								a: A3($elm$core$Dict$update, itemId, $author$project$Main$toggleEdit, model.a)
-							}),
-						$elm$core$Platform$Cmd$none);
+					var newModel = item.W ? _Utils_update(
+						model,
+						{
+							a: A2($elm$core$Dict$remove, itemId, model.a)
+						}) : _Utils_update(
+						model,
+						{
+							a: A3($elm$core$Dict$update, itemId, $author$project$Main$toggleEdit, model.a)
+						});
+					return _Utils_Tuple2(
+						newModel,
+						$author$project$Main$writeToLocalStorage(
+							$author$project$Main$encodeModel(newModel)));
 				} else {
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
@@ -7675,13 +7686,15 @@ var $author$project$Main$update = F2(
 				if (!_v4.$) {
 					var item = _v4.a;
 					if (item.t) {
+						var newModel = _Utils_update(
+							model,
+							{
+								a: A3($elm$core$Dict$update, itemId, $author$project$Main$toggleEdit, model.a)
+							});
 						return _Utils_Tuple2(
-							_Utils_update(
-								model,
-								{
-									a: A3($elm$core$Dict$update, itemId, $author$project$Main$toggleEdit, model.a)
-								}),
-							$elm$core$Platform$Cmd$none);
+							newModel,
+							$author$project$Main$writeToLocalStorage(
+								$author$project$Main$encodeModel(newModel)));
 					} else {
 						var remainingText = $elm$core$String$trim(item.U);
 						var updatedItem = _Utils_update(
@@ -7708,14 +7721,23 @@ var $author$project$Main$update = F2(
 							model.a);
 						var newFilters = A2(
 							$author$project$Main$mergeFilterTags,
-							model.y,
+							model.v,
 							$author$project$Main$filterTagsFromNames(
 								$author$project$Main$filterTagNames(newItems)));
+						var newModel = _Utils_update(
+							model,
+							{v: newFilters, a: newItems});
 						return _Utils_Tuple2(
-							_Utils_update(
-								model,
-								{y: newFilters, a: newItems}),
-							item.W ? A2($author$project$Main$postItem, model.O, updatedItem) : A2($author$project$Main$updateItem, model.O, updatedItem));
+							newModel,
+							$elm$core$Platform$Cmd$batch(
+								A2(
+									$elm$core$List$cons,
+									item.W ? A2($author$project$Main$postItem, model.O, updatedItem) : A2($author$project$Main$updateItem, model.O, updatedItem),
+									_List_fromArray(
+										[
+											$author$project$Main$writeToLocalStorage(
+											$author$project$Main$encodeModel(newModel))
+										]))));
 					}
 				} else {
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
@@ -7727,36 +7749,46 @@ var $author$project$Main$update = F2(
 			case 8:
 				var newUUID = msg.a;
 				var newId = 'local-' + $TSFoster$elm_uuid$UUID$toString(newUUID);
+				var newModel = _Utils_update(
+					model,
+					{
+						a: A2($author$project$Main$addNewItem, newId, model.a)
+					});
 				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{
-							a: A2($author$project$Main$addNewItem, newId, model.a)
-						}),
-					$elm$core$Platform$Cmd$none);
+					newModel,
+					$author$project$Main$writeToLocalStorage(
+						$author$project$Main$encodeModel(newModel)));
 			case 9:
 				var itemId = msg.a;
 				var newTitle = msg.b;
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{
-							a: A3(
-								$elm$core$Dict$update,
-								itemId,
-								$author$project$Main$updateDraftTitle(newTitle),
-								model.a)
-						}),
-					$elm$core$Platform$Cmd$none);
-			case 10:
-				return model.z ? _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{z: false}),
-					$elm$core$Platform$Cmd$none) : _Utils_Tuple2(
+				var newModel = _Utils_update(
 					model,
-					$author$project$Main$callSortAPI(
-						$elm$core$Dict$values(model.a)));
+					{
+						a: A3(
+							$elm$core$Dict$update,
+							itemId,
+							$author$project$Main$updateDraftTitle(newTitle),
+							model.a)
+					});
+				return _Utils_Tuple2(
+					newModel,
+					$author$project$Main$writeToLocalStorage(
+						$author$project$Main$encodeModel(newModel)));
+			case 10:
+				if (model.z) {
+					var newModel = _Utils_update(
+						model,
+						{z: false});
+					return _Utils_Tuple2(
+						newModel,
+						$author$project$Main$writeToLocalStorage(
+							$author$project$Main$encodeModel(newModel)));
+				} else {
+					return _Utils_Tuple2(
+						model,
+						$author$project$Main$callSortAPI(
+							$elm$core$Dict$values(model.a)));
+				}
 			case 11:
 				var requestedIds = msg.a;
 				var payload = msg.b;
@@ -7766,17 +7798,19 @@ var $author$project$Main$update = F2(
 						$elm$core$List$reverse(sortIndices));
 					var idToIndexDict = $elm$core$Dict$fromList(
 						A3($elm$core$List$map2, $elm$core$Tuple$pair, requestedIds, newIndices));
+					var newModel = _Utils_update(
+						model,
+						{
+							a: A2(
+								$elm$core$Dict$map,
+								$author$project$Main$updateOverrideOrderIndex(idToIndexDict),
+								model.a),
+							z: true
+						});
 					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{
-								a: A2(
-									$elm$core$Dict$map,
-									$author$project$Main$updateOverrideOrderIndex(idToIndexDict),
-									model.a),
-								z: true
-							}),
-						$elm$core$Platform$Cmd$none);
+						newModel,
+						$author$project$Main$writeToLocalStorage(
+							$author$project$Main$encodeModel(newModel)));
 				} else {
 					var httpError = payload.a;
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
@@ -7804,12 +7838,21 @@ var $author$project$Main$update = F2(
 							}
 						},
 						model.a);
+					var newModel = _Utils_update(
+						model,
+						{a: newItemDict});
 					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{a: newItemDict}),
-						model.z ? $author$project$Main$callSortAPI(
-							$elm$core$Dict$values(newItemDict)) : $elm$core$Platform$Cmd$none);
+						newModel,
+						$elm$core$Platform$Cmd$batch(
+							A2(
+								$elm$core$List$cons,
+								model.z ? $author$project$Main$callSortAPI(
+									$elm$core$Dict$values(newItemDict)) : $elm$core$Platform$Cmd$none,
+								_List_fromArray(
+									[
+										$author$project$Main$writeToLocalStorage(
+										$author$project$Main$encodeModel(newModel))
+									]))));
 				} else {
 					var httpError = successPayload.a;
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
@@ -7838,13 +7881,23 @@ var $author$project$Main$update = F2(
 				var successPayload = msg.b;
 				if (!successPayload.$) {
 					var success = successPayload.a;
-					return success ? _Utils_Tuple2(
-						_Utils_update(
+					if (success) {
+						var newItems = A2($elm$core$Dict$remove, itemId, model.a);
+						var newFilters = A2(
+							$author$project$Main$mergeFilterTags,
+							model.v,
+							$author$project$Main$filterTagsFromNames(
+								$author$project$Main$filterTagNames(newItems)));
+						var newModel = _Utils_update(
 							model,
-							{
-								a: A2($elm$core$Dict$remove, itemId, model.a)
-							}),
-						$elm$core$Platform$Cmd$none) : _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+							{v: newFilters, a: newItems});
+						return _Utils_Tuple2(
+							newModel,
+							$author$project$Main$writeToLocalStorage(
+								$author$project$Main$encodeModel(newModel)));
+					} else {
+						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+					}
 				} else {
 					var httpError = successPayload.a;
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
@@ -7854,18 +7907,20 @@ var $author$project$Main$update = F2(
 				var maybeMqttData = $author$project$Main$parseMQTTMessageDoneStatus(mqttMsg);
 				if (!maybeMqttData.$) {
 					var mqttData = maybeMqttData.a;
+					var newModel = _Utils_update(
+						model,
+						{
+							a: A3(
+								$elm$core$Dict$update,
+								mqttData.b,
+								$author$project$Main$setDone(
+									mqttData.cw ? 1 : 0),
+								model.a)
+						});
 					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{
-								a: A3(
-									$elm$core$Dict$update,
-									mqttData.b,
-									$author$project$Main$setDone(
-										mqttData.cw ? 1 : 0),
-									model.a)
-							}),
-						$elm$core$Platform$Cmd$none);
+						newModel,
+						$author$project$Main$writeToLocalStorage(
+							$author$project$Main$encodeModel(newModel)));
 				} else {
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
@@ -7880,19 +7935,28 @@ var $author$project$Main$update = F2(
 						return model.a;
 					}
 				}();
+				var newModel = _Utils_update(
+					model,
+					{a: newItems});
 				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{a: newItems}),
-					model.z ? $author$project$Main$callSortAPI(
-						$elm$core$Dict$values(newItems)) : $elm$core$Platform$Cmd$none);
+					newModel,
+					$elm$core$Platform$Cmd$batch(
+						A2(
+							$elm$core$List$cons,
+							model.z ? $author$project$Main$callSortAPI(
+								$elm$core$Dict$values(newItems)) : $elm$core$Platform$Cmd$none,
+							_List_fromArray(
+								[
+									$author$project$Main$writeToLocalStorage(
+									$author$project$Main$encodeModel(newModel))
+								]))));
 			case 17:
 				var oldId = msg.a;
 				var postResponsePayload = msg.b;
 				if (!postResponsePayload.$) {
 					var postResponse = postResponsePayload.a;
 					var maybeOldItem = A2($elm$core$Dict$get, oldId, model.a);
-					var newItemDict = function () {
+					var newItems = function () {
 						if (!maybeOldItem.$) {
 							var oldItem = maybeOldItem.a;
 							return A3(
@@ -7906,12 +7970,21 @@ var $author$project$Main$update = F2(
 							return model.a;
 						}
 					}();
+					var newModel = _Utils_update(
+						model,
+						{a: newItems});
 					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{a: newItemDict}),
-						model.z ? $author$project$Main$callSortAPI(
-							$elm$core$Dict$values(newItemDict)) : $elm$core$Platform$Cmd$none);
+						newModel,
+						$elm$core$Platform$Cmd$batch(
+							A2(
+								$elm$core$List$cons,
+								model.z ? $author$project$Main$callSortAPI(
+									$elm$core$Dict$values(newItems)) : $elm$core$Platform$Cmd$none,
+								_List_fromArray(
+									[
+										$author$project$Main$writeToLocalStorage(
+										$author$project$Main$encodeModel(newModel))
+									]))));
 				} else {
 					var httpError = postResponsePayload.a;
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
@@ -7919,31 +7992,35 @@ var $author$project$Main$update = F2(
 			case 18:
 				var itemId = msg.a;
 				var newTagList = msg.b;
+				var newModel = _Utils_update(
+					model,
+					{
+						a: A3(
+							$elm$core$Dict$update,
+							itemId,
+							$author$project$Main$updateDraftTags(newTagList),
+							model.a)
+					});
 				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{
-							a: A3(
-								$elm$core$Dict$update,
-								itemId,
-								$author$project$Main$updateDraftTags(newTagList),
-								model.a)
-						}),
-					$elm$core$Platform$Cmd$none);
+					newModel,
+					$author$project$Main$writeToLocalStorage(
+						$author$project$Main$encodeModel(newModel)));
 			case 19:
 				var itemId = msg.a;
 				var remainingText = msg.b;
+				var newModel = _Utils_update(
+					model,
+					{
+						a: A3(
+							$elm$core$Dict$update,
+							itemId,
+							$author$project$Main$updateDraftTagsInput(remainingText),
+							model.a)
+					});
 				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{
-							a: A3(
-								$elm$core$Dict$update,
-								itemId,
-								$author$project$Main$updateDraftTagsInput(remainingText),
-								model.a)
-						}),
-					$elm$core$Platform$Cmd$none);
+					newModel,
+					$author$project$Main$writeToLocalStorage(
+						$author$project$Main$encodeModel(newModel)));
 			default:
 				var itemId = msg.a;
 				return _Utils_Tuple2(
@@ -8331,7 +8408,7 @@ var $author$project$Main$headerView = function (model) {
 								A2(
 									$elm$core$List$map,
 									$author$project$Main$filterTagChip,
-									$author$project$Main$sortFilterTags(model.y))),
+									$author$project$Main$sortFilterTags(model.v))),
 								A2(
 								$elm$html$Html$ul,
 								_List_fromArray(
@@ -8730,7 +8807,7 @@ var $author$project$Main$activeFilters = function (filterTags) {
 };
 var $author$project$Main$isVisible = F2(
 	function (model, item) {
-		var filters = $author$project$Main$activeFilters(model.y);
+		var filters = $author$project$Main$activeFilters(model.v);
 		var filteringActive = $elm$core$List$length(filters) > 0;
 		return ((!filteringActive) || (item.E || (A2($elm$core$List$member, 'No tags', filters) && (!$elm$core$List$length(item.g))))) ? true : A3(
 			$elm$core$List$foldl,
