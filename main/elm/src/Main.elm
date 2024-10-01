@@ -439,23 +439,11 @@ update msg model =
                                     model.items
 
                             newFilters =
-                                filterTagNames newItems
-
-                            oldFilters =
-                                List.map .tag model.filterTags
-
-                            filterTagsDecimated =
-                                List.filter (\x -> List.member x.tag newFilters) model.filterTags
-
-                            additionalFilters =
-                                List.filter (\x -> not (List.member x oldFilters)) newFilters
-
-                            filterTagsAdded =
-                                filterTagsDecimated ++ List.map (\x -> { tag = x, isActive = False }) additionalFilters
+                                mergeFilterTags model.filterTags (filterTagsFromNames (filterTagNames newItems))
                         in
                         ( { model
                             | items = newItems
-                            , filterTags = filterTagsAdded
+                            , filterTags = newFilters
                           }
                         , if item.new then
                             postItem model.apiKey updatedItem
