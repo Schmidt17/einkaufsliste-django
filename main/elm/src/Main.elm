@@ -199,7 +199,7 @@ type Msg
     | DraftTitleChanged String String
     | SortButtonClicked
     | SortResponseReceived (List String) (Result Http.Error (List Int))
-    | DoneResponseReceived (Result Http.Error Bool)
+    | DoneResponseReceived String (Result Http.Error Bool)
     | UpdateResponseReceived String (Result Http.Error Bool)
     | DeleteResponseReceived String (Result Http.Error Bool)
     | ReceivedMQTTMessageDoneStatus String
@@ -300,7 +300,7 @@ updateDoneBackend apiKey itemId doneStatus =
     httpUpdate
         { url = updateDoneUrl apiKey itemId
         , body = Http.jsonBody (Encode.object [ ( "done", Encode.int doneStatus ) ])
-        , expect = Http.expectJson DoneResponseReceived (Decode.field "success" Decode.bool)
+        , expect = Http.expectJson (DoneResponseReceived itemId) (Decode.field "success" Decode.bool)
         }
 
 
@@ -370,7 +370,7 @@ update msg model =
         CardClicked itemId ->
             let
                 newItems =
-                    Dict.update itemId toggleDone model.items
+                    Dict.update itemId (\item -> toggleDone item |> setSynced False) model.items
 
                 maybeItem =
                     Dict.get itemId newItems
@@ -542,8 +542,21 @@ update msg model =
                 Err httpError ->
                     ( model, Cmd.none )
 
-        DoneResponseReceived success ->
-            ( model, Cmd.none )
+        DoneResponseReceived itemId success ->
+            let
+                newModel =
+                    case success of
+                        Ok successValue ->
+                            if successValue then
+                                { model | items = Dict.update itemId (setSynced True) model.items }
+
+                            else
+                                model
+
+                        Err httpError ->
+                            model
+            in
+            ( newModel, writeToLocalStorage (encodeModel newModel) )
 
         UpdateResponseReceived itemId successPayload ->
             case successPayload of
@@ -551,14 +564,7 @@ update msg model =
                     let
                         newItemDict =
                             Dict.update itemId
-                                (\maybeItem ->
-                                    case maybeItem of
-                                        Just item ->
-                                            Just { item | synced = True }
-
-                                        Nothing ->
-                                            Nothing
-                                )
+                                (setSynced True)
                                 model.items
 
                         newModel =
@@ -809,11 +815,27 @@ toggleDone maybeItem =
             Nothing
 
 
+setSynced : Bool -> Maybe ItemData -> Maybe ItemData
+setSynced newSynced maybeItem =
+    case maybeItem of
+        Just item ->
+            Just
+                { item
+                    | synced = newSynced
+                }
+
+        Nothing ->
+            Nothing
+
+
 setDone : Int -> Maybe ItemData -> Maybe ItemData
 setDone newStatus maybeItem =
     case maybeItem of
         Just item ->
-            Just { item | done = newStatus }
+            Just
+                { item
+                    | done = newStatus
+                }
 
         Nothing ->
             Nothing
