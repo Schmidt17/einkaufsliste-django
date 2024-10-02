@@ -50,6 +50,7 @@ type alias ItemData =
     , draftTitle : String
     , draftTags : List String
     , draftTagsInput : String
+    , draftChanged : Bool
     , done : Int
     , orderIndexDefault : Int
     , orderIndexOverride : Int
@@ -138,6 +139,7 @@ itemDataDecoder =
         |> required "draftTitle" Decode.string
         |> required "draftTags" (Decode.list Decode.string)
         |> required "draftTagsInput" Decode.string
+        |> required "draftChanged" Decode.bool
         |> required "done" Decode.int
         |> required "orderIndexDefault" Decode.int
         |> required "orderIndexOverride" Decode.int
@@ -419,7 +421,7 @@ update msg model =
         FinishEditing itemId ->
             case Dict.get itemId model.items of
                 Just item ->
-                    if item.synced then
+                    if not item.draftChanged then
                         let
                             newModel =
                                 { model | items = Dict.update itemId toggleEdit model.items }
@@ -445,6 +447,7 @@ update msg model =
                                     , draftTagsInput = ""
                                     , editing = False
                                     , new = False
+                                    , synced = False
                                 }
 
                             newItems =
@@ -716,16 +719,11 @@ updateDraftTitle : String -> Maybe ItemData -> Maybe ItemData
 updateDraftTitle newTitle maybeItem =
     case maybeItem of
         Just item ->
-            Just
-                { item
-                    | draftTitle = newTitle
-                    , synced =
-                        if newTitle /= item.title then
-                            False
-
-                        else
-                            item.synced
-                }
+            let
+                newItem =
+                    { item | draftTitle = newTitle }
+            in
+            Just { newItem | draftChanged = draftHasChanged newItem }
 
         Nothing ->
             Nothing
@@ -735,16 +733,11 @@ updateDraftTags : List String -> Maybe ItemData -> Maybe ItemData
 updateDraftTags newDraftTags maybeItem =
     case maybeItem of
         Just item ->
-            Just
-                { item
-                    | draftTags = newDraftTags
-                    , synced =
-                        if listEqual newDraftTags item.tags then
-                            item.synced
-
-                        else
-                            False
-                }
+            let
+                newItem =
+                    { item | draftTags = newDraftTags }
+            in
+            Just { newItem | draftChanged = draftHasChanged newItem }
 
         Nothing ->
             Nothing
@@ -754,16 +747,11 @@ updateDraftTagsInput : String -> Maybe ItemData -> Maybe ItemData
 updateDraftTagsInput newText maybeItem =
     case maybeItem of
         Just item ->
-            Just
-                { item
-                    | draftTagsInput = newText
-                    , synced =
-                        if String.trim newText == "" then
-                            item.synced
-
-                        else
-                            False
-                }
+            let
+                newItem =
+                    { item | draftTagsInput = newText }
+            in
+            Just { newItem | draftChanged = draftHasChanged newItem }
 
         Nothing ->
             Nothing
@@ -797,7 +785,7 @@ toggleEdit : Maybe ItemData -> Maybe ItemData
 toggleEdit maybeItem =
     case maybeItem of
         Just item ->
-            Just { item | editing = not item.editing, draftTitle = item.title, draftTags = item.tags, draftTagsInput = "" }
+            Just { item | editing = not item.editing, draftTitle = item.title, draftTags = item.tags, draftTagsInput = "", draftChanged = False }
 
         Nothing ->
             Nothing
@@ -849,6 +837,7 @@ addNewItem newId dict =
         , draftTitle = ""
         , draftTags = []
         , draftTagsInput = ""
+        , draftChanged = False
         , done = 0
         , orderIndexDefault = newIndex
         , orderIndexOverride = newIndex
@@ -1260,6 +1249,7 @@ receivedToItem index itemReceived =
     , draftTitle = itemReceived.title
     , draftTags = itemReceived.tags
     , draftTagsInput = ""
+    , draftChanged = False
     , done = itemReceived.done
     , orderIndexDefault = index
     , orderIndexOverride = index
@@ -1387,3 +1377,8 @@ encodeModel { items, overrideOrdering, filterTags, apiKey } =
         , ( "filterTags", Encode.list encodeFilterTag filterTags )
         , ( "apiKey", Encode.string "" ) --- we don't store the apiKey
         ]
+
+
+draftHasChanged : ItemData -> Bool
+draftHasChanged item =
+    (item.draftTitle /= item.title) || not (listEqual item.draftTags item.tags) || (String.trim item.draftTagsInput /= "")
