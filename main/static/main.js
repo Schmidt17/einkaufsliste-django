@@ -7262,6 +7262,18 @@ var $author$project$Main$setDone = F2(
 			return $elm$core$Maybe$Nothing;
 		}
 	});
+var $author$project$Main$setSynced = F2(
+	function (newSynced, maybeItem) {
+		if (!maybeItem.$) {
+			var item = maybeItem.a;
+			return $elm$core$Maybe$Just(
+				_Utils_update(
+					item,
+					{X: newSynced}));
+		} else {
+			return $elm$core$Maybe$Nothing;
+		}
+	});
 var $elm$core$String$cons = _String_cons;
 var $elm$core$String$fromChar = function (_char) {
 	return A2($elm$core$String$cons, _char, '');
@@ -7430,9 +7442,10 @@ var $author$project$Main$toggleTag = F2(
 			tagList);
 	});
 var $elm$core$String$trim = _String_trim;
-var $author$project$Main$DoneResponseReceived = function (a) {
-	return {$: 12, a: a};
-};
+var $author$project$Main$DoneResponseReceived = F2(
+	function (a, b) {
+		return {$: 12, a: a, b: b};
+	});
 var $author$project$Main$httpUpdate = function (options) {
 	return $elm$http$Http$request(
 		{
@@ -7466,7 +7479,7 @@ var $author$project$Main$updateDoneBackend = F3(
 							]))),
 				E: A2(
 					$elm$http$Http$expectJson,
-					$author$project$Main$DoneResponseReceived,
+					$author$project$Main$DoneResponseReceived(itemId),
 					A2($elm$json$Json$Decode$field, 'success', $elm$json$Json$Decode$bool)),
 				I: A2($author$project$Main$updateDoneUrl, apiKey, itemId)
 			});
@@ -7640,7 +7653,16 @@ var $author$project$Main$update = F2(
 						$author$project$Main$encodeModel(newModel)));
 			case 4:
 				var itemId = msg.a;
-				var newItems = A3($elm$core$Dict$update, itemId, $author$project$Main$toggleDone, model.a);
+				var newItems = A3(
+					$elm$core$Dict$update,
+					itemId,
+					function (item) {
+						return A2(
+							$author$project$Main$setSynced,
+							false,
+							$author$project$Main$toggleDone(item));
+					},
+					model.a);
 				var newModel = _Utils_update(
 					model,
 					{a: newItems});
@@ -7838,8 +7860,29 @@ var $author$project$Main$update = F2(
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
 			case 12:
-				var success = msg.a;
-				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				var itemId = msg.a;
+				var success = msg.b;
+				var newModel = function () {
+					if (!success.$) {
+						var successValue = success.a;
+						return successValue ? _Utils_update(
+							model,
+							{
+								a: A3(
+									$elm$core$Dict$update,
+									itemId,
+									$author$project$Main$setSynced(true),
+									model.a)
+							}) : model;
+					} else {
+						var httpError = success.a;
+						return model;
+					}
+				}();
+				return _Utils_Tuple2(
+					newModel,
+					$author$project$Main$writeToLocalStorage(
+						$author$project$Main$encodeModel(newModel)));
 			case 13:
 				var itemId = msg.a;
 				var successPayload = msg.b;
@@ -7848,17 +7891,7 @@ var $author$project$Main$update = F2(
 					var newItemDict = A3(
 						$elm$core$Dict$update,
 						itemId,
-						function (maybeItem) {
-							if (!maybeItem.$) {
-								var item = maybeItem.a;
-								return $elm$core$Maybe$Just(
-									_Utils_update(
-										item,
-										{X: true}));
-							} else {
-								return $elm$core$Maybe$Nothing;
-							}
-						},
+						$author$project$Main$setSynced(true),
 						model.a);
 					var newModel = _Utils_update(
 						model,
