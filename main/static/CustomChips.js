@@ -43,9 +43,21 @@ class CustomChips extends HTMLElement {
 
         this.appendChild(this.chipsDiv);
 
+        let autocompsRaw = this.getAttribute('autocompleteOptions');
+        let autocompsEntries = JSON.parse(autocompsRaw);
+        let autocomps = {};
+        for (var entry of autocompsEntries) {
+            autocomps[entry] = null;
+        }
+
         const thisElement = this;
         M.Chips.init(this.chipsDiv, {
             placeholder: 'Tags',
+            autocompleteOptions: {
+              data: autocomps,
+              limit: Infinity,
+              minLength: 1
+            },
             data: tags,
             onChipAdd: function(e, chip) {
                 thisElement.dispatchEvent(new CustomEvent('inputChanged', {detail: {remainingText : ""}}));

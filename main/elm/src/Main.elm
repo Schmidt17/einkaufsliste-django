@@ -1011,13 +1011,13 @@ delAllModal =
 
 itemCardsView : Model -> Html Msg
 itemCardsView model =
-    div [ class "container" ] (List.map cardView (itemsToShow model))
+    div [ class "container" ] (List.map (cardView (List.map .tag model.filterTags)) (itemsToShow model))
 
 
-cardView : ItemData -> Html Msg
-cardView itemData =
+cardView : List String -> ItemData -> Html Msg
+cardView filterTags itemData =
     if itemData.editing then
-        editCard itemData
+        editCard filterTags itemData
 
     else
         itemCard itemData
@@ -1080,8 +1080,8 @@ desyncIcon =
     i [ class "material-icons grey-text right-align desync-icon" ] [ text "cloud_off" ]
 
 
-editCard : ItemData -> Html Msg
-editCard item =
+editCard : List String -> ItemData -> Html Msg
+editCard filterTags item =
     div
         [ class
             "card s12 item-edit"
@@ -1094,7 +1094,7 @@ editCard item =
                 [ deleteCardButton item.id ]
              )
                 ++ [ div [ class "input-field card-title" ] [ input [ placeholder "Neuer Eintrag", type_ "text", value item.draftTitle, onInput (DraftTitleChanged item.id) ] [] ]
-                   , editChipsView item
+                   , editChipsView filterTags item
                    , div [ class "card-action valign-wrapper justify-right" ]
                         [ cancelButton item.id
                         , a [ class "green btn finish-edit", Aria.role "button", Aria.ariaLabel "Bestätigen", onClick (FinishEditing item.id) ] [ i [ class "material-icons" ] [ text "check" ] ]
@@ -1104,8 +1104,8 @@ editCard item =
         ]
 
 
-editChipsView : ItemData -> Html Msg
-editChipsView item =
+editChipsView : List String -> ItemData -> Html Msg
+editChipsView filterTags item =
     node "custom-chips"
         [ class "chips chips-autocomplete chips-placeholder"
         , placeholder "Tags"
@@ -1117,6 +1117,7 @@ editChipsView item =
             Decode.map (DraftTagsInputChanged item.id) <|
                 Decode.at [ "detail", "remainingText" ] <|
                     Decode.string
+        , attribute "autocompleteOptions" (Encode.encode 0 (Encode.list Encode.string filterTags))
         ]
         (List.map tagElement item.draftTags)
 
