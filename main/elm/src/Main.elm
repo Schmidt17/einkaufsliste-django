@@ -946,11 +946,6 @@ parseMQTTMessageNewItem rawString =
 
 
 
-{- subscriptions : Model -> Sub Msg
-   subscriptions model =
-       Sub.batch
-           []
--}
 -- VIEW
 
 
