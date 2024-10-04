@@ -12,6 +12,7 @@ import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Random
+import ScrollTo
 import Set
 import Time
 import UUID
@@ -34,6 +35,7 @@ type alias Model =
     , overrideOrdering : Bool
     , filterTags : List FilterTag
     , apiKey : String
+    , scrollTo : ScrollTo.State
     }
 
 
@@ -105,7 +107,7 @@ init flags =
                 Nothing ->
                     False
     in
-    ( { items = items, overrideOrdering = overrideOrdering, filterTags = filterTags, apiKey = apiKey }
+    ( { items = items, overrideOrdering = overrideOrdering, filterTags = filterTags, apiKey = apiKey, scrollTo = ScrollTo.init }
     , getItems apiKey
     )
 
@@ -209,6 +211,7 @@ type Msg
     | DraftTagsInputChanged String String
     | DeleteCard String
     | DeleteAllDone
+    | ScrollToMsg ScrollTo.Msg
 
 
 itemsUrl : String -> String
@@ -504,7 +507,13 @@ update msg model =
                 newModel =
                     { model | items = addNewItem newId model.items }
             in
-            ( newModel, writeToLocalStorage (encodeModel newModel) )
+            ( newModel
+            , Cmd.batch
+                [ Cmd.map ScrollToMsg <|
+                    ScrollTo.scrollToTop
+                , writeToLocalStorage (encodeModel newModel)
+                ]
+            )
 
         DraftTitleChanged itemId newTitle ->
             let
@@ -707,6 +716,17 @@ update msg model =
         DeleteCard itemId ->
             ( model, deleteItem model.apiKey itemId )
 
+        ScrollToMsg scrollToMsg ->
+            let
+                ( scrollToModel, scrollToCmds ) =
+                    ScrollTo.update
+                        scrollToMsg
+                        model.scrollTo
+            in
+            ( { model | scrollTo = scrollToModel }
+            , Cmd.map ScrollToMsg scrollToCmds
+            )
+
 
 updateOverrideOrderIndex : Dict String Int -> String -> ItemData -> ItemData
 updateOverrideOrderIndex idToIndexDict itemId item =
@@ -907,10 +927,11 @@ port writeToLocalStorage : Encode.Value -> Cmd msg
 
 
 subscriptions : Model -> Sub Msg
-subscriptions _ =
+subscriptions model =
     Sub.batch
         [ receiveMQTTMessageDoneStatus ReceivedMQTTMessageDoneStatus
         , receiveMQTTMessageNewItem ReceivedMQTTMessageNewItem
+        , Sub.map ScrollToMsg <| ScrollTo.subscriptions model.scrollTo
         ]
 
 
