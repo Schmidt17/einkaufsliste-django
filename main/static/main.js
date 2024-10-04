@@ -6439,7 +6439,7 @@ var $author$project$Main$ReceivedMQTTMessageNewItem = function (a) {
 var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $author$project$Main$receiveMQTTMessageDoneStatus = _Platform_incomingPort('receiveMQTTMessageDoneStatus', $elm$json$Json$Decode$string);
 var $author$project$Main$receiveMQTTMessageNewItem = _Platform_incomingPort('receiveMQTTMessageNewItem', $elm$json$Json$Decode$string);
-var $author$project$Main$subscriptions = function (_v0) {
+var $author$project$Main$subscriptions = function (model) {
 	return $elm$core$Platform$Sub$batch(
 		_List_fromArray(
 			[
@@ -7250,6 +7250,14 @@ var $author$project$Main$postItem = F2(
 				I: $author$project$Main$itemsUrl(apiKey)
 			});
 	});
+var $author$project$Main$NoOp = {$: 22};
+var $elm$browser$Browser$Dom$setViewport = _Browser_setViewport;
+var $author$project$Main$resetViewport = A2(
+	$elm$core$Task$perform,
+	function (_v0) {
+		return $author$project$Main$NoOp;
+	},
+	A2($elm$browser$Browser$Dom$setViewport, 0, 0));
 var $author$project$Main$setDone = F2(
 	function (newStatus, maybeItem) {
 		if (!maybeItem.$) {
@@ -7800,8 +7808,13 @@ var $author$project$Main$update = F2(
 					});
 				return _Utils_Tuple2(
 					newModel,
-					$author$project$Main$writeToLocalStorage(
-						$author$project$Main$encodeModel(newModel)));
+					$elm$core$Platform$Cmd$batch(
+						_List_fromArray(
+							[
+								$author$project$Main$resetViewport,
+								$author$project$Main$writeToLocalStorage(
+								$author$project$Main$encodeModel(newModel))
+							])));
 			case 9:
 				var itemId = msg.a;
 				var newTitle = msg.b;
@@ -8060,11 +8073,13 @@ var $author$project$Main$update = F2(
 					newModel,
 					$author$project$Main$writeToLocalStorage(
 						$author$project$Main$encodeModel(newModel)));
-			default:
+			case 20:
 				var itemId = msg.a;
 				return _Utils_Tuple2(
 					model,
 					A2($author$project$Main$deleteItem, model.M, itemId));
+			default:
+				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 		}
 	});
 var $elm$json$Json$Decode$value = _Json_decodeValue;

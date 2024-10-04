@@ -1,6 +1,7 @@
 port module Main exposing (main)
 
 import Browser
+import Browser.Dom as Dom
 import Dict exposing (Dict)
 import Html exposing (Html, a, br, button, div, h1, h4, header, i, input, label, li, main_, nav, node, p, span, text, ul)
 import Html.Attributes exposing (..)
@@ -13,6 +14,7 @@ import Json.Decode as Decode
 import Json.Encode as Encode
 import Random
 import Set
+import Task
 import Time
 import UUID
 
@@ -209,6 +211,7 @@ type Msg
     | DraftTagsInputChanged String String
     | DeleteCard String
     | DeleteAllDone
+    | NoOp
 
 
 itemsUrl : String -> String
@@ -504,7 +507,12 @@ update msg model =
                 newModel =
                     { model | items = addNewItem newId model.items }
             in
-            ( newModel, writeToLocalStorage (encodeModel newModel) )
+            ( newModel
+            , Cmd.batch
+                [ resetViewport
+                , writeToLocalStorage (encodeModel newModel)
+                ]
+            )
 
         DraftTitleChanged itemId newTitle ->
             let
@@ -707,6 +715,9 @@ update msg model =
         DeleteCard itemId ->
             ( model, deleteItem model.apiKey itemId )
 
+        NoOp ->
+            ( model, Cmd.none )
+
 
 updateOverrideOrderIndex : Dict String Int -> String -> ItemData -> ItemData
 updateOverrideOrderIndex idToIndexDict itemId item =
@@ -907,7 +918,7 @@ port writeToLocalStorage : Encode.Value -> Cmd msg
 
 
 subscriptions : Model -> Sub Msg
-subscriptions _ =
+subscriptions model =
     Sub.batch
         [ receiveMQTTMessageDoneStatus ReceivedMQTTMessageDoneStatus
         , receiveMQTTMessageNewItem ReceivedMQTTMessageNewItem
@@ -935,11 +946,6 @@ parseMQTTMessageNewItem rawString =
 
 
 
-{- subscriptions : Model -> Sub Msg
-   subscriptions model =
-       Sub.batch
-           []
--}
 -- VIEW
 
 
@@ -1404,3 +1410,8 @@ encodeModel { items, overrideOrdering, filterTags, apiKey } =
 draftHasChanged : ItemData -> Bool
 draftHasChanged item =
     (item.draftTitle /= item.title) || not (listEqual item.draftTags item.tags) || (String.trim item.draftTagsInput /= "")
+
+
+resetViewport : Cmd Msg
+resetViewport =
+    Task.perform (\_ -> NoOp) (Dom.setViewport 0 0)
