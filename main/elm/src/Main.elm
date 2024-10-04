@@ -1,6 +1,7 @@
 port module Main exposing (main)
 
 import Browser
+import Browser.Dom as Dom
 import Dict exposing (Dict)
 import Html exposing (Html, a, br, button, div, h1, h4, header, i, input, label, li, main_, nav, node, p, span, text, ul)
 import Html.Attributes exposing (..)
@@ -12,8 +13,8 @@ import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Random
-import ScrollTo
 import Set
+import Task
 import Time
 import UUID
 
@@ -35,7 +36,6 @@ type alias Model =
     , overrideOrdering : Bool
     , filterTags : List FilterTag
     , apiKey : String
-    , scrollTo : ScrollTo.State
     }
 
 
@@ -107,7 +107,7 @@ init flags =
                 Nothing ->
                     False
     in
-    ( { items = items, overrideOrdering = overrideOrdering, filterTags = filterTags, apiKey = apiKey, scrollTo = ScrollTo.init }
+    ( { items = items, overrideOrdering = overrideOrdering, filterTags = filterTags, apiKey = apiKey }
     , getItems apiKey
     )
 
@@ -211,7 +211,7 @@ type Msg
     | DraftTagsInputChanged String String
     | DeleteCard String
     | DeleteAllDone
-    | ScrollToMsg ScrollTo.Msg
+    | NoOp
 
 
 itemsUrl : String -> String
@@ -509,8 +509,7 @@ update msg model =
             in
             ( newModel
             , Cmd.batch
-                [ Cmd.map ScrollToMsg <|
-                    ScrollTo.scrollToTop
+                [ resetViewport
                 , writeToLocalStorage (encodeModel newModel)
                 ]
             )
@@ -716,16 +715,8 @@ update msg model =
         DeleteCard itemId ->
             ( model, deleteItem model.apiKey itemId )
 
-        ScrollToMsg scrollToMsg ->
-            let
-                ( scrollToModel, scrollToCmds ) =
-                    ScrollTo.update
-                        scrollToMsg
-                        model.scrollTo
-            in
-            ( { model | scrollTo = scrollToModel }
-            , Cmd.map ScrollToMsg scrollToCmds
-            )
+        NoOp ->
+            ( model, Cmd.none )
 
 
 updateOverrideOrderIndex : Dict String Int -> String -> ItemData -> ItemData
@@ -931,7 +922,6 @@ subscriptions model =
     Sub.batch
         [ receiveMQTTMessageDoneStatus ReceivedMQTTMessageDoneStatus
         , receiveMQTTMessageNewItem ReceivedMQTTMessageNewItem
-        , Sub.map ScrollToMsg <| ScrollTo.subscriptions model.scrollTo
         ]
 
 
@@ -1425,3 +1415,8 @@ encodeModel { items, overrideOrdering, filterTags, apiKey } =
 draftHasChanged : ItemData -> Bool
 draftHasChanged item =
     (item.draftTitle /= item.title) || not (listEqual item.draftTags item.tags) || (String.trim item.draftTagsInput /= "")
+
+
+resetViewport : Cmd Msg
+resetViewport =
+    Task.perform (\_ -> NoOp) (Dom.setViewport 0 0)
