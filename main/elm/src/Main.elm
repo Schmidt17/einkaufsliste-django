@@ -1524,7 +1524,6 @@ encodeModel { items, overrideOrdering, filterTags, apiKey } =
         [ ( "items", Encode.dict identity encodeItemData items )
         , ( "overrideOrdering", Encode.bool overrideOrdering )
         , ( "filterTags", Encode.list encodeFilterTag filterTags )
-        , ( "apiKey", Encode.string "" ) --- we don't store the apiKey
         ]
 
 

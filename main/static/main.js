@@ -6827,10 +6827,7 @@ var $author$project$Main$encodeModel = function (_v0) {
 				$elm$json$Json$Encode$bool(overrideOrdering)),
 				_Utils_Tuple2(
 				'filterTags',
-				A2($elm$json$Json$Encode$list, $author$project$Main$encodeFilterTag, filterTags)),
-				_Utils_Tuple2(
-				'apiKey',
-				$elm$json$Json$Encode$string(''))
+				A2($elm$json$Json$Encode$list, $author$project$Main$encodeFilterTag, filterTags))
 			]));
 };
 var $elm$core$List$filter = F2(
