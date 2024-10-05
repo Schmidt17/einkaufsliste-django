@@ -36,6 +36,7 @@ type alias Model =
     , overrideOrdering : Bool
     , filterTags : List FilterTag
     , apiKey : String
+    , geolocation : Maybe Geolocation
     }
 
 
@@ -107,7 +108,7 @@ init flags =
                 Nothing ->
                     False
     in
-    ( { items = items, overrideOrdering = overrideOrdering, filterTags = filterTags, apiKey = apiKey }
+    ( { items = items, overrideOrdering = overrideOrdering, filterTags = filterTags, apiKey = apiKey, geolocation = Nothing }
     , getItems apiKey
     )
 
@@ -213,6 +214,7 @@ type Msg
     | DraftTagsInputChanged String String
     | DeleteItem String
     | DeleteAllDone
+    | ReceivedGeolocation Decode.Value
     | NoOp
 
 
@@ -749,6 +751,18 @@ update msg model =
             in
             ( newModel, writeToLocalStorage (encodeModel newModel) )
 
+        ReceivedGeolocation portMsg ->
+            case parseGeolocation portMsg of
+                Just geolocation ->
+                    let
+                        newModel =
+                            { model | geolocation = Just geolocation }
+                    in
+                    ( newModel, writeToLocalStorage (encodeModel newModel) )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
         NoOp ->
             ( model, Cmd.none )
 
@@ -972,6 +986,9 @@ port receiveMQTTMessageDeletedItem : (String -> msg) -> Sub msg
 port receiveMQTTMessageUpdatedItem : (String -> msg) -> Sub msg
 
 
+port receiveGeolocation : (Decode.Value -> msg) -> Sub msg
+
+
 port writeToLocalStorage : Encode.Value -> Cmd msg
 
 
@@ -982,7 +999,22 @@ subscriptions model =
         , receiveMQTTMessageNewItem ReceivedMQTTMessageNewItem
         , receiveMQTTMessageDeletedItem ReceivedMQTTMessageDeletedItem
         , receiveMQTTMessageUpdatedItem ReceivedMQTTMessageUpdatedItem
+        , receiveGeolocation ReceivedGeolocation
         ]
+
+
+type alias Geolocation =
+    { latitude : Float, longitude : Float }
+
+
+parseGeolocation : Decode.Value -> Maybe Geolocation
+parseGeolocation portMsg =
+    case Decode.decodeValue (Decode.map2 Geolocation (Decode.field "latitude" Decode.float) (Decode.field "longitude" Decode.float)) portMsg of
+        Ok geolocation ->
+            Just geolocation
+
+        Err _ ->
+            Nothing
 
 
 parseMQTTMessageDoneStatus : String -> Maybe MqttMessageDoneStatus
