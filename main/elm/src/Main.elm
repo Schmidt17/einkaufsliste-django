@@ -206,6 +206,7 @@ type Msg
     | DeleteResponseReceived String (Result Http.Error Bool)
     | ReceivedMQTTMessageDoneStatus String
     | ReceivedMQTTMessageNewItem String
+    | ReceivedMQTTMessageDeletedItem String
     | ItemPosted String (Result Http.Error PostResponse)
     | DraftTagsChanged String (List String)
     | DraftTagsInputChanged String String
@@ -705,6 +706,27 @@ update msg model =
         DeleteItem itemId ->
             ( model, deleteItem model.apiKey itemId )
 
+        ReceivedMQTTMessageDeletedItem mqttMsg ->
+            let
+                maybeItemId =
+                    parseMQTTMessageItemDeleted mqttMsg
+
+                newItems =
+                    case maybeItemId of
+                        Just itemId ->
+                            Dict.remove itemId model.items
+
+                        Nothing ->
+                            model.items
+
+                newFilters =
+                    mergeFilterTags model.filterTags (filterTagsFromNames (filterTagNames newItems))
+
+                newModel =
+                    { model | items = newItems, filterTags = newFilters }
+            in
+            ( newModel, writeToLocalStorage (encodeModel newModel) )
+
         NoOp ->
             ( model, Cmd.none )
 
@@ -904,6 +926,9 @@ port receiveMQTTMessageDoneStatus : (String -> msg) -> Sub msg
 port receiveMQTTMessageNewItem : (String -> msg) -> Sub msg
 
 
+port receiveMQTTMessageDeletedItem : (String -> msg) -> Sub msg
+
+
 port writeToLocalStorage : Encode.Value -> Cmd msg
 
 
@@ -912,6 +937,7 @@ subscriptions model =
     Sub.batch
         [ receiveMQTTMessageDoneStatus ReceivedMQTTMessageDoneStatus
         , receiveMQTTMessageNewItem ReceivedMQTTMessageNewItem
+        , receiveMQTTMessageDeletedItem ReceivedMQTTMessageDeletedItem
         ]
 
 
@@ -930,6 +956,16 @@ parseMQTTMessageNewItem rawString =
     case Decode.decodeString jsonParseItemData rawString of
         Ok itemDataReceived ->
             Just itemDataReceived
+
+        Err _ ->
+            Nothing
+
+
+parseMQTTMessageItemDeleted : String -> Maybe String
+parseMQTTMessageItemDeleted rawString =
+    case Decode.decodeString (Decode.field "id" Decode.string) rawString of
+        Ok itemId ->
+            Just itemId
 
         Err _ ->
             Nothing

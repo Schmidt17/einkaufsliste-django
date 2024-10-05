@@ -83,7 +83,7 @@
           } else if (msg_topic == newItem_topic) {
             app.ports.receiveMQTTMessageNewItem.send(msg_string);
           } else if (msg_topic == itemDeleted_topic) {
-            console.log(msg_string);
+            app.ports.receiveMQTTMessageDeletedItem.send(msg_string);
           }
         }
 
