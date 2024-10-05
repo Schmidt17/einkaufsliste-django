@@ -234,6 +234,7 @@ type Msg
     | DeleteItem String
     | DeleteAllDone
     | ReceivedGeolocation Decode.Value
+    | CollectResponseReceived (Result Http.Error ())
     | NoOp
 
 
@@ -255,6 +256,11 @@ updateDoneUrl apiKey itemId =
 sortUrl : String
 sortUrl =
     "https://picluster.a-h.wtf/einkaufs_api/sort/"
+
+
+collectUrl : String
+collectUrl =
+    "https://picluster.a-h.wtf/einkaufs_api/collect/"
 
 
 getItems : String -> Cmd Msg
@@ -339,6 +345,51 @@ callSortAPI items =
         }
 
 
+postCollectEvent : Model -> ItemData -> Cmd Msg
+postCollectEvent model item =
+    let
+        actionType =
+            case item.done of
+                0 ->
+                    "UNCROSSED"
+
+                _ ->
+                    "CROSSED"
+
+        latitudeValue =
+            case model.geolocation of
+                Just geolocation ->
+                    Encode.float geolocation.latitude
+
+                Nothing ->
+                    Encode.null
+
+        longitudeValue =
+            case model.geolocation of
+                Just geolocation ->
+                    Encode.float geolocation.longitude
+
+                Nothing ->
+                    Encode.null
+    in
+    Http.post
+        { url = collectUrl
+        , body =
+            Http.jsonBody
+                (Encode.object
+                    [ ( "action_type", Encode.string actionType )
+                    , ( "name", Encode.string item.title )
+                    , ( "item_id", Encode.string item.id )
+                    , ( "latitude", latitudeValue )
+                    , ( "longitude", longitudeValue )
+                    , ( "user_agent", Encode.string model.userAgent )
+                    , ( "user_key", Encode.string model.apiKey )
+                    ]
+                )
+        , expect = Http.expectWhatever CollectResponseReceived
+        }
+
+
 filterTagsFromNames : List String -> List FilterTag
 filterTagsFromNames tagNames =
     List.map (\tag -> FilterTag tag False) tagNames
@@ -408,12 +459,14 @@ update msg model =
             , Cmd.batch
                 ((case maybeItem of
                     Just item ->
-                        updateDoneBackend model.apiKey itemId item.done
+                        [ updateDoneBackend model.apiKey itemId item.done
+                        , postCollectEvent model item
+                        ]
 
                     Nothing ->
-                        Cmd.none
+                        []
                  )
-                    :: [ writeToLocalStorage (encodeModel newModel) ]
+                    ++ [ writeToLocalStorage (encodeModel newModel) ]
                 )
             )
 
@@ -781,6 +834,9 @@ update msg model =
 
                 Nothing ->
                     ( model, Cmd.none )
+
+        CollectResponseReceived _ ->
+            ( model, Cmd.none )
 
         NoOp ->
             ( model, Cmd.none )
