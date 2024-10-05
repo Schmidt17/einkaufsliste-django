@@ -209,7 +209,7 @@ type Msg
     | ItemPosted String (Result Http.Error PostResponse)
     | DraftTagsChanged String (List String)
     | DraftTagsInputChanged String String
-    | DeleteCard String
+    | DeleteItem String
     | DeleteAllDone
     | NoOp
 
@@ -702,7 +702,7 @@ update msg model =
             in
             ( newModel, writeToLocalStorage (encodeModel newModel) )
 
-        DeleteCard itemId ->
+        DeleteItem itemId ->
             ( model, deleteItem model.apiKey itemId )
 
         NoOp ->
@@ -1149,7 +1149,7 @@ deleteCardButton : String -> Html Msg
 deleteCardButton itemId =
     a
         [ href ""
-        , onWithOptions "click" { preventDefault = True, stopPropagation = True } (\event -> DeleteCard itemId)
+        , onWithOptions "click" { preventDefault = True, stopPropagation = True } (\event -> DeleteItem itemId)
         , class "delete-btn right"
         , Aria.role "button"
         , Aria.ariaLabel "Löschen"
