@@ -207,6 +207,7 @@ type Msg
     | ReceivedMQTTMessageDoneStatus String
     | ReceivedMQTTMessageNewItem String
     | ReceivedMQTTMessageDeletedItem String
+    | ReceivedMQTTMessageUpdatedItem String
     | ItemPosted String (Result Http.Error PostResponse)
     | DraftTagsChanged String (List String)
     | DraftTagsInputChanged String String
@@ -727,6 +728,27 @@ update msg model =
             in
             ( newModel, writeToLocalStorage (encodeModel newModel) )
 
+        ReceivedMQTTMessageUpdatedItem mqttMsg ->
+            let
+                maybeUpdatedItem =
+                    parseMQTTMessageNewItem mqttMsg
+
+                newItems =
+                    case maybeUpdatedItem of
+                        Just updatedItem ->
+                            updateFromReceivedItem updatedItem model.items
+
+                        Nothing ->
+                            model.items
+
+                newFilters =
+                    mergeFilterTags model.filterTags (filterTagsFromNames (filterTagNames newItems))
+
+                newModel =
+                    { model | items = newItems, filterTags = newFilters }
+            in
+            ( newModel, writeToLocalStorage (encodeModel newModel) )
+
         NoOp ->
             ( model, Cmd.none )
 
@@ -910,6 +932,24 @@ addReceivedItem itemDataReceived dict =
     Dict.insert itemData.id itemData dict
 
 
+updateFromReceivedItem : ItemDataReceived -> Dict String ItemData -> Dict String ItemData
+updateFromReceivedItem itemDataReceived dict =
+    Dict.update itemDataReceived.id
+        (\maybeItem ->
+            case maybeItem of
+                Just item ->
+                    if item.editing then
+                        Just item
+
+                    else
+                        Just { item | title = itemDataReceived.title, tags = itemDataReceived.tags, done = itemDataReceived.done }
+
+                Nothing ->
+                    Nothing
+        )
+        dict
+
+
 
 -- SUBSCRIPTIONS
 
@@ -929,6 +969,9 @@ port receiveMQTTMessageNewItem : (String -> msg) -> Sub msg
 port receiveMQTTMessageDeletedItem : (String -> msg) -> Sub msg
 
 
+port receiveMQTTMessageUpdatedItem : (String -> msg) -> Sub msg
+
+
 port writeToLocalStorage : Encode.Value -> Cmd msg
 
 
@@ -938,6 +981,7 @@ subscriptions model =
         [ receiveMQTTMessageDoneStatus ReceivedMQTTMessageDoneStatus
         , receiveMQTTMessageNewItem ReceivedMQTTMessageNewItem
         , receiveMQTTMessageDeletedItem ReceivedMQTTMessageDeletedItem
+        , receiveMQTTMessageUpdatedItem ReceivedMQTTMessageUpdatedItem
         ]
 
 
