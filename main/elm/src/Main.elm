@@ -64,7 +64,7 @@ type alias ItemData =
 
 type alias MqttMessageDoneStatus =
     { id : String
-    , status : Bool
+    , status : Int
     }
 
 
@@ -624,17 +624,7 @@ update msg model =
                     let
                         newModel =
                             { model
-                                | items =
-                                    Dict.update mqttData.id
-                                        (setDone
-                                            (if mqttData.status then
-                                                1
-
-                                             else
-                                                0
-                                            )
-                                        )
-                                        model.items
+                                | items = Dict.update mqttData.id (setDone mqttData.status) model.items
                             }
                     in
                     ( newModel
@@ -927,7 +917,7 @@ subscriptions model =
 
 parseMQTTMessageDoneStatus : String -> Maybe MqttMessageDoneStatus
 parseMQTTMessageDoneStatus rawString =
-    case Decode.decodeString (Decode.map2 MqttMessageDoneStatus (Decode.field "id" Decode.string) (Decode.field "status" Decode.bool)) rawString of
+    case Decode.decodeString (Decode.map2 MqttMessageDoneStatus (Decode.field "id" Decode.string) (Decode.field "status" Decode.int)) rawString of
         Ok mqttData ->
             Just mqttData
 

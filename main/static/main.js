@@ -7192,7 +7192,7 @@ var $author$project$Main$parseMQTTMessageDoneStatus = function (rawString) {
 			$elm$json$Json$Decode$map2,
 			$author$project$Main$MqttMessageDoneStatus,
 			A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string),
-			A2($elm$json$Json$Decode$field, 'status', $elm$json$Json$Decode$bool)),
+			A2($elm$json$Json$Decode$field, 'status', $elm$json$Json$Decode$int)),
 		rawString);
 	if (!_v0.$) {
 		var mqttData = _v0.a;
@@ -7973,8 +7973,7 @@ var $author$project$Main$update = F2(
 							a: A3(
 								$elm$core$Dict$update,
 								mqttData.b,
-								$author$project$Main$setDone(
-									mqttData.cx ? 1 : 0),
+								$author$project$Main$setDone(mqttData.cx),
 								model.a)
 						});
 					return _Utils_Tuple2(
