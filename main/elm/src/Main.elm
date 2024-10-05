@@ -36,6 +36,8 @@ type alias Model =
     , overrideOrdering : Bool
     , filterTags : List FilterTag
     , apiKey : String
+    , geolocation : Maybe Geolocation
+    , userAgent : String
     }
 
 
@@ -83,6 +85,14 @@ init flags =
                 Nothing ->
                     ""
 
+        userAgent =
+            case userAgentFromFlags flags of
+                Just decodedUserAgent ->
+                    decodedUserAgent
+
+                Nothing ->
+                    ""
+
         items =
             case itemsFromLocalStorage flags of
                 Just itemDict ->
@@ -107,7 +117,7 @@ init flags =
                 Nothing ->
                     False
     in
-    ( { items = items, overrideOrdering = overrideOrdering, filterTags = filterTags, apiKey = apiKey }
+    ( { items = items, overrideOrdering = overrideOrdering, filterTags = filterTags, apiKey = apiKey, geolocation = Nothing, userAgent = userAgent }
     , getItems apiKey
     )
 
@@ -117,6 +127,16 @@ apiKeyFromFlags flags =
     case Decode.decodeValue (Decode.field "apiKey" Decode.string) flags of
         Ok apiKey ->
             Just apiKey
+
+        Err _ ->
+            Nothing
+
+
+userAgentFromFlags : Decode.Value -> Maybe String
+userAgentFromFlags flags =
+    case Decode.decodeValue (Decode.field "userAgent" Decode.string) flags of
+        Ok userAgent ->
+            Just userAgent
 
         Err _ ->
             Nothing
@@ -213,6 +233,8 @@ type Msg
     | DraftTagsInputChanged String String
     | DeleteItem String
     | DeleteAllDone
+    | ReceivedGeolocation Decode.Value
+    | CollectResponseReceived (Result Http.Error ())
     | NoOp
 
 
@@ -234,6 +256,11 @@ updateDoneUrl apiKey itemId =
 sortUrl : String
 sortUrl =
     "https://picluster.a-h.wtf/einkaufs_api/sort/"
+
+
+collectUrl : String
+collectUrl =
+    "https://picluster.a-h.wtf/einkaufs_api/collect/"
 
 
 getItems : String -> Cmd Msg
@@ -318,6 +345,51 @@ callSortAPI items =
         }
 
 
+postCollectEvent : Model -> ItemData -> Cmd Msg
+postCollectEvent model item =
+    let
+        actionType =
+            case item.done of
+                0 ->
+                    "UNCROSSED"
+
+                _ ->
+                    "CROSSED"
+
+        latitudeValue =
+            case model.geolocation of
+                Just geolocation ->
+                    Encode.float geolocation.latitude
+
+                Nothing ->
+                    Encode.null
+
+        longitudeValue =
+            case model.geolocation of
+                Just geolocation ->
+                    Encode.float geolocation.longitude
+
+                Nothing ->
+                    Encode.null
+    in
+    Http.post
+        { url = collectUrl
+        , body =
+            Http.jsonBody
+                (Encode.object
+                    [ ( "action_type", Encode.string actionType )
+                    , ( "name", Encode.string item.title )
+                    , ( "item_id", Encode.string item.id )
+                    , ( "latitude", latitudeValue )
+                    , ( "longitude", longitudeValue )
+                    , ( "user_agent", Encode.string model.userAgent )
+                    , ( "user_key", Encode.string model.apiKey )
+                    ]
+                )
+        , expect = Http.expectWhatever CollectResponseReceived
+        }
+
+
 filterTagsFromNames : List String -> List FilterTag
 filterTagsFromNames tagNames =
     List.map (\tag -> FilterTag tag False) tagNames
@@ -387,12 +459,14 @@ update msg model =
             , Cmd.batch
                 ((case maybeItem of
                     Just item ->
-                        updateDoneBackend model.apiKey itemId item.done
+                        [ updateDoneBackend model.apiKey itemId item.done
+                        , postCollectEvent model item
+                        ]
 
                     Nothing ->
-                        Cmd.none
+                        []
                  )
-                    :: [ writeToLocalStorage (encodeModel newModel) ]
+                    ++ [ writeToLocalStorage (encodeModel newModel) ]
                 )
             )
 
@@ -749,6 +823,21 @@ update msg model =
             in
             ( newModel, writeToLocalStorage (encodeModel newModel) )
 
+        ReceivedGeolocation portMsg ->
+            case parseGeolocation portMsg of
+                Just geolocation ->
+                    let
+                        newModel =
+                            { model | geolocation = Just geolocation }
+                    in
+                    ( newModel, writeToLocalStorage (encodeModel newModel) )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+        CollectResponseReceived _ ->
+            ( model, Cmd.none )
+
         NoOp ->
             ( model, Cmd.none )
 
@@ -972,6 +1061,9 @@ port receiveMQTTMessageDeletedItem : (String -> msg) -> Sub msg
 port receiveMQTTMessageUpdatedItem : (String -> msg) -> Sub msg
 
 
+port receiveGeolocation : (Decode.Value -> msg) -> Sub msg
+
+
 port writeToLocalStorage : Encode.Value -> Cmd msg
 
 
@@ -982,7 +1074,22 @@ subscriptions model =
         , receiveMQTTMessageNewItem ReceivedMQTTMessageNewItem
         , receiveMQTTMessageDeletedItem ReceivedMQTTMessageDeletedItem
         , receiveMQTTMessageUpdatedItem ReceivedMQTTMessageUpdatedItem
+        , receiveGeolocation ReceivedGeolocation
         ]
+
+
+type alias Geolocation =
+    { latitude : Float, longitude : Float }
+
+
+parseGeolocation : Decode.Value -> Maybe Geolocation
+parseGeolocation portMsg =
+    case Decode.decodeValue (Decode.map2 Geolocation (Decode.field "latitude" Decode.float) (Decode.field "longitude" Decode.float)) portMsg of
+        Ok geolocation ->
+            Just geolocation
+
+        Err _ ->
+            Nothing
 
 
 parseMQTTMessageDoneStatus : String -> Maybe MqttMessageDoneStatus
@@ -1473,7 +1580,6 @@ encodeModel { items, overrideOrdering, filterTags, apiKey } =
         [ ( "items", Encode.dict identity encodeItemData items )
         , ( "overrideOrdering", Encode.bool overrideOrdering )
         , ( "filterTags", Encode.list encodeFilterTag filterTags )
-        , ( "apiKey", Encode.string "" ) --- we don't store the apiKey
         ]
 
 

@@ -29,6 +29,9 @@
     <script type="text/javascript" src="{% static 'main.js' %}"></script>
 
     <script>
+
+
+
         const localStorageKeyModel = 'einkaufsliste:model';
         function getLocalStorage() {
             let localData = localStorage.getItem(localStorageKeyModel)
@@ -46,6 +49,7 @@
 
         const flags = {
             apiKey: "{{ api_key }}",
+            userAgent: window.navigator.userAgent,
             localStore: JSON.parse(getLocalStorage())
         }
 
@@ -55,6 +59,15 @@
         });
 
         app.ports.writeToLocalStorage.subscribe(setLocalStorage);
+
+        var posWatchId = navigator.geolocation.watchPosition(sendGeolocation);
+
+        function sendGeolocation(geolocationPos) {
+            app.ports.receiveGeolocation.send({
+                latitude: geolocationPos.coords.latitude,
+                longitude: geolocationPos.coords.longitude
+            });
+        }
 
         // can be called from Elm to initialize materialize js input chips
         function initializeMaterializeInputChips(args) {
