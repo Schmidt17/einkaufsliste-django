@@ -1857,9 +1857,9 @@ var _Platform_worker = F4(function(impl, flagDecoder, debugMetadata, args)
 	return _Platform_initialize(
 		flagDecoder,
 		args,
-		impl.cZ,
-		impl.dx,
-		impl.dp,
+		impl.c_,
+		impl.dy,
+		impl.dq,
 		function() { return function() {} }
 	);
 });
@@ -3943,11 +3943,11 @@ var _Browser_element = _Debugger_element || F4(function(impl, flagDecoder, debug
 	return _Platform_initialize(
 		flagDecoder,
 		args,
-		impl.cZ,
-		impl.dx,
-		impl.dp,
+		impl.c_,
+		impl.dy,
+		impl.dq,
 		function(sendToApp, initialModel) {
-			var view = impl.dz;
+			var view = impl.dA;
 			/**/
 			var domNode = args['node'];
 			//*/
@@ -3979,12 +3979,12 @@ var _Browser_document = _Debugger_document || F4(function(impl, flagDecoder, deb
 	return _Platform_initialize(
 		flagDecoder,
 		args,
-		impl.cZ,
-		impl.dx,
-		impl.dp,
+		impl.c_,
+		impl.dy,
+		impl.dq,
 		function(sendToApp, initialModel) {
 			var divertHrefToApp = impl.bO && impl.bO(sendToApp)
-			var view = impl.dz;
+			var view = impl.dA;
 			var title = _VirtualDom_doc.title;
 			var bodyNode = _VirtualDom_doc.body;
 			var currNode = _VirtualDom_virtualize(bodyNode);
@@ -4053,8 +4053,8 @@ function _Browser_makeAnimator(model, draw)
 
 function _Browser_application(impl)
 {
-	var onUrlChange = impl.c7;
-	var onUrlRequest = impl.c8;
+	var onUrlChange = impl.c8;
+	var onUrlRequest = impl.c9;
 	var key = function() { key.a(onUrlChange(_Browser_getUrl())); };
 
 	return _Browser_document({
@@ -4084,13 +4084,13 @@ function _Browser_application(impl)
 				}
 			});
 		},
-		cZ: function(flags)
+		c_: function(flags)
 		{
-			return A3(impl.cZ, flags, _Browser_getUrl(), key);
+			return A3(impl.c_, flags, _Browser_getUrl(), key);
 		},
-		dz: impl.dz,
-		dx: impl.dx,
-		dp: impl.dp
+		dA: impl.dA,
+		dy: impl.dy,
+		dq: impl.dq
 	});
 }
 
@@ -4156,17 +4156,17 @@ var _Browser_decodeEvent = F2(function(decoder, event)
 function _Browser_visibilityInfo()
 {
 	return (typeof _VirtualDom_doc.hidden !== 'undefined')
-		? { cU: 'hidden', cJ: 'visibilitychange' }
+		? { cV: 'hidden', cK: 'visibilitychange' }
 		:
 	(typeof _VirtualDom_doc.mozHidden !== 'undefined')
-		? { cU: 'mozHidden', cJ: 'mozvisibilitychange' }
+		? { cV: 'mozHidden', cK: 'mozvisibilitychange' }
 		:
 	(typeof _VirtualDom_doc.msHidden !== 'undefined')
-		? { cU: 'msHidden', cJ: 'msvisibilitychange' }
+		? { cV: 'msHidden', cK: 'msvisibilitychange' }
 		:
 	(typeof _VirtualDom_doc.webkitHidden !== 'undefined')
-		? { cU: 'webkitHidden', cJ: 'webkitvisibilitychange' }
-		: { cU: 'hidden', cJ: 'visibilitychange' };
+		? { cV: 'webkitHidden', cK: 'webkitvisibilitychange' }
+		: { cV: 'hidden', cK: 'visibilitychange' };
 }
 
 
@@ -4415,7 +4415,7 @@ function _Http_configureRequest(xhr, request)
 	}
 	xhr.timeout = request.cA.a || 0;
 	xhr.responseType = request.F.d;
-	xhr.withCredentials = request.cE;
+	xhr.withCredentials = request.cF;
 }
 
 
@@ -4437,8 +4437,8 @@ function _Http_toMetadata(xhr)
 {
 	return {
 		J: xhr.responseURL,
-		dn: xhr.status,
-		$7: xhr.statusText,
+		$7: xhr.status,
+		dp: xhr.statusText,
 		b8: _Http_parseHeaders(xhr.getAllResponseHeaders())
 	};
 }
@@ -4534,14 +4534,14 @@ function _Http_track(router, xhr, tracker)
 	xhr.upload.addEventListener('progress', function(event) {
 		if (xhr.c) { return; }
 		_Scheduler_rawSpawn(A2($elm$core$Platform$sendToSelf, router, _Utils_Tuple2(tracker, $elm$http$Http$Sending({
-			dl: event.loaded,
+			dm: event.loaded,
 			B: event.total
 		}))));
 	});
 	xhr.addEventListener('progress', function(event) {
 		if (xhr.c) { return; }
 		_Scheduler_rawSpawn(A2($elm$core$Platform$sendToSelf, router, _Utils_Tuple2(tracker, $elm$http$Http$Receiving({
-			dg: event.loaded,
+			dh: event.loaded,
 			B: event.lengthComputable ? $elm$core$Maybe$Just(event.total) : $elm$core$Maybe$Nothing
 		}))));
 	});
@@ -6051,7 +6051,7 @@ var $elm$http$Http$resolve = F2(
 			case 3:
 				var metadata = response.a;
 				return $elm$core$Result$Err(
-					$elm$http$Http$BadStatus(metadata.dn));
+					$elm$http$Http$BadStatus(metadata.$7));
 			default:
 				var body = response.b;
 				return A2(
@@ -6203,7 +6203,7 @@ var $elm$http$Http$cmdMap = F2(
 			var r = cmd.a;
 			return $elm$http$Http$Request(
 				{
-					cE: r.cE,
+					cF: r.cF,
 					O: r.O,
 					F: A2(_Http_mapExpect, func, r.F),
 					b8: r.b8,
@@ -6233,7 +6233,7 @@ var $elm$http$Http$subscription = _Platform_leaf('Http');
 var $elm$http$Http$request = function (r) {
 	return $elm$http$Http$command(
 		$elm$http$Http$Request(
-			{cE: false, O: r.O, F: r.F, b8: r.b8, cc: r.cc, cA: r.cA, cB: r.cB, J: r.J}));
+			{cF: false, O: r.O, F: r.F, b8: r.b8, cc: r.cc, cA: r.cA, cB: r.cB, J: r.J}));
 };
 var $elm$http$Http$get = function (r) {
 	return $elm$http$Http$request(
@@ -6389,7 +6389,28 @@ var $author$project$Main$overrideOrderingFromLocalStorage = function (flags) {
 		return $elm$core$Maybe$Nothing;
 	}
 };
+var $author$project$Main$userAgentFromFlags = function (flags) {
+	var _v0 = A2(
+		$elm$json$Json$Decode$decodeValue,
+		A2($elm$json$Json$Decode$field, 'userAgent', $elm$json$Json$Decode$string),
+		flags);
+	if (!_v0.$) {
+		var userAgent = _v0.a;
+		return $elm$core$Maybe$Just(userAgent);
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
 var $author$project$Main$init = function (flags) {
+	var userAgent = function () {
+		var _v4 = $author$project$Main$userAgentFromFlags(flags);
+		if (!_v4.$) {
+			var decodedUserAgent = _v4.a;
+			return decodedUserAgent;
+		} else {
+			return '';
+		}
+	}();
 	var overrideOrdering = function () {
 		var _v3 = $author$project$Main$overrideOrderingFromLocalStorage(flags);
 		if (!_v3.$) {
@@ -6427,7 +6448,7 @@ var $author$project$Main$init = function (flags) {
 		}
 	}();
 	return _Utils_Tuple2(
-		{N: apiKey, i: filterTags, bn: $elm$core$Maybe$Nothing, a: items, z: overrideOrdering},
+		{N: apiKey, i: filterTags, bn: $elm$core$Maybe$Nothing, a: items, z: overrideOrdering, cC: userAgent},
 		$author$project$Main$getItems(apiKey));
 };
 var $author$project$Main$ReceivedGeolocation = function (a) {
@@ -7174,7 +7195,7 @@ var $author$project$Main$mergeFilterTags = F2(
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $author$project$Main$Geolocation = F2(
 	function (latitude, longitude) {
-		return {c0: latitude, c1: longitude};
+		return {c1: latitude, c2: longitude};
 	});
 var $elm$json$Json$Decode$float = _Json_decodeFloat;
 var $author$project$Main$parseGeolocation = function (portMsg) {
@@ -7265,7 +7286,7 @@ var $author$project$Main$ItemPosted = F2(
 	});
 var $author$project$Main$PostResponse = F2(
 	function (success, newId) {
-		return {bv: newId, dq: success};
+		return {bv: newId, dr: success};
 	});
 var $author$project$Main$postItem = F2(
 	function (apiKey, item) {
@@ -8411,7 +8432,7 @@ var $elm$html$Html$Events$custom = F2(
 	});
 var $mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$Event = F6(
 	function (keys, button, clientPos, offsetPos, pagePos, screenPos) {
-		return {cI: button, cL: clientPos, c$: keys, c5: offsetPos, c9: pagePos, di: screenPos};
+		return {cJ: button, cM: clientPos, c0: keys, c6: offsetPos, da: pagePos, dj: screenPos};
 	});
 var $mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$BackButton = 4;
 var $mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$ErrorButton = 0;
@@ -8449,7 +8470,7 @@ var $mpizenberg$elm_pointer_events$Internal$Decode$clientPos = A3(
 	A2($elm$json$Json$Decode$field, 'clientY', $elm$json$Json$Decode$float));
 var $mpizenberg$elm_pointer_events$Internal$Decode$Keys = F4(
 	function (alt, ctrl, meta, shift) {
-		return {cF: alt, cN: ctrl, c2: meta, dm: shift};
+		return {cG: alt, cO: ctrl, c3: meta, dn: shift};
 	});
 var $mpizenberg$elm_pointer_events$Internal$Decode$keys = A5(
 	$elm$json$Json$Decode$map4,
@@ -9076,5 +9097,5 @@ var $author$project$Main$view = function (model) {
 			]));
 };
 var $author$project$Main$main = $elm$browser$Browser$element(
-	{cZ: $author$project$Main$init, dp: $author$project$Main$subscriptions, dx: $author$project$Main$update, dz: $author$project$Main$view});
+	{c_: $author$project$Main$init, dq: $author$project$Main$subscriptions, dy: $author$project$Main$update, dA: $author$project$Main$view});
 _Platform_export({'Main':{'init':$author$project$Main$main($elm$json$Json$Decode$value)(0)}});}(this));

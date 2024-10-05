@@ -37,6 +37,7 @@ type alias Model =
     , filterTags : List FilterTag
     , apiKey : String
     , geolocation : Maybe Geolocation
+    , userAgent : String
     }
 
 
@@ -84,6 +85,14 @@ init flags =
                 Nothing ->
                     ""
 
+        userAgent =
+            case userAgentFromFlags flags of
+                Just decodedUserAgent ->
+                    decodedUserAgent
+
+                Nothing ->
+                    ""
+
         items =
             case itemsFromLocalStorage flags of
                 Just itemDict ->
@@ -108,7 +117,7 @@ init flags =
                 Nothing ->
                     False
     in
-    ( { items = items, overrideOrdering = overrideOrdering, filterTags = filterTags, apiKey = apiKey, geolocation = Nothing }
+    ( { items = items, overrideOrdering = overrideOrdering, filterTags = filterTags, apiKey = apiKey, geolocation = Nothing, userAgent = userAgent }
     , getItems apiKey
     )
 
@@ -118,6 +127,16 @@ apiKeyFromFlags flags =
     case Decode.decodeValue (Decode.field "apiKey" Decode.string) flags of
         Ok apiKey ->
             Just apiKey
+
+        Err _ ->
+            Nothing
+
+
+userAgentFromFlags : Decode.Value -> Maybe String
+userAgentFromFlags flags =
+    case Decode.decodeValue (Decode.field "userAgent" Decode.string) flags of
+        Ok userAgent ->
+            Just userAgent
 
         Err _ ->
             Nothing
