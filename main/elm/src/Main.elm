@@ -64,7 +64,7 @@ type alias ItemData =
 
 type alias MqttMessageDoneStatus =
     { id : String
-    , status : Bool
+    , status : Int
     }
 
 
@@ -206,10 +206,11 @@ type Msg
     | DeleteResponseReceived String (Result Http.Error Bool)
     | ReceivedMQTTMessageDoneStatus String
     | ReceivedMQTTMessageNewItem String
+    | ReceivedMQTTMessageDeletedItem String
     | ItemPosted String (Result Http.Error PostResponse)
     | DraftTagsChanged String (List String)
     | DraftTagsInputChanged String String
-    | DeleteCard String
+    | DeleteItem String
     | DeleteAllDone
     | NoOp
 
@@ -624,17 +625,7 @@ update msg model =
                     let
                         newModel =
                             { model
-                                | items =
-                                    Dict.update mqttData.id
-                                        (setDone
-                                            (if mqttData.status then
-                                                1
-
-                                             else
-                                                0
-                                            )
-                                        )
-                                        model.items
+                                | items = Dict.update mqttData.id (setDone mqttData.status) model.items
                             }
                     in
                     ( newModel
@@ -712,8 +703,29 @@ update msg model =
             in
             ( newModel, writeToLocalStorage (encodeModel newModel) )
 
-        DeleteCard itemId ->
+        DeleteItem itemId ->
             ( model, deleteItem model.apiKey itemId )
+
+        ReceivedMQTTMessageDeletedItem mqttMsg ->
+            let
+                maybeItemId =
+                    parseMQTTMessageItemDeleted mqttMsg
+
+                newItems =
+                    case maybeItemId of
+                        Just itemId ->
+                            Dict.remove itemId model.items
+
+                        Nothing ->
+                            model.items
+
+                newFilters =
+                    mergeFilterTags model.filterTags (filterTagsFromNames (filterTagNames newItems))
+
+                newModel =
+                    { model | items = newItems, filterTags = newFilters }
+            in
+            ( newModel, writeToLocalStorage (encodeModel newModel) )
 
         NoOp ->
             ( model, Cmd.none )
@@ -914,6 +926,9 @@ port receiveMQTTMessageDoneStatus : (String -> msg) -> Sub msg
 port receiveMQTTMessageNewItem : (String -> msg) -> Sub msg
 
 
+port receiveMQTTMessageDeletedItem : (String -> msg) -> Sub msg
+
+
 port writeToLocalStorage : Encode.Value -> Cmd msg
 
 
@@ -922,12 +937,13 @@ subscriptions model =
     Sub.batch
         [ receiveMQTTMessageDoneStatus ReceivedMQTTMessageDoneStatus
         , receiveMQTTMessageNewItem ReceivedMQTTMessageNewItem
+        , receiveMQTTMessageDeletedItem ReceivedMQTTMessageDeletedItem
         ]
 
 
 parseMQTTMessageDoneStatus : String -> Maybe MqttMessageDoneStatus
 parseMQTTMessageDoneStatus rawString =
-    case Decode.decodeString (Decode.map2 MqttMessageDoneStatus (Decode.field "id" Decode.string) (Decode.field "status" Decode.bool)) rawString of
+    case Decode.decodeString (Decode.map2 MqttMessageDoneStatus (Decode.field "id" Decode.string) (Decode.field "status" Decode.int)) rawString of
         Ok mqttData ->
             Just mqttData
 
@@ -940,6 +956,16 @@ parseMQTTMessageNewItem rawString =
     case Decode.decodeString jsonParseItemData rawString of
         Ok itemDataReceived ->
             Just itemDataReceived
+
+        Err _ ->
+            Nothing
+
+
+parseMQTTMessageItemDeleted : String -> Maybe String
+parseMQTTMessageItemDeleted rawString =
+    case Decode.decodeString (Decode.field "id" Decode.string) rawString of
+        Ok itemId ->
+            Just itemId
 
         Err _ ->
             Nothing
@@ -1159,7 +1185,7 @@ deleteCardButton : String -> Html Msg
 deleteCardButton itemId =
     a
         [ href ""
-        , onWithOptions "click" { preventDefault = True, stopPropagation = True } (\event -> DeleteCard itemId)
+        , onWithOptions "click" { preventDefault = True, stopPropagation = True } (\event -> DeleteItem itemId)
         , class "delete-btn right"
         , Aria.role "button"
         , Aria.ariaLabel "Löschen"

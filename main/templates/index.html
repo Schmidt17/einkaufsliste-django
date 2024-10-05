@@ -78,12 +78,12 @@
           const msg_string = message.payloadString;
           const msg_topic = message.destinationName;
 
-          console.log(msg_topic);
-
           if (msg_topic == done_topic) {
             app.ports.receiveMQTTMessageDoneStatus.send(msg_string);
           } else if (msg_topic == newItem_topic) {
             app.ports.receiveMQTTMessageNewItem.send(msg_string);
+          } else if (msg_topic == itemDeleted_topic) {
+            app.ports.receiveMQTTMessageDeletedItem.send(msg_string);
           }
         }
 
@@ -92,6 +92,7 @@
           // Once a connection has been made, subscribe to the needed channels
           client.subscribe(done_topic, {qos: 1});
           client.subscribe(newItem_topic, {qos: 1});
+          client.subscribe(itemDeleted_topic, {qos: 1});
         }
 
         // called when the connection process has failed
@@ -122,6 +123,7 @@
         const mqtt_port = 8884;
         const done_topic = "einkaufsliste_doneUpdates";
         const newItem_topic = "einkaufsliste_newItem";
+        const itemDeleted_topic = "einkaufsliste_itemDeleted";
 
         // create a MQTT client instance
         const client = new Paho.MQTT.Client(mqtt_host, mqtt_port, "");
