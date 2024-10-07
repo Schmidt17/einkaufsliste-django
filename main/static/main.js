@@ -6239,7 +6239,7 @@ var $elm$http$Http$get = function (r) {
 	return $elm$http$Http$request(
 		{F: $elm$http$Http$emptyBody, z: r.z, b9: _List_Nil, cf: 'GET', cD: $elm$core$Maybe$Nothing, cE: $elm$core$Maybe$Nothing, D: r.D});
 };
-var $author$project$Main$backendBaseUrl = 'https://picluster.a-h.wtf/einkaufsliste/api/v1';
+var $author$project$Main$backendBaseUrl = 'https://picluster.a-h.wtf/einkaufsliste-multiuser/api/v1';
 var $author$project$Main$itemsUrl = function (apiKey) {
 	return $author$project$Main$backendBaseUrl + ('/items?k=' + apiKey);
 };

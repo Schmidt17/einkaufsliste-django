@@ -137,10 +137,10 @@
         // configuration for the connection to the MQTT broker
         const mqtt_host = "broker.hivemq.com";
         const mqtt_port = 8884;
-        const done_topic = "einkaufsliste_doneUpdates";
-        const newItem_topic = "einkaufsliste_newItem";
-        const itemDeleted_topic = "einkaufsliste_itemDeleted";
-        const itemUpdated_topic = "einkaufsliste_itemUpdated";
+        const done_topic = "{{ mqtt_topic_done_updates }}";
+        const newItem_topic = "{{ mqtt_topic_new_item }}";
+        const itemDeleted_topic = "{{ mqtt_topic_item_deleted }}";
+        const itemUpdated_topic = "{{ mqtt_topic_item_updated }}";
 
         // create a MQTT client instance
         const client = new Paho.MQTT.Client(mqtt_host, mqtt_port, "");
