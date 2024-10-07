@@ -9145,18 +9145,27 @@ var $author$project$Main$itemCardsView = function (model) {
 		$elm$html$Html$div,
 		_List_fromArray(
 			[
-				$elm$html$Html$Attributes$class('container')
+				$elm$html$Html$Attributes$class('row')
 			]),
-		A2(
-			$elm$core$List$map,
-			$author$project$Main$cardView(
+		_List_fromArray(
+			[
+				A2(
+				$elm$html$Html$div,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$class('col s12 l8 offset-l2')
+					]),
 				A2(
 					$elm$core$List$map,
-					function ($) {
-						return $.w;
-					},
-					model.j)),
-			$author$project$Main$itemsToShow(model)));
+					$author$project$Main$cardView(
+						A2(
+							$elm$core$List$map,
+							function ($) {
+								return $.w;
+							},
+							model.j)),
+					$author$project$Main$itemsToShow(model)))
+			]));
 };
 var $elm$html$Html$main_ = _VirtualDom_node('main');
 var $author$project$Main$view = function (model) {
@@ -9174,8 +9183,17 @@ var $author$project$Main$view = function (model) {
 					]),
 				_List_fromArray(
 					[
-						$author$project$Main$itemCardsView(model),
-						$author$project$Main$addCardButton
+						A2(
+						$elm$html$Html$div,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$class('container')
+							]),
+						_List_fromArray(
+							[
+								$author$project$Main$itemCardsView(model),
+								$author$project$Main$addCardButton
+							]))
 					]))
 			]));
 };

@@ -1141,8 +1141,10 @@ view model =
     div []
         [ headerView model
         , main_ [ Aria.ariaLabel "Listenbereich" ]
-            [ itemCardsView model
-            , addCardButton
+            [ div [ class "container" ]
+                [ itemCardsView model
+                , addCardButton
+                ]
             ]
         ]
 
@@ -1215,7 +1217,10 @@ delAllModal =
 
 itemCardsView : Model -> Html Msg
 itemCardsView model =
-    div [ class "container" ] (List.map (cardView (List.map .tag model.filterTags)) (itemsToShow model))
+    div [ class "row" ]
+        [ div [ class "col s12 l8 offset-l2" ]
+            (List.map (cardView (List.map .tag model.filterTags)) (itemsToShow model))
+        ]
 
 
 cardView : List String -> ItemData -> Html Msg
