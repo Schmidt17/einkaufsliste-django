@@ -6239,8 +6239,9 @@ var $elm$http$Http$get = function (r) {
 	return $elm$http$Http$request(
 		{F: $elm$http$Http$emptyBody, z: r.z, b9: _List_Nil, cf: 'GET', cD: $elm$core$Maybe$Nothing, cE: $elm$core$Maybe$Nothing, D: r.D});
 };
+var $author$project$Main$backendBaseUrl = 'https://picluster.a-h.wtf/einkaufsliste-multiuser/api/v1';
 var $author$project$Main$itemsUrl = function (apiKey) {
-	return 'https://picluster.a-h.wtf/einkaufsliste/api/v1/items?k=' + apiKey;
+	return $author$project$Main$backendBaseUrl + ('/items?k=' + apiKey);
 };
 var $author$project$Main$getItems = function (apiKey) {
 	return $elm$http$Http$get(
@@ -6626,7 +6627,8 @@ var $author$project$Main$sortAPIResponseDecoder = A2(
 	$elm$json$Json$Decode$field,
 	'sort_indices',
 	$elm$json$Json$Decode$list($elm$json$Json$Decode$int));
-var $author$project$Main$sortUrl = 'https://picluster.a-h.wtf/einkaufs_api/sort/';
+var $author$project$Main$dataBaseUrl = 'https://picluster.a-h.wtf/einkaufs_api';
+var $author$project$Main$sortUrl = $author$project$Main$dataBaseUrl + '/sort/';
 var $elm$json$Json$Encode$string = _Json_wrap;
 var $author$project$Main$callSortAPI = function (items) {
 	return $elm$http$Http$post(
@@ -6686,7 +6688,7 @@ var $author$project$Main$httpDelete = function (options) {
 };
 var $author$project$Main$itemUrl = F2(
 	function (apiKey, itemId) {
-		return 'https://picluster.a-h.wtf/einkaufsliste/api/v1/items/' + (itemId + ('?k=' + apiKey));
+		return $author$project$Main$backendBaseUrl + ('/items/' + (itemId + ('?k=' + apiKey)));
 	});
 var $author$project$Main$deleteItem = F2(
 	function (apiKey, itemId) {
@@ -7280,7 +7282,7 @@ var $author$project$Main$parseMQTTMessageNewItem = function (rawString) {
 var $author$project$Main$CollectResponseReceived = function (a) {
 	return {$: 25, a: a};
 };
-var $author$project$Main$collectUrl = 'https://picluster.a-h.wtf/einkaufs_api/collect/';
+var $author$project$Main$collectUrl = $author$project$Main$dataBaseUrl + '/collect/';
 var $elm$http$Http$expectBytesResponse = F2(
 	function (toMsg, toResult) {
 		return A3(
@@ -7617,7 +7619,7 @@ var $author$project$Main$httpUpdate = function (options) {
 };
 var $author$project$Main$updateDoneUrl = F2(
 	function (apiKey, itemId) {
-		return 'https://picluster.a-h.wtf/einkaufsliste/api/v1/items/' + (itemId + ('/done?k=' + apiKey));
+		return $author$project$Main$backendBaseUrl + ('/items/' + (itemId + ('/done?k=' + apiKey)));
 	});
 var $author$project$Main$updateDoneBackend = F3(
 	function (apiKey, itemId, doneStatus) {
@@ -9143,18 +9145,27 @@ var $author$project$Main$itemCardsView = function (model) {
 		$elm$html$Html$div,
 		_List_fromArray(
 			[
-				$elm$html$Html$Attributes$class('container')
+				$elm$html$Html$Attributes$class('row')
 			]),
-		A2(
-			$elm$core$List$map,
-			$author$project$Main$cardView(
+		_List_fromArray(
+			[
+				A2(
+				$elm$html$Html$div,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$class('col s12 l8 offset-l2')
+					]),
 				A2(
 					$elm$core$List$map,
-					function ($) {
-						return $.w;
-					},
-					model.j)),
-			$author$project$Main$itemsToShow(model)));
+					$author$project$Main$cardView(
+						A2(
+							$elm$core$List$map,
+							function ($) {
+								return $.w;
+							},
+							model.j)),
+					$author$project$Main$itemsToShow(model)))
+			]));
 };
 var $elm$html$Html$main_ = _VirtualDom_node('main');
 var $author$project$Main$view = function (model) {
@@ -9172,8 +9183,17 @@ var $author$project$Main$view = function (model) {
 					]),
 				_List_fromArray(
 					[
-						$author$project$Main$itemCardsView(model),
-						$author$project$Main$addCardButton
+						A2(
+						$elm$html$Html$div,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$class('container')
+							]),
+						_List_fromArray(
+							[
+								$author$project$Main$itemCardsView(model),
+								$author$project$Main$addCardButton
+							]))
 					]))
 			]));
 };
