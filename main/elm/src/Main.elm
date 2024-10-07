@@ -238,29 +238,39 @@ type Msg
     | NoOp
 
 
+backendBaseUrl : String
+backendBaseUrl =
+    "https://picluster.a-h.wtf/einkaufsliste/api/v1"
+
+
 itemsUrl : String -> String
 itemsUrl apiKey =
-    "https://picluster.a-h.wtf/einkaufsliste/api/v1/items?k=" ++ apiKey
+    backendBaseUrl ++ "/items?k=" ++ apiKey
 
 
 itemUrl : String -> String -> String
 itemUrl apiKey itemId =
-    "https://picluster.a-h.wtf/einkaufsliste/api/v1/items/" ++ itemId ++ "?k=" ++ apiKey
+    backendBaseUrl ++ "/items/" ++ itemId ++ "?k=" ++ apiKey
 
 
 updateDoneUrl : String -> String -> String
 updateDoneUrl apiKey itemId =
-    "https://picluster.a-h.wtf/einkaufsliste/api/v1/items/" ++ itemId ++ "/done?k=" ++ apiKey
+    backendBaseUrl ++ "/items/" ++ itemId ++ "/done?k=" ++ apiKey
+
+
+dataBaseUrl : String
+dataBaseUrl =
+    "https://picluster.a-h.wtf/einkaufs_api"
 
 
 sortUrl : String
 sortUrl =
-    "https://picluster.a-h.wtf/einkaufs_api/sort/"
+    dataBaseUrl ++ "/sort/"
 
 
 collectUrl : String
 collectUrl =
-    "https://picluster.a-h.wtf/einkaufs_api/collect/"
+    dataBaseUrl ++ "/collect/"
 
 
 getItems : String -> Cmd Msg
