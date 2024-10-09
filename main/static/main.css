@@ -37,6 +37,9 @@ i.add-list-trigger {
 .chips-wrapper {
     display: flex;
     overflow-x: scroll;
+
+    scrollbar-color: #4CAF50 #E8F5E9;
+    scrollbar-width: thin;
 }
 
 .chip {
