@@ -58,6 +58,10 @@
             flags: flags
         });
 
+        window.addEventListener("focus", function() {
+            app.ports.gotFocus.send("");
+        });
+
         app.ports.writeToLocalStorage.subscribe(setLocalStorage);
 
         var posWatchId = navigator.geolocation.watchPosition(sendGeolocation);

@@ -6452,6 +6452,9 @@ var $author$project$Main$init = function (flags) {
 		{E: apiKey, j: filterTags, ar: $elm$core$Maybe$Nothing, a: items, A: overrideOrdering, bX: userAgent},
 		$author$project$Main$getItems(apiKey));
 };
+var $author$project$Main$GotFocus = function (a) {
+	return {$: 26, a: a};
+};
 var $author$project$Main$ReceivedGeolocation = function (a) {
 	return {$: 24, a: a};
 };
@@ -6468,6 +6471,7 @@ var $author$project$Main$ReceivedMQTTMessageUpdatedItem = function (a) {
 	return {$: 18, a: a};
 };
 var $elm$core$Platform$Sub$batch = _Platform_batch;
+var $author$project$Main$gotFocus = _Platform_incomingPort('gotFocus', $elm$json$Json$Decode$string);
 var $elm$json$Json$Decode$value = _Json_decodeValue;
 var $author$project$Main$receiveGeolocation = _Platform_incomingPort('receiveGeolocation', $elm$json$Json$Decode$value);
 var $author$project$Main$receiveMQTTMessageDeletedItem = _Platform_incomingPort('receiveMQTTMessageDeletedItem', $elm$json$Json$Decode$string);
@@ -6482,7 +6486,8 @@ var $author$project$Main$subscriptions = function (model) {
 				$author$project$Main$receiveMQTTMessageNewItem($author$project$Main$ReceivedMQTTMessageNewItem),
 				$author$project$Main$receiveMQTTMessageDeletedItem($author$project$Main$ReceivedMQTTMessageDeletedItem),
 				$author$project$Main$receiveMQTTMessageUpdatedItem($author$project$Main$ReceivedMQTTMessageUpdatedItem),
-				$author$project$Main$receiveGeolocation($author$project$Main$ReceivedGeolocation)
+				$author$project$Main$receiveGeolocation($author$project$Main$ReceivedGeolocation),
+				$author$project$Main$gotFocus($author$project$Main$GotFocus)
 			]));
 };
 var $author$project$Main$AddNewCard = function (a) {
@@ -7398,7 +7403,7 @@ var $author$project$Main$postItem = F2(
 				D: $author$project$Main$itemsUrl(apiKey)
 			});
 	});
-var $author$project$Main$NoOp = {$: 26};
+var $author$project$Main$NoOp = {$: 27};
 var $elm$browser$Browser$Dom$setViewport = _Browser_setViewport;
 var $author$project$Main$resetViewport = A2(
 	$elm$core$Task$perform,
@@ -8310,6 +8315,8 @@ var $author$project$Main$update = F2(
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
 			case 25:
+				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+			case 26:
 				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 			default:
 				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
