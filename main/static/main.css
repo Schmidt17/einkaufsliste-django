@@ -30,9 +30,6 @@ i.add-list-trigger {
     transform: translateX(-50%);
 }
 
-.item-card {
-    max-height: 150px;
-}
 
 .chips-wrapper {
     display: flex;
