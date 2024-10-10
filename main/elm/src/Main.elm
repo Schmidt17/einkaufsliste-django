@@ -6,7 +6,7 @@ import Dict exposing (Dict)
 import Html exposing (Html, a, br, button, div, h1, h4, header, i, input, label, li, main_, nav, node, p, span, text, ul)
 import Html.Attributes exposing (..)
 import Html.Attributes.Aria as Aria
-import Html.Events exposing (on, onClick, onInput, onMouseDown, preventDefaultOn)
+import Html.Events exposing (on, onClick, onFocus, onInput, onMouseDown, preventDefaultOn)
 import Html.Events.Extra.Mouse exposing (onWithOptions)
 import Html.Events.Extra.Touch exposing (onStart)
 import Http
@@ -235,6 +235,7 @@ type Msg
     | DeleteAllDone
     | ReceivedGeolocation Decode.Value
     | CollectResponseReceived (Result Http.Error ())
+    | GotFocus String
     | NoOp
 
 
@@ -848,6 +849,9 @@ update msg model =
         CollectResponseReceived _ ->
             ( model, Cmd.none )
 
+        GotFocus _ ->
+            ( model, Cmd.none )
+
         NoOp ->
             ( model, Cmd.none )
 
@@ -1077,6 +1081,9 @@ port receiveGeolocation : (Decode.Value -> msg) -> Sub msg
 port writeToLocalStorage : Encode.Value -> Cmd msg
 
 
+port gotFocus : (String -> msg) -> Sub msg
+
+
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
@@ -1085,6 +1092,7 @@ subscriptions model =
         , receiveMQTTMessageDeletedItem ReceivedMQTTMessageDeletedItem
         , receiveMQTTMessageUpdatedItem ReceivedMQTTMessageUpdatedItem
         , receiveGeolocation ReceivedGeolocation
+        , gotFocus GotFocus
         ]
 
 
