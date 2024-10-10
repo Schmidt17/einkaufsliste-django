@@ -119,6 +119,7 @@ init flags =
     in
     ( { items = items, overrideOrdering = overrideOrdering, filterTags = filterTags, apiKey = apiKey, geolocation = Nothing, userAgent = userAgent }
     , getItems apiKey
+      --, Cmd.none
     )
 
 
@@ -434,16 +435,29 @@ update msg model =
             case payload of
                 Ok rawString ->
                     let
-                        items =
+                        serverItems =
                             itemListToDict (List.indexedMap receivedToItem (parseItems rawString))
+
+                        items =
+                            mergeIntoItemDict serverItems model.items
 
                         newFilterTags =
                             mergeFilterTags model.filterTags (filterTagsFromNames (filterTagNames items))
 
                         newModel =
-                            { model | items = items, filterTags = newFilterTags, overrideOrdering = False }
+                            { model | items = items, filterTags = newFilterTags }
                     in
-                    ( newModel, writeToLocalStorage (encodeModel newModel) )
+                    ( newModel
+                    , Cmd.batch
+                        ((if model.overrideOrdering then
+                            [ callSortAPI (Dict.values items) ]
+
+                          else
+                            []
+                         )
+                            ++ [ writeToLocalStorage (encodeModel newModel) ]
+                        )
+                    )
 
                 Err httpError ->
                     ( model, Cmd.none )
@@ -850,7 +864,7 @@ update msg model =
             ( model, Cmd.none )
 
         GotFocus _ ->
-            ( model, Cmd.none )
+            ( model, getItems model.apiKey )
 
         NoOp ->
             ( model, Cmd.none )
@@ -1572,7 +1586,7 @@ argsort l =
 
 
 encodeItemData : ItemData -> Encode.Value
-encodeItemData { id, title, tags, draftTitle, draftTags, draftTagsInput, done, orderIndexDefault, orderIndexOverride, editing, synced, new } =
+encodeItemData { id, title, tags, draftTitle, draftTags, draftTagsInput, draftChanged, done, orderIndexDefault, orderIndexOverride, editing, synced, new } =
     Encode.object
         [ ( "id", Encode.string id )
         , ( "title", Encode.string title )
@@ -1580,11 +1594,12 @@ encodeItemData { id, title, tags, draftTitle, draftTags, draftTagsInput, done, o
         , ( "draftTitle", Encode.string draftTitle )
         , ( "draftTags", Encode.list Encode.string draftTags )
         , ( "draftTagsInput", Encode.string draftTagsInput )
+        , ( "draftChanged", Encode.bool draftChanged )
         , ( "done", Encode.int done )
         , ( "orderIndexDefault", Encode.int orderIndexDefault )
         , ( "orderIndexOverride", Encode.int orderIndexOverride )
         , ( "editing", Encode.bool editing )
-        , ( "synced", Encode.bool False )
+        , ( "synced", Encode.bool synced )
         , ( "new", Encode.bool new )
         ]
 
@@ -1614,3 +1629,38 @@ draftHasChanged item =
 resetViewport : Cmd Msg
 resetViewport =
     Task.perform (\_ -> NoOp) (Dom.setViewport 0 0)
+
+
+newOnly : String -> ItemData -> Dict String ItemData -> Dict String ItemData
+newOnly key val res =
+    Dict.insert key val res
+
+
+both : String -> ItemData -> ItemData -> Dict String ItemData -> Dict String ItemData
+both key valLeft valRight res =
+    if valRight.editing then
+        Dict.insert key valRight res
+
+    else if valRight.synced then
+        Dict.insert key { valRight | title = valLeft.title, tags = valLeft.tags, done = valLeft.done } res
+
+    else
+        Dict.insert key valRight res
+
+
+oldOnly : String -> ItemData -> Dict String ItemData -> Dict String ItemData
+oldOnly key val res =
+    if val.synced then
+        res
+
+    else
+        Dict.insert key val res
+
+
+mergeIntoItemDict : Dict String ItemData -> Dict String ItemData -> Dict String ItemData
+mergeIntoItemDict newDict oldDict =
+    let
+        newItems =
+            Dict.diff newDict oldDict
+    in
+    Dict.merge newOnly both oldOnly newDict oldDict Dict.empty
