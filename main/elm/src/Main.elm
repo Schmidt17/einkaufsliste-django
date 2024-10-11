@@ -35,6 +35,7 @@ type alias Model =
     { items : Dict String ItemData
     , overrideOrdering : Bool
     , filterTags : List FilterTag
+    , noTagsFilterActive : Bool
     , apiKey : String
     , geolocation : Maybe Geolocation
     , userAgent : String
@@ -116,8 +117,23 @@ init flags =
 
                 Nothing ->
                     False
+
+        noTagsFilterActive =
+            case noTagsFilterFromLocalStorage flags of
+                Just filterActive ->
+                    filterActive
+
+                Nothing ->
+                    False
     in
-    ( { items = items, overrideOrdering = overrideOrdering, filterTags = filterTags, apiKey = apiKey, geolocation = Nothing, userAgent = userAgent }
+    ( { items = items
+      , overrideOrdering = overrideOrdering
+      , filterTags = filterTags
+      , noTagsFilterActive = noTagsFilterActive
+      , apiKey = apiKey
+      , geolocation = Nothing
+      , userAgent = userAgent
+      }
     , getItems apiKey
       --, Cmd.none
     )
@@ -196,6 +212,16 @@ overrideOrderingFromLocalStorage flags =
             Nothing
 
 
+noTagsFilterFromLocalStorage : Decode.Value -> Maybe Bool
+noTagsFilterFromLocalStorage flags =
+    case Decode.decodeValue (Decode.at [ "localStore", "noTagsFilterActive" ] Decode.bool) flags of
+        Ok data ->
+            Just data
+
+        Err _ ->
+            Nothing
+
+
 decodeApply =
     Decode.map2 (|>)
 
@@ -237,6 +263,7 @@ type Msg
     | ReceivedGeolocation Decode.Value
     | CollectResponseReceived (Result Http.Error ())
     | GotFocus String
+    | NoTagsFilterClicked
     | NoOp
 
 
@@ -866,6 +893,13 @@ update msg model =
         GotFocus _ ->
             ( model, getItems model.apiKey )
 
+        NoTagsFilterClicked ->
+            let
+                newModel =
+                    { model | noTagsFilterActive = not model.noTagsFilterActive }
+            in
+            ( newModel, writeToLocalStorage (encodeModel newModel) )
+
         NoOp ->
             ( model, Cmd.none )
 
@@ -1182,7 +1216,7 @@ headerView model =
         [ nav [ Aria.ariaLabel "Header", style "height" "auto" ]
             [ div [ class "nav-wrapper", style "display" "flex" ]
                 [ div [ class "chips-wrapper filter-chips", Aria.ariaLabel "Filterbereich", Aria.role "navigation" ]
-                    (List.map filterTagChip (sortFilterTags model.filterTags))
+                    ([ noTagsFilterView model.noTagsFilterActive ] ++ List.map filterTagChip (sortFilterTags model.filterTags))
                 , ul [ id "nav-mobile" ]
                     [ li [] [ sortButton model.overrideOrdering ]
                     , li []
@@ -1195,6 +1229,24 @@ headerView model =
             ]
         , delAllModal
         ]
+
+
+noTagsFilterView : Bool -> Html Msg
+noTagsFilterView isActive =
+    div
+        [ class
+            ("chip green-text green lighten-5"
+                ++ (case isActive of
+                        True ->
+                            " darken-1 white-text"
+
+                        False ->
+                            ""
+                   )
+            )
+        , onClick NoTagsFilterClicked
+        ]
+        [ text "No tags" ]
 
 
 sortButton : Bool -> Html Msg
@@ -1413,9 +1465,9 @@ isVisible model item =
             activeFilters model.filterTags
 
         filteringActive =
-            List.length filters > 0
+            (List.length filters > 0) || model.noTagsFilterActive
     in
-    if not filteringActive || item.editing || (List.member "No tags" filters && (List.length item.tags == 0)) then
+    if not filteringActive || item.editing || (model.noTagsFilterActive && (List.length item.tags == 0)) then
         True
 
     else
@@ -1545,17 +1597,12 @@ activeFilters filterTags =
 
 filterTagNames : Dict String ItemData -> List String
 filterTagNames items =
-    [ "No tags" ] ++ Set.toList (uniqueTags (Dict.values items))
+    Set.toList (uniqueTags (Dict.values items))
 
 
 sortFilterTags : List FilterTag -> List FilterTag
 sortFilterTags filterTags =
-    case filterTags of
-        noTags :: rest ->
-            noTags :: List.sortBy .tag rest
-
-        [] ->
-            []
+    List.sortBy .tag filterTags
 
 
 itemListToDict : List ItemData -> Dict String ItemData
@@ -1613,11 +1660,12 @@ encodeFilterTag { tag, isActive } =
 
 
 encodeModel : Model -> Encode.Value
-encodeModel { items, overrideOrdering, filterTags, apiKey } =
+encodeModel { items, overrideOrdering, filterTags, noTagsFilterActive, apiKey } =
     Encode.object
         [ ( "items", Encode.dict identity encodeItemData items )
         , ( "overrideOrdering", Encode.bool overrideOrdering )
         , ( "filterTags", Encode.list encodeFilterTag filterTags )
+        , ( "noTagsFilterActive", Encode.bool noTagsFilterActive )
         ]
 
 
