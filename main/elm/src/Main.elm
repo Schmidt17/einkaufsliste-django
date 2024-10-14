@@ -1784,7 +1784,9 @@ newOnly oldDict key val res =
         Just oldItem ->
             Dict.insert key
                 { oldItem
-                    | title = val.title
+                    | id = key
+                    , oldId = oldItem.id
+                    , title = val.title
                     , tags = val.tags
                     , done = val.done
                     , lastSyncedRevision = val.lastSyncedRevision

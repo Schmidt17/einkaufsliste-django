@@ -5614,7 +5614,7 @@ var $author$project$Main$ItemData = function (id) {
 												return function (_new) {
 													return function (lastSyncedRevision) {
 														return function (oldId) {
-															return {e: done, R: draftChanged, S: draftTags, T: draftTagsInput, U: draftTitle, D: editing, b: id, K: lastSyncedRevision, Y: _new, ag: oldId, _: orderIndexDefault, ai: orderIndexOverride, H: synced, c: tags, d: title};
+															return {e: done, R: draftChanged, S: draftTags, T: draftTagsInput, U: draftTitle, D: editing, b: id, K: lastSyncedRevision, Y: _new, _: oldId, aa: orderIndexDefault, ai: orderIndexOverride, H: synced, c: tags, d: title};
 														};
 													};
 												};
@@ -5793,13 +5793,13 @@ var $author$project$Main$encodeItemData = function (_v0) {
 	var draftTagsInput = _v0.T;
 	var draftChanged = _v0.R;
 	var done = _v0.e;
-	var orderIndexDefault = _v0._;
+	var orderIndexDefault = _v0.aa;
 	var orderIndexOverride = _v0.ai;
 	var editing = _v0.D;
 	var synced = _v0.H;
 	var _new = _v0.Y;
 	var lastSyncedRevision = _v0.K;
-	var oldId = _v0.ag;
+	var oldId = _v0._;
 	return $elm$json$Json$Encode$object(
 		_List_fromArray(
 			[
@@ -6345,7 +6345,7 @@ var $elm$http$Http$expectString = function (toMsg) {
 		toMsg,
 		$elm$http$Http$resolve($elm$core$Result$Ok));
 };
-var $author$project$Main$backendBaseUrl = 'https://picluster.a-h.wtf/einkaufsliste-multiuser-test/api/v1';
+var $author$project$Main$backendBaseUrl = 'https://picluster.a-h.wtf/einkaufsliste-multiuser/api/v1';
 var $author$project$Main$itemsSyncUrl = F2(
 	function (apiKey, clientId) {
 		return $author$project$Main$backendBaseUrl + ('/items/sync?k=' + (apiKey + ('&c=' + clientId)));
@@ -6639,7 +6639,7 @@ var $author$project$Main$init = function (flags) {
 			A2(
 				$elm$core$List$sortBy,
 				function ($) {
-					return $._;
+					return $.aa;
 				},
 				$elm$core$Dict$values(items))));
 };
@@ -6699,7 +6699,7 @@ var $author$project$Main$maxOrderIndex = function (items) {
 		A2(
 			$elm$core$List$map,
 			function ($) {
-				return $._;
+				return $.aa;
 			},
 			items));
 };
@@ -6721,7 +6721,7 @@ var $author$project$Main$addNewItem = F2(
 		return A3(
 			$elm$core$Dict$insert,
 			newId,
-			{e: 0, R: false, S: _List_Nil, T: '', U: '', D: true, b: newId, K: -1, Y: true, ag: '', _: newIndex, ai: newIndex, H: false, c: _List_Nil, d: ''},
+			{e: 0, R: false, S: _List_Nil, T: '', U: '', D: true, b: newId, K: -1, Y: true, _: '', aa: newIndex, ai: newIndex, H: false, c: _List_Nil, d: ''},
 			dict);
 	});
 var $author$project$Main$receivedToItem = F2(
@@ -6736,8 +6736,8 @@ var $author$project$Main$receivedToItem = F2(
 			b: itemReceived.b,
 			K: itemReceived.ar,
 			Y: false,
-			ag: function () {
-				var _v0 = itemReceived.ag;
+			_: function () {
+				var _v0 = itemReceived._;
 				if (!_v0.$) {
 					var oldId = _v0.a;
 					return oldId;
@@ -6745,7 +6745,7 @@ var $author$project$Main$receivedToItem = F2(
 					return '';
 				}
 			}(),
-			_: index,
+			aa: index,
 			ai: index,
 			H: true,
 			c: itemReceived.c,
@@ -7402,7 +7402,7 @@ var $elm$core$Dict$merge = F6(
 	});
 var $author$project$Main$newOnly = F4(
 	function (oldDict, key, val, res) {
-		var _v0 = A2($elm$core$Dict$get, val.ag, oldDict);
+		var _v0 = A2($elm$core$Dict$get, val._, oldDict);
 		if (!_v0.$) {
 			var oldItem = _v0.a;
 			return A3(
@@ -7410,7 +7410,7 @@ var $author$project$Main$newOnly = F4(
 				key,
 				_Utils_update(
 					oldItem,
-					{e: val.e, K: val.K, H: true, c: val.c, d: val.d}),
+					{e: val.e, b: key, K: val.K, _: oldItem.b, H: true, c: val.c, d: val.d}),
 				res);
 		} else {
 			return A3($elm$core$Dict$insert, key, val, res);
@@ -7455,7 +7455,7 @@ var $author$project$Main$parseGeolocation = function (portMsg) {
 };
 var $author$project$Main$ItemDataReceived = F6(
 	function (id, title, tags, done, revision, oldId) {
-		return {e: done, b: id, ag: oldId, ar: revision, c: tags, d: title};
+		return {e: done, b: id, _: oldId, ar: revision, c: tags, d: title};
 	});
 var $elm$json$Json$Decode$map6 = _Json_map6;
 var $elm$json$Json$Decode$maybe = function (decoder) {
@@ -8638,7 +8638,7 @@ var $author$project$Main$update = F2(
 						A2(
 							$elm$core$List$sortBy,
 							function ($) {
-								return $._;
+								return $.aa;
 							},
 							$elm$core$Dict$values(model.a))));
 			case 27:
@@ -9482,7 +9482,7 @@ var $author$project$Main$sortItems = F2(
 			A2(
 				$elm$core$List$sortBy,
 				function ($) {
-					return $._;
+					return $.aa;
 				},
 				items));
 	});
