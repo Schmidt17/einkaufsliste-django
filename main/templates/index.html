@@ -30,8 +30,6 @@
 
     <script>
 
-
-
         const localStorageKeyModel = 'einkaufsliste:model';
         function getLocalStorage() {
             let localData = localStorage.getItem(localStorageKeyModel)
@@ -49,6 +47,7 @@
 
         const flags = {
             apiKey: "{{ api_key }}",
+            clientId: "{{ client_id }}",
             userAgent: window.navigator.userAgent,
             localStore: JSON.parse(getLocalStorage())
         }

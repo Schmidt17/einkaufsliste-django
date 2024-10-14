@@ -1,3 +1,5 @@
+import uuid
+
 from django.http import HttpResponse, JsonResponse
 from django.template import loader
 
@@ -7,6 +9,8 @@ def main(request):
 
     user_key = request.GET.get('k')
 
+    client_id = uuid.uuid4()
+
     mqtt_topic_done_updates = f'einkaufsliste/{user_key_part(user_key)}/doneUpdates'
     mqtt_topic_new_item = f'einkaufsliste/{user_key_part(user_key)}/newItem'
     mqtt_topic_item_deleted = f'einkaufsliste/{user_key_part(user_key)}/itemDeleted'
@@ -14,6 +18,7 @@ def main(request):
 
     return HttpResponse(template.render(context={
         'api_key': user_key,
+        'client_id': client_id,
         'mqtt_topic_done_updates': mqtt_topic_done_updates,
         'mqtt_topic_new_item': mqtt_topic_new_item,
         'mqtt_topic_item_deleted': mqtt_topic_item_deleted,

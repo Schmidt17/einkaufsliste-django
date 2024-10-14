@@ -39,6 +39,7 @@ type alias Model =
     , apiKey : String
     , geolocation : Maybe Geolocation
     , userAgent : String
+    , clientId : String
     }
 
 
@@ -62,6 +63,8 @@ type alias ItemData =
     , editing : Bool
     , synced : Bool
     , new : Bool
+    , lastSyncedRevision : Int
+    , oldId : String
     }
 
 
@@ -82,6 +85,14 @@ init flags =
             case apiKeyFromFlags flags of
                 Just decodedApiKey ->
                     decodedApiKey
+
+                Nothing ->
+                    ""
+
+        clientId =
+            case clientIdFromFlags flags of
+                Just decodedClientId ->
+                    decodedClientId
 
                 Nothing ->
                     ""
@@ -133,8 +144,10 @@ init flags =
       , apiKey = apiKey
       , geolocation = Nothing
       , userAgent = userAgent
+      , clientId = clientId
       }
-    , getItems apiKey
+      -- , getItems apiKey
+    , syncItems apiKey clientId (List.sortBy .orderIndexDefault (Dict.values items))
       --, Cmd.none
     )
 
@@ -144,6 +157,16 @@ apiKeyFromFlags flags =
     case Decode.decodeValue (Decode.field "apiKey" Decode.string) flags of
         Ok apiKey ->
             Just apiKey
+
+        Err _ ->
+            Nothing
+
+
+clientIdFromFlags : Decode.Value -> Maybe String
+clientIdFromFlags flags =
+    case Decode.decodeValue (Decode.field "clientId" Decode.string) flags of
+        Ok clientId ->
+            Just clientId
 
         Err _ ->
             Nothing
@@ -185,6 +208,8 @@ itemDataDecoder =
         |> required "editing" Decode.bool
         |> required "synced" Decode.bool
         |> required "new" Decode.bool
+        |> required "lastSyncedRevision" Decode.int
+        |> required "oldId" (Decode.oneOf [ Decode.string, Decode.null "" ])
 
 
 filterTagsFromLocalStorage : Decode.Value -> Maybe (List FilterTag)
@@ -249,7 +274,7 @@ type Msg
     | SortButtonClicked
     | SortResponseReceived (List String) (Result Http.Error (List Int))
     | DoneResponseReceived String (Result Http.Error Bool)
-    | UpdateResponseReceived String (Result Http.Error Bool)
+    | UpdateResponseReceived String (Result Http.Error UpdateResponse)
     | DeleteResponseReceived String (Result Http.Error Bool)
     | ReceivedMQTTMessageDoneStatus String
     | ReceivedMQTTMessageNewItem String
@@ -269,12 +294,12 @@ type Msg
 
 backendBaseUrl : String
 backendBaseUrl =
-    "https://picluster.a-h.wtf/einkaufsliste-multiuser/api/v1"
+    "https://picluster.a-h.wtf/einkaufsliste-multiuser-test/api/v1"
 
 
-itemsUrl : String -> String
-itemsUrl apiKey =
-    backendBaseUrl ++ "/items?k=" ++ apiKey
+itemsUrl : String -> String -> String
+itemsUrl apiKey clientId =
+    backendBaseUrl ++ "/items?k=" ++ apiKey ++ "&c=" ++ clientId
 
 
 itemUrl : String -> String -> String
@@ -285,6 +310,11 @@ itemUrl apiKey itemId =
 updateDoneUrl : String -> String -> String
 updateDoneUrl apiKey itemId =
     backendBaseUrl ++ "/items/" ++ itemId ++ "/done?k=" ++ apiKey
+
+
+itemsSyncUrl : String -> String -> String
+itemsSyncUrl apiKey clientId =
+    backendBaseUrl ++ "/items/sync?k=" ++ apiKey ++ "&c=" ++ clientId
 
 
 dataBaseUrl : String
@@ -302,23 +332,45 @@ collectUrl =
     dataBaseUrl ++ "/collect/"
 
 
-getItems : String -> Cmd Msg
-getItems apiKey =
-    Http.get { url = itemsUrl apiKey, expect = Http.expectString ItemsReceived }
+getItems : String -> String -> Cmd Msg
+getItems apiKey clientId =
+    Http.get { url = itemsUrl apiKey clientId, expect = Http.expectString ItemsReceived }
+
+
+syncItems : String -> String -> List ItemData -> Cmd Msg
+syncItems apiKey clientId items =
+    Http.post
+        { url = itemsSyncUrl apiKey clientId
+        , body = Http.jsonBody (Encode.object [ ( "clientItems", Encode.list encodeItemData items ) ])
+        , expect = Http.expectString ItemsReceived
+        }
 
 
 type alias PostResponse =
     { success : Bool
     , newId : String
+    , revision : Int
     }
 
 
-postItem : String -> ItemData -> Cmd Msg
-postItem apiKey item =
+type alias UpdateResponse =
+    { success : Bool
+    , revision : Int
+    }
+
+
+postItem : String -> String -> ItemData -> Cmd Msg
+postItem apiKey clientId item =
     Http.post
-        { url = itemsUrl apiKey
+        { url = itemsUrl apiKey clientId
         , body = Http.jsonBody (Encode.object [ ( "itemData", Encode.object [ ( "title", Encode.string item.title ), ( "tags", Encode.list Encode.string item.tags ) ] ) ])
-        , expect = Http.expectJson (ItemPosted item.id) (Decode.map2 PostResponse (Decode.field "success" Decode.bool) (Decode.field "newId" Decode.string))
+        , expect =
+            Http.expectJson (ItemPosted item.id)
+                (Decode.map3 PostResponse
+                    (Decode.field "success" Decode.bool)
+                    (Decode.field "newId" Decode.string)
+                    (Decode.field "revision" Decode.int)
+                )
         }
 
 
@@ -336,7 +388,7 @@ updateItem apiKey item =
     httpUpdate
         { url = itemUrl apiKey item.id
         , body = Http.jsonBody (Encode.object [ ( "itemData", Encode.object [ ( "title", Encode.string item.title ), ( "tags", Encode.list Encode.string item.tags ) ] ) ])
-        , expect = Http.expectJson (UpdateResponseReceived item.id) (Decode.field "success" Decode.bool)
+        , expect = Http.expectJson (UpdateResponseReceived item.id) (Decode.map2 UpdateResponse (Decode.field "success" Decode.bool) (Decode.field "revision" Decode.int))
         }
 
 
@@ -456,7 +508,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         FetchItems ->
-            ( model, getItems model.apiKey )
+            ( model, getItems model.apiKey model.clientId )
 
         ItemsReceived payload ->
             case payload of
@@ -605,7 +657,7 @@ update msg model =
                         ( newModel
                         , Cmd.batch
                             ((if item.new then
-                                postItem model.apiKey updatedItem
+                                postItem model.apiKey model.clientId updatedItem
 
                               else
                                 updateItem model.apiKey updatedItem
@@ -694,13 +746,20 @@ update msg model =
             in
             ( newModel, writeToLocalStorage (encodeModel newModel) )
 
-        UpdateResponseReceived itemId successPayload ->
-            case successPayload of
-                Ok success ->
+        UpdateResponseReceived itemId updatePayload ->
+            case updatePayload of
+                Ok updateResponse ->
                     let
                         newItemDict =
                             Dict.update itemId
-                                (setSynced True)
+                                (\maybeItem ->
+                                    case maybeItem of
+                                        Just item ->
+                                            Just { item | synced = True, lastSyncedRevision = updateResponse.revision }
+
+                                        Nothing ->
+                                            Nothing
+                                )
                                 model.items
 
                         newModel =
@@ -767,13 +826,32 @@ update msg model =
                 maybeReceivedItem =
                     parseMQTTMessageNewItem mqttMsg
 
-                newItems =
-                    case maybeReceivedItem of
-                        Just receivedItem ->
-                            addReceivedItem receivedItem model.items
+                maybeClientId =
+                    parseMQTTClientId mqttMsg
+
+                processMessage =
+                    case maybeClientId of
+                        Just clientId ->
+                            if clientId == model.clientId then
+                                False
+
+                            else
+                                True
 
                         Nothing ->
-                            model.items
+                            True
+
+                newItems =
+                    if processMessage then
+                        case maybeReceivedItem of
+                            Just receivedItem ->
+                                addReceivedItem receivedItem model.items
+
+                            Nothing ->
+                                model.items
+
+                    else
+                        model.items
 
                 newModel =
                     { model | items = newItems }
@@ -801,7 +879,7 @@ update msg model =
                             case maybeOldItem of
                                 Just oldItem ->
                                     Dict.remove oldId model.items
-                                        |> Dict.insert postResponse.newId { oldItem | id = postResponse.newId, synced = True }
+                                        |> Dict.insert postResponse.newId { oldItem | id = postResponse.newId, synced = True, lastSyncedRevision = postResponse.revision }
 
                                 Nothing ->
                                     model.items
@@ -891,7 +969,7 @@ update msg model =
             ( model, Cmd.none )
 
         GotFocus _ ->
-            ( model, getItems model.apiKey )
+            ( model, syncItems model.apiKey model.clientId (List.sortBy .orderIndexDefault (Dict.values model.items)) )
 
         NoTagsFilterClicked ->
             let
@@ -1062,6 +1140,8 @@ addNewItem newId dict =
         , editing = True
         , synced = False
         , new = True
+        , lastSyncedRevision = -1
+        , oldId = ""
         }
         dict
 
@@ -1153,6 +1233,16 @@ parseGeolocation portMsg =
     case Decode.decodeValue (Decode.map2 Geolocation (Decode.field "latitude" Decode.float) (Decode.field "longitude" Decode.float)) portMsg of
         Ok geolocation ->
             Just geolocation
+
+        Err _ ->
+            Nothing
+
+
+parseMQTTClientId : String -> Maybe String
+parseMQTTClientId rawString =
+    case Decode.decodeString (Decode.field "clientId" Decode.string) rawString of
+        Ok clientId ->
+            Just clientId
 
         Err _ ->
             Nothing
@@ -1508,16 +1598,20 @@ type alias ItemDataReceived =
     , title : String
     , tags : List String
     , done : Int
+    , revision : Int
+    , oldId : Maybe String
     }
 
 
 jsonParseItemData : Decode.Decoder ItemDataReceived
 jsonParseItemData =
-    Decode.map4 ItemDataReceived
+    Decode.map6 ItemDataReceived
         (Decode.field "id" Decode.string)
         (Decode.field "title" Decode.string)
         (Decode.field "tags" (Decode.list Decode.string))
         (Decode.field "done" Decode.int)
+        (Decode.field "revision" (Decode.oneOf [ Decode.int, Decode.null 0 ]))
+        (Decode.field "oldId" (Decode.maybe Decode.string))
 
 
 jsonParseItemList : Decode.Decoder (List ItemDataReceived)
@@ -1550,12 +1644,15 @@ receivedToItem index itemReceived =
     , editing = False
     , synced = True
     , new = False
+    , lastSyncedRevision = itemReceived.revision
+    , oldId =
+        case itemReceived.oldId of
+            Just oldId ->
+                oldId
+
+            Nothing ->
+                ""
     }
-
-
-itemToReceived : ItemData -> ItemDataReceived
-itemToReceived item =
-    { id = item.id, title = item.title, tags = item.tags, done = item.done }
 
 
 uniqueTags : List ItemData -> Set.Set String
@@ -1633,7 +1730,7 @@ argsort l =
 
 
 encodeItemData : ItemData -> Encode.Value
-encodeItemData { id, title, tags, draftTitle, draftTags, draftTagsInput, draftChanged, done, orderIndexDefault, orderIndexOverride, editing, synced, new } =
+encodeItemData { id, title, tags, draftTitle, draftTags, draftTagsInput, draftChanged, done, orderIndexDefault, orderIndexOverride, editing, synced, new, lastSyncedRevision, oldId } =
     Encode.object
         [ ( "id", Encode.string id )
         , ( "title", Encode.string title )
@@ -1648,6 +1745,8 @@ encodeItemData { id, title, tags, draftTitle, draftTags, draftTagsInput, draftCh
         , ( "editing", Encode.bool editing )
         , ( "synced", Encode.bool synced )
         , ( "new", Encode.bool new )
+        , ( "lastSyncedRevision", Encode.int lastSyncedRevision )
+        , ( "oldId", Encode.string oldId )
         ]
 
 
@@ -1679,9 +1778,22 @@ resetViewport =
     Task.perform (\_ -> NoOp) (Dom.setViewport 0 0)
 
 
-newOnly : String -> ItemData -> Dict String ItemData -> Dict String ItemData
-newOnly key val res =
-    Dict.insert key val res
+newOnly : Dict String ItemData -> String -> ItemData -> Dict String ItemData -> Dict String ItemData
+newOnly oldDict key val res =
+    case Dict.get val.oldId oldDict of
+        Just oldItem ->
+            Dict.insert key
+                { oldItem
+                    | title = val.title
+                    , tags = val.tags
+                    , done = val.done
+                    , lastSyncedRevision = val.lastSyncedRevision
+                    , synced = True
+                }
+                res
+
+        Nothing ->
+            Dict.insert key val res
 
 
 both : String -> ItemData -> ItemData -> Dict String ItemData -> Dict String ItemData
@@ -1689,26 +1801,23 @@ both key valLeft valRight res =
     if valRight.editing then
         Dict.insert key valRight res
 
-    else if valRight.synced then
-        Dict.insert key { valRight | title = valLeft.title, tags = valLeft.tags, done = valLeft.done } res
-
     else
-        Dict.insert key valRight res
+        Dict.insert key
+            { valRight
+                | title = valLeft.title
+                , tags = valLeft.tags
+                , done = valLeft.done
+                , lastSyncedRevision = valLeft.lastSyncedRevision
+                , synced = True
+            }
+            res
 
 
 oldOnly : String -> ItemData -> Dict String ItemData -> Dict String ItemData
 oldOnly key val res =
-    if val.synced then
-        res
-
-    else
-        Dict.insert key val res
+    res
 
 
 mergeIntoItemDict : Dict String ItemData -> Dict String ItemData -> Dict String ItemData
 mergeIntoItemDict newDict oldDict =
-    let
-        newItems =
-            Dict.diff newDict oldDict
-    in
-    Dict.merge newOnly both oldOnly newDict oldDict Dict.empty
+    Dict.merge (newOnly oldDict) both oldOnly newDict oldDict Dict.empty
