@@ -294,7 +294,7 @@ type Msg
 
 backendBaseUrl : String
 backendBaseUrl =
-    "https://picluster.a-h.wtf/einkaufsliste-multiuser-test/api/v1"
+    "https://picluster.a-h.wtf/einkaufsliste-multiuser/api/v1"
 
 
 itemsUrl : String -> String -> String
