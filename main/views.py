@@ -31,6 +31,11 @@ def appcache(request):
 
     return  HttpResponse(template.render(), content_type="text/cache-manifest")
 
+def service_worker(request):
+    template = loader.get_template('service-worker.js')
+
+    return HttpResponse(template.render(), content_type="application/javascript", headers={"Service-Worker-Allowed": "http://127.0.0.1:8000/"})
+
 
 def get_items(request):
     test_data = [
