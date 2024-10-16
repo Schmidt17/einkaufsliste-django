@@ -26,6 +26,12 @@ def main(request):
     }))
 
 
+def appcache(request):
+    template = loader.get_template('main.appcache')
+
+    return  HttpResponse(template.render(), content_type="text/cache-manifest")
+
+
 def get_items(request):
     test_data = [
         {
