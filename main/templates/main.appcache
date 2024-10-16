@@ -1,0 +1,5 @@
+{% load static %}
+CACHE MANIFEST
+
+index.html
+{% static 'materialize.min.css' %}

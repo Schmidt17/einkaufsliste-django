@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from pathlib import Path
 import os
 from django.core.management.utils import get_random_secret_key
+import mimetypes
 
 from django.conf.global_settings import STATIC_ROOT, STATICFILES_DIRS
 
@@ -132,3 +133,6 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Additional mimetypes
+mimetypes.add_type("text/cache-manifest", ".appcache", True)
