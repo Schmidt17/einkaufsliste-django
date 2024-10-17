@@ -7485,10 +7485,8 @@ var $author$project$Main$jsonParseItemData = A7(
 					$elm$json$Json$Decode$int,
 					$elm$json$Json$Decode$null(0)
 				]))),
-	A2(
-		$elm$json$Json$Decode$field,
-		'oldId',
-		$elm$json$Json$Decode$maybe($elm$json$Json$Decode$string)));
+	$elm$json$Json$Decode$maybe(
+		A2($elm$json$Json$Decode$field, 'oldId', $elm$json$Json$Decode$string)));
 var $author$project$Main$jsonParseItemList = $elm$json$Json$Decode$list($author$project$Main$jsonParseItemData);
 var $author$project$Main$parseItems = function (rawString) {
 	var _v0 = A2($elm$json$Json$Decode$decodeString, $author$project$Main$jsonParseItemList, rawString);
