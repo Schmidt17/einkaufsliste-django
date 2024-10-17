@@ -1,6 +1,6 @@
 import uuid
 
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, HttpResponseForbidden
 from django.template import loader
 
 
@@ -30,6 +30,21 @@ def appcache(request):
     template = loader.get_template('main.appcache')
 
     return  HttpResponse(template.render(), content_type="text/cache-manifest")
+
+def service_worker(request):
+    user_key = request.GET.get('k')
+
+    if user_key is None:
+        return HttpResponseForbidden()
+
+    template = loader.get_template('service-worker.js')
+
+    return HttpResponse(
+        template.render(context={
+            'api_key': user_key,
+        }),
+        content_type="application/javascript",
+    )
 
 
 def get_items(request):

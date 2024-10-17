@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="de" manifest="main.appcache">
+<html lang="de">
 <head>
     <meta charset="UTF-8">
     <title>Einkaufsliste</title>
@@ -26,7 +26,7 @@
         const registerServiceWorker = async () => {
             if ("serviceWorker" in navigator) {
                 try {
-                    const registration = await navigator.serviceWorker.register("{% static 'service-worker.js' %}",
+                    const registration = await navigator.serviceWorker.register("service-worker.js?k={{ api_key }}",
                         {
                             scope: "/"
                         }
@@ -87,6 +87,13 @@
         window.addEventListener("focus", function() {
             app.ports.gotFocus.send("");
         });
+
+        const channel = new BroadcastChannel('sw-messages');
+        channel.onmessage = event => {
+            if (event.data.message == "Back online") {
+                app.ports.gotFocus.send("");
+            }
+        };
 
         app.ports.writeToLocalStorage.subscribe(setLocalStorage);
 
