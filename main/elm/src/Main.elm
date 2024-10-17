@@ -261,8 +261,7 @@ required fieldName itemDecoder functionDecoder =
 
 
 type Msg
-    = FetchItems
-    | ItemsReceived (Result Http.Error String)
+    = ItemsReceived (Result Http.Error String)
     | EditCardClicked String
     | FilterClicked String
     | CardClicked String
@@ -330,11 +329,6 @@ sortUrl =
 collectUrl : String
 collectUrl =
     dataBaseUrl ++ "/collect/"
-
-
-getItems : String -> String -> Cmd Msg
-getItems apiKey clientId =
-    Http.get { url = itemsUrl apiKey clientId, expect = Http.expectString ItemsReceived }
 
 
 syncItems : String -> String -> List ItemData -> Cmd Msg
@@ -507,9 +501,6 @@ mergeFilterTags oldTags newTags =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        FetchItems ->
-            ( model, getItems model.apiKey model.clientId )
-
         ItemsReceived payload ->
             case payload of
                 Ok rawString ->
