@@ -1,7 +1,7 @@
 {% load static %}
 
-const CURRENT_STATIC_CACHE = 'static-v1';
-const CURRENT_DYNAMIC_CACHE = 'dynamic-v1';
+const CURRENT_STATIC_CACHE = 'static-v2';
+const CURRENT_DYNAMIC_CACHE = 'dynamic-v2';
 
 const channel = new BroadcastChannel('sw-messages');
 
@@ -21,7 +21,7 @@ self.addEventListener("install", (event) => {
       "{% static 'img/apple-touch-icon.png' %}",
       "{% static 'img/favicon-32x32.png' %}",
       "{% static 'img/favicon-16x16.png' %}",
-      "{% static 'img/site.webmanifest' %}",
+      "site.webmanifest?k={{ api_key }}",
 
       // CSS
       "https://fonts.googleapis.com/icon?family=Material+Icons",

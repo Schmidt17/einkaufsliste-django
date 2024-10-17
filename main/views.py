@@ -1,7 +1,11 @@
 import uuid
+import os
 
 from django.http import HttpResponse, JsonResponse, HttpResponseForbidden
 from django.template import loader
+
+
+BASE_URL = os.environ.get('BASE_URL', 'http://127.0.0.1:8000')
 
 
 def main(request):
@@ -30,6 +34,17 @@ def appcache(request):
     template = loader.get_template('main.appcache')
 
     return  HttpResponse(template.render(), content_type="text/cache-manifest")
+
+
+def webmanifest(request):
+    user_key = request.GET.get('k')
+
+    template = loader.get_template('site.webmanifest')
+
+    return  HttpResponse(template.render(context={
+        'start_url': f'{BASE_URL}?k={user_key}'
+    }))
+
 
 def service_worker(request):
     user_key = request.GET.get('k')
