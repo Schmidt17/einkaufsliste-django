@@ -1412,7 +1412,7 @@ itemCard itemData =
                 ]
             , span
                 [ class
-                    ("card-title"
+                    ("card-title prevent-select"
                         ++ (if itemData.done == 1 then
                                 " line-through"
 
