@@ -1,7 +1,7 @@
 {% load static %}
 
-const CURRENT_STATIC_CACHE = 'static-v3';
-const CURRENT_DYNAMIC_CACHE = 'dynamic-v3';
+const CURRENT_STATIC_CACHE = 'static-v4';
+const CURRENT_DYNAMIC_CACHE = 'dynamic-v4';
 
 const channel = new BroadcastChannel('sw-messages');
 

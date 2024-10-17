@@ -9411,7 +9411,7 @@ var $author$project$Main$itemCard = function (itemData) {
 						_List_fromArray(
 							[
 								$elm$html$Html$Attributes$class(
-								'card-title' + ((itemData.e === 1) ? ' line-through' : ''))
+								'card-title prevent-select' + ((itemData.e === 1) ? ' line-through' : ''))
 							]),
 						_List_fromArray(
 							[
