@@ -1611,7 +1611,7 @@ jsonParseItemData =
         (Decode.field "tags" (Decode.list Decode.string))
         (Decode.field "done" Decode.int)
         (Decode.field "revision" (Decode.oneOf [ Decode.int, Decode.null 0 ]))
-        (Decode.field "oldId" (Decode.maybe Decode.string))
+        (Decode.maybe (Decode.field "oldId" Decode.string))
 
 
 jsonParseItemList : Decode.Decoder (List ItemDataReceived)
