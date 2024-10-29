@@ -1780,6 +1780,7 @@ newOnly oldDict key val res =
                     , title = val.title
                     , tags = val.tags
                     , done = val.done
+                    , orderIndexDefault = val.orderIndexDefault
                     , lastSyncedRevision = val.lastSyncedRevision
                     , synced = True
                 }
@@ -1800,6 +1801,7 @@ both key valLeft valRight res =
                 | title = valLeft.title
                 , tags = valLeft.tags
                 , done = valLeft.done
+                , orderIndexDefault = valLeft.orderIndexDefault
                 , lastSyncedRevision = valLeft.lastSyncedRevision
                 , synced = True
             }
