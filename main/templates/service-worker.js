@@ -1,7 +1,7 @@
 {% load static %}
 
-const CURRENT_STATIC_CACHE = 'static-v5';
-const CURRENT_DYNAMIC_CACHE = 'dynamic-v5';
+const CURRENT_STATIC_CACHE = 'static-v6';
+const CURRENT_DYNAMIC_CACHE = 'dynamic-v6';
 
 const channel = new BroadcastChannel('sw-messages');
 
@@ -60,7 +60,9 @@ self.addEventListener('fetch', event => {
     if (!(event.request.url.indexOf('http') === 0)) return; // skip the request. if request is not made with http protocol
 
     const dont_cache_url_patterns = [
-        /.\/items\/sync/g
+        /.\/items\/sync/g,
+        /.\/einkaufsliste-multiuser\/api/g,
+        /.\/einkaufs_api/g
     ]
 
     event.respondWith(
