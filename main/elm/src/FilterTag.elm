@@ -51,3 +51,26 @@ activeTags filterTags =
 sort : List FilterTag -> List FilterTag
 sort filterTags =
     List.sortBy .tag filterTags
+
+
+merge : List FilterTag -> List FilterTag -> List FilterTag
+merge oldTags newTags =
+    let
+        oldNames =
+            List.map .tag oldTags
+
+        newNames =
+            List.map .tag newTags
+
+        additionalTags =
+            List.filter (\tag -> not (List.member tag.tag oldNames)) newTags
+
+        tagsToKeep =
+            List.filter (\tag -> List.member tag.tag newNames) oldTags
+    in
+    tagsToKeep ++ additionalTags
+
+
+fromTags : List String -> List FilterTag
+fromTags tagNames =
+    List.map (\tag -> FilterTag tag False) tagNames

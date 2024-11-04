@@ -462,29 +462,6 @@ postCollectEvent model item =
         }
 
 
-filterTagsFromNames : List String -> List FilterTag
-filterTagsFromNames tagNames =
-    List.map (\tag -> FilterTag tag False) tagNames
-
-
-mergeFilterTags : List FilterTag -> List FilterTag -> List FilterTag
-mergeFilterTags oldTags newTags =
-    let
-        oldNames =
-            List.map .tag oldTags
-
-        newNames =
-            List.map .tag newTags
-
-        additionalTags =
-            List.filter (\tag -> not (List.member tag.tag oldNames)) newTags
-
-        tagsToKeep =
-            List.filter (\tag -> List.member tag.tag newNames) oldTags
-    in
-    tagsToKeep ++ additionalTags
-
-
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -499,7 +476,7 @@ update msg model =
                             mergeIntoItemDict serverItems model.items
 
                         newFilterTags =
-                            mergeFilterTags model.filterTags (filterTagsFromNames (filterTagNames items))
+                            FilterTag.merge model.filterTags (FilterTag.fromTags (filterTagNames items))
 
                         newModel =
                             { model | items = items, filterTags = newFilterTags }
@@ -624,7 +601,7 @@ update msg model =
                                     model.items
 
                             newFilters =
-                                mergeFilterTags model.filterTags (filterTagsFromNames (filterTagNames newItems))
+                                FilterTag.merge model.filterTags (FilterTag.fromTags (filterTagNames newItems))
 
                             newModel =
                                 { model
@@ -766,7 +743,7 @@ update msg model =
                                 Dict.remove itemId model.items
 
                             newFilters =
-                                mergeFilterTags model.filterTags (filterTagsFromNames (filterTagNames newItems))
+                                FilterTag.merge model.filterTags (FilterTag.fromTags (filterTagNames newItems))
 
                             newModel =
                                 { model | items = newItems, filterTags = newFilters }
@@ -903,7 +880,7 @@ update msg model =
                             model.items
 
                 newFilters =
-                    mergeFilterTags model.filterTags (filterTagsFromNames (filterTagNames newItems))
+                    FilterTag.merge model.filterTags (FilterTag.fromTags (filterTagNames newItems))
 
                 newModel =
                     { model | items = newItems, filterTags = newFilters }
@@ -924,7 +901,7 @@ update msg model =
                             model.items
 
                 newFilters =
-                    mergeFilterTags model.filterTags (filterTagsFromNames (filterTagNames newItems))
+                    FilterTag.merge model.filterTags (FilterTag.fromTags (filterTagNames newItems))
 
                 newModel =
                     { model | items = newItems, filterTags = newFilters }
@@ -958,19 +935,6 @@ update msg model =
 
         NoOp ->
             ( model, Cmd.none )
-
-
-updateOverrideOrderIndex : Dict String Int -> String -> ItemData -> ItemData
-updateOverrideOrderIndex idToIndexDict itemId item =
-    { item
-        | orderIndexOverride =
-            case Dict.get itemId idToIndexDict of
-                Just newIndex ->
-                    newIndex
-
-                Nothing ->
-                    item.orderIndexOverride
-    }
 
 
 
@@ -1513,6 +1477,19 @@ sortItems useOverrideIndex items =
 filterTagNames : Dict String ItemData -> List String
 filterTagNames items =
     Set.toList (ItemData.uniqueTags (Dict.values items))
+
+
+updateOverrideOrderIndex : Dict String Int -> String -> ItemData -> ItemData
+updateOverrideOrderIndex idToIndexDict itemId item =
+    { item
+        | orderIndexOverride =
+            case Dict.get itemId idToIndexDict of
+                Just newIndex ->
+                    newIndex
+
+                Nothing ->
+                    item.orderIndexOverride
+    }
 
 
 sortAPIResponseDecoder : Decode.Decoder (List Int)
