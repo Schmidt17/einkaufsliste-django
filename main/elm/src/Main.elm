@@ -3,6 +3,7 @@ port module Main exposing (main)
 import Browser
 import Browser.Dom as Dom
 import Dict exposing (Dict)
+import FilterTag exposing (FilterTag)
 import Html exposing (Html, a, br, button, div, h1, h4, header, i, input, label, li, main_, nav, node, p, span, text, ul)
 import Html.Attributes exposing (..)
 import Html.Attributes.Aria as Aria
@@ -44,10 +45,14 @@ type alias Model =
     }
 
 
-type alias FilterTag =
-    { tag : String
-    , isActive : Bool
-    }
+encodeModel : Model -> Encode.Value
+encodeModel { items, overrideOrdering, filterTags, noTagsFilterActive, apiKey } =
+    Encode.object
+        [ ( "items", Encode.dict identity ItemData.encode items )
+        , ( "overrideOrdering", Encode.bool overrideOrdering )
+        , ( "filterTags", Encode.list encodeFilterTag filterTags )
+        , ( "noTagsFilterActive", Encode.bool noTagsFilterActive )
+        ]
 
 
 type alias MqttMessageDoneStatus =
@@ -1265,7 +1270,7 @@ headerView model =
         [ nav [ Aria.ariaLabel "Header", style "height" "auto" ]
             [ div [ class "nav-wrapper", style "display" "flex" ]
                 [ div [ class "chips-wrapper filter-chips", Aria.ariaLabel "Filterbereich", Aria.role "navigation" ]
-                    ([ noTagsFilterView model.noTagsFilterActive ] ++ List.map filterTagChip (sortFilterTags model.filterTags))
+                    ([ noTagsFilterView model.noTagsFilterActive ] ++ List.map filterTagChip (FilterTag.sort model.filterTags))
                 , ul [ id "nav-mobile" ]
                     [ li [] [ sortButton model.overrideOrdering ]
                     , li []
@@ -1507,11 +1512,29 @@ displayTagChip tag =
         [ text tag ]
 
 
+addCardButton : Html Msg
+addCardButton =
+    div [ class "fixed-action-btn center-horizontally" ]
+        [ a
+            [ class "btn-floating btn-large waves-effect red"
+            , Aria.role "button"
+            , Aria.ariaLabel "Neuer Eintrag"
+            , onClick AddNewCardClicked
+            ]
+            [ i [ class "large material-icons" ] [ text "add" ]
+            ]
+        ]
+
+
+
+-- UTILITIES
+
+
 isVisible : Model -> ItemData -> Bool
 isVisible model item =
     let
         filters =
-            activeFilters model.filterTags
+            FilterTag.activeTags model.filterTags
 
         filteringActive =
             (List.length filters > 0) || model.noTagsFilterActive
@@ -1534,24 +1557,6 @@ sortItems useOverrideIndex items =
             |> List.reverse
 
 
-addCardButton : Html Msg
-addCardButton =
-    div [ class "fixed-action-btn center-horizontally" ]
-        [ a
-            [ class "btn-floating btn-large waves-effect red"
-            , Aria.role "button"
-            , Aria.ariaLabel "Neuer Eintrag"
-            , onClick AddNewCardClicked
-            ]
-            [ i [ class "large material-icons" ] [ text "add" ]
-            ]
-        ]
-
-
-
--- UTILITIES
-
-
 toggleTag : String -> List FilterTag -> List FilterTag
 toggleTag tag tagList =
     let
@@ -1565,28 +1570,9 @@ toggleTag tag tagList =
     List.map (toggle tag) tagList
 
 
-maybeActiveTag : FilterTag -> Maybe String
-maybeActiveTag filterTag =
-    if filterTag.isActive then
-        Just filterTag.tag
-
-    else
-        Nothing
-
-
-activeFilters : List FilterTag -> List String
-activeFilters filterTags =
-    List.filterMap maybeActiveTag filterTags
-
-
 filterTagNames : Dict String ItemData -> List String
 filterTagNames items =
     Set.toList (ItemData.uniqueTags (Dict.values items))
-
-
-sortFilterTags : List FilterTag -> List FilterTag
-sortFilterTags filterTags =
-    List.sortBy .tag filterTags
 
 
 sortAPIResponseDecoder : Decode.Decoder (List Int)
@@ -1609,19 +1595,13 @@ encodeFilterTag { tag, isActive } =
         ]
 
 
-encodeModel : Model -> Encode.Value
-encodeModel { items, overrideOrdering, filterTags, noTagsFilterActive, apiKey } =
-    Encode.object
-        [ ( "items", Encode.dict identity ItemData.encode items )
-        , ( "overrideOrdering", Encode.bool overrideOrdering )
-        , ( "filterTags", Encode.list encodeFilterTag filterTags )
-        , ( "noTagsFilterActive", Encode.bool noTagsFilterActive )
-        ]
-
-
 resetViewport : Cmd Msg
 resetViewport =
     Task.perform (\_ -> NoOp) (Dom.setViewport 0 0)
+
+
+
+-- DICT MERGING
 
 
 newOnly : Dict String ItemData -> String -> ItemData -> Dict String ItemData -> Dict String ItemData
