@@ -10,6 +10,7 @@ import Html.Events exposing (on, onClick, onFocus, onInput, onMouseDown, prevent
 import Html.Events.Extra.Mouse exposing (onWithOptions)
 import Html.Events.Extra.Touch exposing (onStart)
 import Http
+import ItemData exposing (ItemData)
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Random
@@ -46,25 +47,6 @@ type alias Model =
 type alias FilterTag =
     { tag : String
     , isActive : Bool
-    }
-
-
-type alias ItemData =
-    { id : String
-    , title : String
-    , tags : List String
-    , draftTitle : String
-    , draftTags : List String
-    , draftTagsInput : String
-    , draftChanged : Bool
-    , done : Int
-    , orderIndexDefault : Int
-    , orderIndexOverride : Int
-    , editing : Bool
-    , synced : Bool
-    , new : Bool
-    , lastSyncedRevision : Int
-    , oldId : String
     }
 
 
@@ -335,7 +317,7 @@ syncItems : String -> String -> List ItemData -> Cmd Msg
 syncItems apiKey clientId items =
     Http.post
         { url = itemsSyncUrl apiKey clientId
-        , body = Http.jsonBody (Encode.object [ ( "clientItems", Encode.list encodeItemData items ) ])
+        , body = Http.jsonBody (Encode.object [ ( "clientItems", Encode.list ItemData.encode items ) ])
         , expect = Http.expectString ItemsReceived
         }
 
@@ -1720,27 +1702,6 @@ argsort l =
         |> List.map Tuple.first
 
 
-encodeItemData : ItemData -> Encode.Value
-encodeItemData { id, title, tags, draftTitle, draftTags, draftTagsInput, draftChanged, done, orderIndexDefault, orderIndexOverride, editing, synced, new, lastSyncedRevision, oldId } =
-    Encode.object
-        [ ( "id", Encode.string id )
-        , ( "title", Encode.string title )
-        , ( "tags", Encode.list Encode.string tags )
-        , ( "draftTitle", Encode.string draftTitle )
-        , ( "draftTags", Encode.list Encode.string draftTags )
-        , ( "draftTagsInput", Encode.string draftTagsInput )
-        , ( "draftChanged", Encode.bool draftChanged )
-        , ( "done", Encode.int done )
-        , ( "orderIndexDefault", Encode.int orderIndexDefault )
-        , ( "orderIndexOverride", Encode.int orderIndexOverride )
-        , ( "editing", Encode.bool editing )
-        , ( "synced", Encode.bool synced )
-        , ( "new", Encode.bool new )
-        , ( "lastSyncedRevision", Encode.int lastSyncedRevision )
-        , ( "oldId", Encode.string oldId )
-        ]
-
-
 encodeFilterTag : FilterTag -> Encode.Value
 encodeFilterTag { tag, isActive } =
     Encode.object
@@ -1752,7 +1713,7 @@ encodeFilterTag { tag, isActive } =
 encodeModel : Model -> Encode.Value
 encodeModel { items, overrideOrdering, filterTags, noTagsFilterActive, apiKey } =
     Encode.object
-        [ ( "items", Encode.dict identity encodeItemData items )
+        [ ( "items", Encode.dict identity ItemData.encode items )
         , ( "overrideOrdering", Encode.bool overrideOrdering )
         , ( "filterTags", Encode.list encodeFilterTag filterTags )
         , ( "noTagsFilterActive", Encode.bool noTagsFilterActive )
