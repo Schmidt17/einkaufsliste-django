@@ -1,6 +1,8 @@
 module ItemData exposing (..)
 
+import Dict exposing (Dict)
 import Json.Encode as Encode
+import Set
 
 
 type alias ItemData =
@@ -41,3 +43,47 @@ encode { id, title, tags, draftTitle, draftTags, draftTagsInput, draftChanged, d
         , ( "lastSyncedRevision", Encode.int lastSyncedRevision )
         , ( "oldId", Encode.string oldId )
         ]
+
+
+maxOrderIndex : List ItemData -> Maybe Int
+maxOrderIndex items =
+    List.maximum (List.map .orderIndexDefault items)
+
+
+draftHasChanged : ItemData -> Bool
+draftHasChanged item =
+    (item.draftTitle /= item.title) || not (listEqual item.draftTags item.tags) || (String.trim item.draftTagsInput /= "")
+
+
+listEqual : List comparable -> List comparable -> Bool
+listEqual listA listB =
+    let
+        sortedA =
+            List.sort listA
+
+        sortedB =
+            List.sort listB
+    in
+    List.map2 Tuple.pair sortedA sortedB
+        |> List.map (\x -> Tuple.first x == Tuple.second x)
+        |> List.foldr (&&) (List.length listA == List.length listB)
+
+
+uniqueTags : List ItemData -> Set.Set String
+uniqueTags items =
+    Set.fromList (allTags items)
+
+
+allTags : List ItemData -> List String
+allTags =
+    List.concatMap .tags
+
+
+itemListToDict : List ItemData -> Dict String ItemData
+itemListToDict items =
+    Dict.fromList (itemListToAssoc items)
+
+
+itemListToAssoc : List ItemData -> List ( String, ItemData )
+itemListToAssoc items =
+    List.map (\item -> ( item.id, item )) items

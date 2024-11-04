@@ -488,7 +488,7 @@ update msg model =
                 Ok rawString ->
                     let
                         serverItems =
-                            itemListToDict (List.indexedMap receivedToItem (parseItems rawString))
+                            ItemData.itemListToDict (List.indexedMap receivedToItem (parseItems rawString))
 
                         items =
                             mergeIntoItemDict serverItems model.items
@@ -976,7 +976,7 @@ updateDraftTitle newTitle maybeItem =
                 newItem =
                     { item | draftTitle = newTitle }
             in
-            Just { newItem | draftChanged = draftHasChanged newItem }
+            Just { newItem | draftChanged = ItemData.draftHasChanged newItem }
 
         Nothing ->
             Nothing
@@ -990,7 +990,7 @@ updateDraftTags newDraftTags maybeItem =
                 newItem =
                     { item | draftTags = newDraftTags }
             in
-            Just { newItem | draftChanged = draftHasChanged newItem }
+            Just { newItem | draftChanged = ItemData.draftHasChanged newItem }
 
         Nothing ->
             Nothing
@@ -1004,24 +1004,10 @@ updateDraftTagsInput newText maybeItem =
                 newItem =
                     { item | draftTagsInput = newText }
             in
-            Just { newItem | draftChanged = draftHasChanged newItem }
+            Just { newItem | draftChanged = ItemData.draftHasChanged newItem }
 
         Nothing ->
             Nothing
-
-
-listEqual : List comparable -> List comparable -> Bool
-listEqual listA listB =
-    let
-        sortedA =
-            List.sort listA
-
-        sortedB =
-            List.sort listB
-    in
-    List.map2 Tuple.pair sortedA sortedB
-        |> List.map (\x -> Tuple.first x == Tuple.second x)
-        |> List.foldr (&&) (List.length listA == List.length listB)
 
 
 updateTitle : String -> Maybe ItemData -> Maybe ItemData
@@ -1092,7 +1078,7 @@ addNewItem : String -> Dict String ItemData -> Dict String ItemData
 addNewItem newId dict =
     let
         newIndex =
-            case maxOrderIndex (Dict.values dict) of
+            case ItemData.maxOrderIndex (Dict.values dict) of
                 Just maxIndex ->
                     maxIndex + 1
 
@@ -1123,7 +1109,7 @@ addReceivedItem : ItemDataReceived -> Dict String ItemData -> Dict String ItemDa
 addReceivedItem itemDataReceived dict =
     let
         newIndex =
-            case maxOrderIndex (Dict.values dict) of
+            case ItemData.maxOrderIndex (Dict.values dict) of
                 Just maxIndex ->
                     maxIndex + 1
 
@@ -1628,16 +1614,6 @@ receivedToItem index itemReceived =
     }
 
 
-uniqueTags : List ItemData -> Set.Set String
-uniqueTags items =
-    Set.fromList (allTags items)
-
-
-allTags : List ItemData -> List String
-allTags =
-    List.concatMap .tags
-
-
 toggleTag : String -> List FilterTag -> List FilterTag
 toggleTag tag tagList =
     let
@@ -1667,27 +1643,12 @@ activeFilters filterTags =
 
 filterTagNames : Dict String ItemData -> List String
 filterTagNames items =
-    Set.toList (uniqueTags (Dict.values items))
+    Set.toList (ItemData.uniqueTags (Dict.values items))
 
 
 sortFilterTags : List FilterTag -> List FilterTag
 sortFilterTags filterTags =
     List.sortBy .tag filterTags
-
-
-itemListToDict : List ItemData -> Dict String ItemData
-itemListToDict items =
-    Dict.fromList (itemListToAssoc items)
-
-
-itemListToAssoc : List ItemData -> List ( String, ItemData )
-itemListToAssoc items =
-    List.map (\item -> ( item.id, item )) items
-
-
-maxOrderIndex : List ItemData -> Maybe Int
-maxOrderIndex items =
-    List.maximum (List.map .orderIndexDefault items)
 
 
 sortAPIResponseDecoder : Decode.Decoder (List Int)
@@ -1718,11 +1679,6 @@ encodeModel { items, overrideOrdering, filterTags, noTagsFilterActive, apiKey } 
         , ( "filterTags", Encode.list encodeFilterTag filterTags )
         , ( "noTagsFilterActive", Encode.bool noTagsFilterActive )
         ]
-
-
-draftHasChanged : ItemData -> Bool
-draftHasChanged item =
-    (item.draftTitle /= item.title) || not (listEqual item.draftTags item.tags) || (String.trim item.draftTagsInput /= "")
 
 
 resetViewport : Cmd Msg
