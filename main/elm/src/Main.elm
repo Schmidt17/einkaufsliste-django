@@ -3,6 +3,7 @@ port module Main exposing (main)
 import Browser
 import Browser.Dom as Dom
 import Dict exposing (Dict)
+import FilterTag exposing (FilterTag)
 import Html exposing (Html, a, br, button, div, h1, h4, header, i, input, label, li, main_, nav, node, p, span, text, ul)
 import Html.Attributes exposing (..)
 import Html.Attributes.Aria as Aria
@@ -10,6 +11,7 @@ import Html.Events exposing (on, onClick, onFocus, onInput, onMouseDown, prevent
 import Html.Events.Extra.Mouse exposing (onWithOptions)
 import Html.Events.Extra.Touch exposing (onStart)
 import Http
+import ItemData exposing (ItemData, ItemDataReceived)
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Random
@@ -17,6 +19,7 @@ import Set
 import Task
 import Time
 import UUID
+import Urls
 
 
 
@@ -43,35 +46,14 @@ type alias Model =
     }
 
 
-type alias FilterTag =
-    { tag : String
-    , isActive : Bool
-    }
-
-
-type alias ItemData =
-    { id : String
-    , title : String
-    , tags : List String
-    , draftTitle : String
-    , draftTags : List String
-    , draftTagsInput : String
-    , draftChanged : Bool
-    , done : Int
-    , orderIndexDefault : Int
-    , orderIndexOverride : Int
-    , editing : Bool
-    , synced : Bool
-    , new : Bool
-    , lastSyncedRevision : Int
-    , oldId : String
-    }
-
-
-type alias MqttMessageDoneStatus =
-    { id : String
-    , status : Int
-    }
+encodeModel : Model -> Encode.Value
+encodeModel { items, overrideOrdering, filterTags, noTagsFilterActive, apiKey } =
+    Encode.object
+        [ ( "items", Encode.dict identity ItemData.encode items )
+        , ( "overrideOrdering", Encode.bool overrideOrdering )
+        , ( "filterTags", Encode.list FilterTag.encode filterTags )
+        , ( "noTagsFilterActive", Encode.bool noTagsFilterActive )
+        ]
 
 
 
@@ -184,47 +166,22 @@ userAgentFromFlags flags =
 
 itemsFromLocalStorage : Decode.Value -> Maybe (Dict String ItemData)
 itemsFromLocalStorage flags =
-    case Decode.decodeValue (Decode.at [ "localStore", "items" ] (Decode.dict itemDataDecoder)) flags of
+    case Decode.decodeValue (Decode.at [ "localStore", "items" ] (Decode.dict ItemData.decode)) flags of
         Ok data ->
             Just data
 
         Err _ ->
             Nothing
-
-
-itemDataDecoder : Decode.Decoder ItemData
-itemDataDecoder =
-    Decode.succeed ItemData
-        |> required "id" Decode.string
-        |> required "title" Decode.string
-        |> required "tags" (Decode.list Decode.string)
-        |> required "draftTitle" Decode.string
-        |> required "draftTags" (Decode.list Decode.string)
-        |> required "draftTagsInput" Decode.string
-        |> required "draftChanged" Decode.bool
-        |> required "done" Decode.int
-        |> required "orderIndexDefault" Decode.int
-        |> required "orderIndexOverride" Decode.int
-        |> required "editing" Decode.bool
-        |> required "synced" Decode.bool
-        |> required "new" Decode.bool
-        |> required "lastSyncedRevision" Decode.int
-        |> required "oldId" (Decode.oneOf [ Decode.string, Decode.null "" ])
 
 
 filterTagsFromLocalStorage : Decode.Value -> Maybe (List FilterTag)
 filterTagsFromLocalStorage flags =
-    case Decode.decodeValue (Decode.at [ "localStore", "filterTags" ] (Decode.list filterTagDecoder)) flags of
+    case Decode.decodeValue (Decode.at [ "localStore", "filterTags" ] (Decode.list FilterTag.decode)) flags of
         Ok data ->
             Just data
 
         Err _ ->
             Nothing
-
-
-filterTagDecoder : Decode.Decoder FilterTag
-filterTagDecoder =
-    Decode.map2 FilterTag (Decode.field "tag" Decode.string) (Decode.field "isActive" Decode.bool)
 
 
 overrideOrderingFromLocalStorage : Decode.Value -> Maybe Bool
@@ -245,15 +202,6 @@ noTagsFilterFromLocalStorage flags =
 
         Err _ ->
             Nothing
-
-
-decodeApply =
-    Decode.map2 (|>)
-
-
-required : String -> Decode.Decoder a -> Decode.Decoder (a -> b) -> Decode.Decoder b
-required fieldName itemDecoder functionDecoder =
-    decodeApply (Decode.field fieldName itemDecoder) functionDecoder
 
 
 
@@ -291,213 +239,6 @@ type Msg
     | NoOp
 
 
-backendBaseUrl : String
-backendBaseUrl =
-    "https://picluster.a-h.wtf/einkaufsliste-multiuser/api/v1"
-
-
-itemsUrl : String -> String -> String
-itemsUrl apiKey clientId =
-    backendBaseUrl ++ "/items?k=" ++ apiKey ++ "&c=" ++ clientId
-
-
-itemUrl : String -> String -> String
-itemUrl apiKey itemId =
-    backendBaseUrl ++ "/items/" ++ itemId ++ "?k=" ++ apiKey
-
-
-updateDoneUrl : String -> String -> String
-updateDoneUrl apiKey itemId =
-    backendBaseUrl ++ "/items/" ++ itemId ++ "/done?k=" ++ apiKey
-
-
-itemsSyncUrl : String -> String -> String
-itemsSyncUrl apiKey clientId =
-    backendBaseUrl ++ "/items/sync?k=" ++ apiKey ++ "&c=" ++ clientId
-
-
-dataBaseUrl : String
-dataBaseUrl =
-    "https://picluster.a-h.wtf/einkaufs_api"
-
-
-sortUrl : String
-sortUrl =
-    dataBaseUrl ++ "/sort/"
-
-
-collectUrl : String
-collectUrl =
-    dataBaseUrl ++ "/collect/"
-
-
-syncItems : String -> String -> List ItemData -> Cmd Msg
-syncItems apiKey clientId items =
-    Http.post
-        { url = itemsSyncUrl apiKey clientId
-        , body = Http.jsonBody (Encode.object [ ( "clientItems", Encode.list encodeItemData items ) ])
-        , expect = Http.expectString ItemsReceived
-        }
-
-
-type alias PostResponse =
-    { success : Bool
-    , newId : String
-    , revision : Int
-    }
-
-
-type alias UpdateResponse =
-    { success : Bool
-    , revision : Int
-    }
-
-
-postItem : String -> String -> ItemData -> Cmd Msg
-postItem apiKey clientId item =
-    Http.post
-        { url = itemsUrl apiKey clientId
-        , body = Http.jsonBody (Encode.object [ ( "itemData", Encode.object [ ( "title", Encode.string item.title ), ( "tags", Encode.list Encode.string item.tags ) ] ) ])
-        , expect =
-            Http.expectJson (ItemPosted item.id)
-                (Decode.map3 PostResponse
-                    (Decode.field "success" Decode.bool)
-                    (Decode.field "newId" Decode.string)
-                    (Decode.field "revision" Decode.int)
-                )
-        }
-
-
-deleteItem : String -> String -> Cmd Msg
-deleteItem apiKey itemId =
-    httpDelete
-        { url = itemUrl apiKey itemId
-        , body = Http.emptyBody
-        , expect = Http.expectJson (DeleteResponseReceived itemId) (Decode.field "success" Decode.bool)
-        }
-
-
-updateItem : String -> ItemData -> Cmd Msg
-updateItem apiKey item =
-    httpUpdate
-        { url = itemUrl apiKey item.id
-        , body = Http.jsonBody (Encode.object [ ( "itemData", Encode.object [ ( "title", Encode.string item.title ), ( "tags", Encode.list Encode.string item.tags ) ] ) ])
-        , expect = Http.expectJson (UpdateResponseReceived item.id) (Decode.map2 UpdateResponse (Decode.field "success" Decode.bool) (Decode.field "revision" Decode.int))
-        }
-
-
-httpUpdate : { url : String, body : Http.Body, expect : Http.Expect msg } -> Cmd msg
-httpUpdate options =
-    Http.request
-        { method = "UPDATE"
-        , headers = [ Http.header "Content-Type" "application/json" ]
-        , url = options.url
-        , body = options.body
-        , expect = options.expect
-        , timeout = Nothing
-        , tracker = Nothing
-        }
-
-
-httpDelete : { url : String, body : Http.Body, expect : Http.Expect msg } -> Cmd msg
-httpDelete options =
-    Http.request
-        { method = "DELETE"
-        , headers = [ Http.header "Content-Type" "application/json" ]
-        , url = options.url
-        , body = options.body
-        , expect = options.expect
-        , timeout = Nothing
-        , tracker = Nothing
-        }
-
-
-updateDoneBackend : String -> String -> Int -> Cmd Msg
-updateDoneBackend apiKey itemId doneStatus =
-    httpUpdate
-        { url = updateDoneUrl apiKey itemId
-        , body = Http.jsonBody (Encode.object [ ( "done", Encode.int doneStatus ) ])
-        , expect = Http.expectJson (DoneResponseReceived itemId) (Decode.field "success" Decode.bool)
-        }
-
-
-callSortAPI : List ItemData -> Cmd Msg
-callSortAPI items =
-    Http.post
-        { url = sortUrl
-        , body = Http.jsonBody (Encode.object [ ( "input_list", Encode.list Encode.string (List.map .title items) ) ])
-        , expect = Http.expectJson (SortResponseReceived (List.map .id items)) sortAPIResponseDecoder
-        }
-
-
-postCollectEvent : Model -> ItemData -> Cmd Msg
-postCollectEvent model item =
-    let
-        actionType =
-            case item.done of
-                0 ->
-                    "UNCROSSED"
-
-                _ ->
-                    "CROSSED"
-
-        latitudeValue =
-            case model.geolocation of
-                Just geolocation ->
-                    Encode.float geolocation.latitude
-
-                Nothing ->
-                    Encode.null
-
-        longitudeValue =
-            case model.geolocation of
-                Just geolocation ->
-                    Encode.float geolocation.longitude
-
-                Nothing ->
-                    Encode.null
-    in
-    Http.post
-        { url = collectUrl
-        , body =
-            Http.jsonBody
-                (Encode.object
-                    [ ( "action_type", Encode.string actionType )
-                    , ( "name", Encode.string item.title )
-                    , ( "item_id", Encode.string item.id )
-                    , ( "latitude", latitudeValue )
-                    , ( "longitude", longitudeValue )
-                    , ( "user_agent", Encode.string model.userAgent )
-                    , ( "user_key", Encode.string model.apiKey )
-                    ]
-                )
-        , expect = Http.expectWhatever CollectResponseReceived
-        }
-
-
-filterTagsFromNames : List String -> List FilterTag
-filterTagsFromNames tagNames =
-    List.map (\tag -> FilterTag tag False) tagNames
-
-
-mergeFilterTags : List FilterTag -> List FilterTag -> List FilterTag
-mergeFilterTags oldTags newTags =
-    let
-        oldNames =
-            List.map .tag oldTags
-
-        newNames =
-            List.map .tag newTags
-
-        additionalTags =
-            List.filter (\tag -> not (List.member tag.tag oldNames)) newTags
-
-        tagsToKeep =
-            List.filter (\tag -> List.member tag.tag newNames) oldTags
-    in
-    tagsToKeep ++ additionalTags
-
-
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -506,13 +247,13 @@ update msg model =
                 Ok rawString ->
                     let
                         serverItems =
-                            itemListToDict (List.indexedMap receivedToItem (parseItems rawString))
+                            ItemData.itemListToDict (List.indexedMap ItemData.receivedToItem (ItemData.parseReceivedItems rawString))
 
                         items =
                             mergeIntoItemDict serverItems model.items
 
                         newFilterTags =
-                            mergeFilterTags model.filterTags (filterTagsFromNames (filterTagNames items))
+                            FilterTag.merge model.filterTags (FilterTag.fromTags (filterTagNames items))
 
                         newModel =
                             { model | items = items, filterTags = newFilterTags }
@@ -535,14 +276,14 @@ update msg model =
         FilterClicked tag ->
             let
                 newModel =
-                    { model | filterTags = toggleTag tag model.filterTags }
+                    { model | filterTags = FilterTag.toggleByTag tag model.filterTags }
             in
             ( newModel, writeToLocalStorage (encodeModel newModel) )
 
         CardClicked itemId ->
             let
                 newItems =
-                    Dict.update itemId (\item -> toggleDone item |> setSynced False) model.items
+                    Dict.update itemId (\item -> ItemData.toggleDone item |> ItemData.setSynced False) model.items
 
                 maybeItem =
                     Dict.get itemId newItems
@@ -568,7 +309,7 @@ update msg model =
         EditCardClicked itemId ->
             let
                 newModel =
-                    { model | items = Dict.update itemId toggleEdit model.items }
+                    { model | items = Dict.update itemId ItemData.toggleEdit model.items }
             in
             ( newModel, writeToLocalStorage (encodeModel newModel) )
 
@@ -585,7 +326,7 @@ update msg model =
                                 { model | items = Dict.remove itemId model.items }
 
                             else
-                                { model | items = Dict.update itemId toggleEdit model.items }
+                                { model | items = Dict.update itemId ItemData.toggleEdit model.items }
                     in
                     ( newModel, writeToLocalStorage (encodeModel newModel) )
 
@@ -598,7 +339,7 @@ update msg model =
                     if not item.draftChanged then
                         let
                             newModel =
-                                { model | items = Dict.update itemId toggleEdit model.items }
+                                { model | items = Dict.update itemId ItemData.toggleEdit model.items }
                         in
                         ( newModel, writeToLocalStorage (encodeModel newModel) )
 
@@ -637,7 +378,7 @@ update msg model =
                                     model.items
 
                             newFilters =
-                                mergeFilterTags model.filterTags (filterTagsFromNames (filterTagNames newItems))
+                                FilterTag.merge model.filterTags (FilterTag.fromTags (filterTagNames newItems))
 
                             newModel =
                                 { model
@@ -688,7 +429,7 @@ update msg model =
         DraftTitleChanged itemId newTitle ->
             let
                 newModel =
-                    { model | items = Dict.update itemId (updateDraftTitle newTitle) model.items }
+                    { model | items = Dict.update itemId (ItemData.updateDraftTitle newTitle) model.items }
             in
             ( newModel, writeToLocalStorage (encodeModel newModel) )
 
@@ -727,7 +468,7 @@ update msg model =
                     case success of
                         Ok successValue ->
                             if successValue then
-                                { model | items = Dict.update itemId (setSynced True) model.items }
+                                { model | items = Dict.update itemId (ItemData.setSynced True) model.items }
 
                             else
                                 model
@@ -779,7 +520,7 @@ update msg model =
                                 Dict.remove itemId model.items
 
                             newFilters =
-                                mergeFilterTags model.filterTags (filterTagsFromNames (filterTagNames newItems))
+                                FilterTag.merge model.filterTags (FilterTag.fromTags (filterTagNames newItems))
 
                             newModel =
                                 { model | items = newItems, filterTags = newFilters }
@@ -802,7 +543,7 @@ update msg model =
                     let
                         newModel =
                             { model
-                                | items = Dict.update mqttData.id (setDone mqttData.status) model.items
+                                | items = Dict.update mqttData.id (ItemData.setDone mqttData.status) model.items
                             }
                     in
                     ( newModel
@@ -888,14 +629,14 @@ update msg model =
         DraftTagsChanged itemId newTagList ->
             let
                 newModel =
-                    { model | items = Dict.update itemId (updateDraftTags newTagList) model.items }
+                    { model | items = Dict.update itemId (ItemData.updateDraftTags newTagList) model.items }
             in
             ( newModel, writeToLocalStorage (encodeModel newModel) )
 
         DraftTagsInputChanged itemId remainingText ->
             let
                 newModel =
-                    { model | items = Dict.update itemId (updateDraftTagsInput remainingText) model.items }
+                    { model | items = Dict.update itemId (ItemData.updateDraftTagsInput remainingText) model.items }
             in
             ( newModel, writeToLocalStorage (encodeModel newModel) )
 
@@ -916,7 +657,7 @@ update msg model =
                             model.items
 
                 newFilters =
-                    mergeFilterTags model.filterTags (filterTagsFromNames (filterTagNames newItems))
+                    FilterTag.merge model.filterTags (FilterTag.fromTags (filterTagNames newItems))
 
                 newModel =
                     { model | items = newItems, filterTags = newFilters }
@@ -937,7 +678,7 @@ update msg model =
                             model.items
 
                 newFilters =
-                    mergeFilterTags model.filterTags (filterTagsFromNames (filterTagNames newItems))
+                    FilterTag.merge model.filterTags (FilterTag.fromTags (filterTagNames newItems))
 
                 newModel =
                     { model | items = newItems, filterTags = newFilters }
@@ -973,213 +714,8 @@ update msg model =
             ( model, Cmd.none )
 
 
-updateOverrideOrderIndex : Dict String Int -> String -> ItemData -> ItemData
-updateOverrideOrderIndex idToIndexDict itemId item =
-    { item
-        | orderIndexOverride =
-            case Dict.get itemId idToIndexDict of
-                Just newIndex ->
-                    newIndex
-
-                Nothing ->
-                    item.orderIndexOverride
-    }
-
-
-updateDraftTitle : String -> Maybe ItemData -> Maybe ItemData
-updateDraftTitle newTitle maybeItem =
-    case maybeItem of
-        Just item ->
-            let
-                newItem =
-                    { item | draftTitle = newTitle }
-            in
-            Just { newItem | draftChanged = draftHasChanged newItem }
-
-        Nothing ->
-            Nothing
-
-
-updateDraftTags : List String -> Maybe ItemData -> Maybe ItemData
-updateDraftTags newDraftTags maybeItem =
-    case maybeItem of
-        Just item ->
-            let
-                newItem =
-                    { item | draftTags = newDraftTags }
-            in
-            Just { newItem | draftChanged = draftHasChanged newItem }
-
-        Nothing ->
-            Nothing
-
-
-updateDraftTagsInput : String -> Maybe ItemData -> Maybe ItemData
-updateDraftTagsInput newText maybeItem =
-    case maybeItem of
-        Just item ->
-            let
-                newItem =
-                    { item | draftTagsInput = newText }
-            in
-            Just { newItem | draftChanged = draftHasChanged newItem }
-
-        Nothing ->
-            Nothing
-
-
-listEqual : List comparable -> List comparable -> Bool
-listEqual listA listB =
-    let
-        sortedA =
-            List.sort listA
-
-        sortedB =
-            List.sort listB
-    in
-    List.map2 Tuple.pair sortedA sortedB
-        |> List.map (\x -> Tuple.first x == Tuple.second x)
-        |> List.foldr (&&) (List.length listA == List.length listB)
-
-
-updateTitle : String -> Maybe ItemData -> Maybe ItemData
-updateTitle newTitle maybeItem =
-    case maybeItem of
-        Just item ->
-            Just { item | title = newTitle }
-
-        Nothing ->
-            Nothing
-
-
-toggleEdit : Maybe ItemData -> Maybe ItemData
-toggleEdit maybeItem =
-    case maybeItem of
-        Just item ->
-            Just { item | editing = not item.editing, draftTitle = item.title, draftTags = item.tags, draftTagsInput = "", draftChanged = False }
-
-        Nothing ->
-            Nothing
-
-
-toggleDone : Maybe ItemData -> Maybe ItemData
-toggleDone maybeItem =
-    case maybeItem of
-        Just item ->
-            Just
-                { item
-                    | done =
-                        if item.done == 0 then
-                            1
-
-                        else
-                            0
-                }
-
-        Nothing ->
-            Nothing
-
-
-setSynced : Bool -> Maybe ItemData -> Maybe ItemData
-setSynced newSynced maybeItem =
-    case maybeItem of
-        Just item ->
-            Just
-                { item
-                    | synced = newSynced
-                }
-
-        Nothing ->
-            Nothing
-
-
-setDone : Int -> Maybe ItemData -> Maybe ItemData
-setDone newStatus maybeItem =
-    case maybeItem of
-        Just item ->
-            Just
-                { item
-                    | done = newStatus
-                }
-
-        Nothing ->
-            Nothing
-
-
-addNewItem : String -> Dict String ItemData -> Dict String ItemData
-addNewItem newId dict =
-    let
-        newIndex =
-            case maxOrderIndex (Dict.values dict) of
-                Just maxIndex ->
-                    maxIndex + 1
-
-                Nothing ->
-                    0
-    in
-    Dict.insert newId
-        { id = newId
-        , title = ""
-        , tags = []
-        , draftTitle = ""
-        , draftTags = []
-        , draftTagsInput = ""
-        , draftChanged = False
-        , done = 0
-        , orderIndexDefault = newIndex
-        , orderIndexOverride = newIndex
-        , editing = True
-        , synced = False
-        , new = True
-        , lastSyncedRevision = -1
-        , oldId = ""
-        }
-        dict
-
-
-addReceivedItem : ItemDataReceived -> Dict String ItemData -> Dict String ItemData
-addReceivedItem itemDataReceived dict =
-    let
-        newIndex =
-            case maxOrderIndex (Dict.values dict) of
-                Just maxIndex ->
-                    maxIndex + 1
-
-                Nothing ->
-                    0
-
-        itemData =
-            receivedToItem newIndex itemDataReceived
-    in
-    Dict.insert itemData.id itemData dict
-
-
-updateFromReceivedItem : ItemDataReceived -> Dict String ItemData -> Dict String ItemData
-updateFromReceivedItem itemDataReceived dict =
-    Dict.update itemDataReceived.id
-        (\maybeItem ->
-            case maybeItem of
-                Just item ->
-                    if item.editing then
-                        Just item
-
-                    else
-                        Just { item | title = itemDataReceived.title, tags = itemDataReceived.tags, done = itemDataReceived.done }
-
-                Nothing ->
-                    Nothing
-        )
-        dict
-
-
 
 -- SUBSCRIPTIONS
-
-
-type alias ChipsInitArgs =
-    { parentSelector : String
-    , tags : List String
-    }
 
 
 port receiveMQTTMessageDoneStatus : (String -> msg) -> Sub msg
@@ -1215,58 +751,152 @@ subscriptions model =
         ]
 
 
-type alias Geolocation =
-    { latitude : Float, longitude : Float }
+
+-- HTTP COMMANDS
 
 
-parseGeolocation : Decode.Value -> Maybe Geolocation
-parseGeolocation portMsg =
-    case Decode.decodeValue (Decode.map2 Geolocation (Decode.field "latitude" Decode.float) (Decode.field "longitude" Decode.float)) portMsg of
-        Ok geolocation ->
-            Just geolocation
-
-        Err _ ->
-            Nothing
-
-
-parseMQTTClientId : String -> Maybe String
-parseMQTTClientId rawString =
-    case Decode.decodeString (Decode.field "clientId" Decode.string) rawString of
-        Ok clientId ->
-            Just clientId
-
-        Err _ ->
-            Nothing
+syncItems : String -> String -> List ItemData -> Cmd Msg
+syncItems apiKey clientId items =
+    Http.post
+        { url = Urls.itemsSyncUrl apiKey clientId
+        , body = Http.jsonBody (Encode.object [ ( "clientItems", Encode.list ItemData.encode items ) ])
+        , expect = Http.expectString ItemsReceived
+        }
 
 
-parseMQTTMessageDoneStatus : String -> Maybe MqttMessageDoneStatus
-parseMQTTMessageDoneStatus rawString =
-    case Decode.decodeString (Decode.map2 MqttMessageDoneStatus (Decode.field "id" Decode.string) (Decode.field "status" Decode.int)) rawString of
-        Ok mqttData ->
-            Just mqttData
-
-        Err _ ->
-            Nothing
+type alias PostResponse =
+    { success : Bool
+    , newId : String
+    , revision : Int
+    }
 
 
-parseMQTTMessageNewItem : String -> Maybe ItemDataReceived
-parseMQTTMessageNewItem rawString =
-    case Decode.decodeString jsonParseItemData rawString of
-        Ok itemDataReceived ->
-            Just itemDataReceived
-
-        Err _ ->
-            Nothing
+type alias UpdateResponse =
+    { success : Bool
+    , revision : Int
+    }
 
 
-parseMQTTMessageItemDeleted : String -> Maybe String
-parseMQTTMessageItemDeleted rawString =
-    case Decode.decodeString (Decode.field "id" Decode.string) rawString of
-        Ok itemId ->
-            Just itemId
+postItem : String -> String -> ItemData -> Cmd Msg
+postItem apiKey clientId item =
+    Http.post
+        { url = Urls.itemsUrl apiKey clientId
+        , body = Http.jsonBody (Encode.object [ ( "itemData", Encode.object [ ( "title", Encode.string item.title ), ( "tags", Encode.list Encode.string item.tags ) ] ) ])
+        , expect =
+            Http.expectJson (ItemPosted item.id)
+                (Decode.map3 PostResponse
+                    (Decode.field "success" Decode.bool)
+                    (Decode.field "newId" Decode.string)
+                    (Decode.field "revision" Decode.int)
+                )
+        }
 
-        Err _ ->
-            Nothing
+
+deleteItem : String -> String -> Cmd Msg
+deleteItem apiKey itemId =
+    httpDelete
+        { url = Urls.itemUrl apiKey itemId
+        , body = Http.emptyBody
+        , expect = Http.expectJson (DeleteResponseReceived itemId) (Decode.field "success" Decode.bool)
+        }
+
+
+updateItem : String -> ItemData -> Cmd Msg
+updateItem apiKey item =
+    httpUpdate
+        { url = Urls.itemUrl apiKey item.id
+        , body = Http.jsonBody (Encode.object [ ( "itemData", Encode.object [ ( "title", Encode.string item.title ), ( "tags", Encode.list Encode.string item.tags ) ] ) ])
+        , expect = Http.expectJson (UpdateResponseReceived item.id) (Decode.map2 UpdateResponse (Decode.field "success" Decode.bool) (Decode.field "revision" Decode.int))
+        }
+
+
+httpUpdate : { url : String, body : Http.Body, expect : Http.Expect msg } -> Cmd msg
+httpUpdate options =
+    Http.request
+        { method = "UPDATE"
+        , headers = [ Http.header "Content-Type" "application/json" ]
+        , url = options.url
+        , body = options.body
+        , expect = options.expect
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
+httpDelete : { url : String, body : Http.Body, expect : Http.Expect msg } -> Cmd msg
+httpDelete options =
+    Http.request
+        { method = "DELETE"
+        , headers = [ Http.header "Content-Type" "application/json" ]
+        , url = options.url
+        , body = options.body
+        , expect = options.expect
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
+updateDoneBackend : String -> String -> Int -> Cmd Msg
+updateDoneBackend apiKey itemId doneStatus =
+    httpUpdate
+        { url = Urls.updateDoneUrl apiKey itemId
+        , body = Http.jsonBody (Encode.object [ ( "done", Encode.int doneStatus ) ])
+        , expect = Http.expectJson (DoneResponseReceived itemId) (Decode.field "success" Decode.bool)
+        }
+
+
+callSortAPI : List ItemData -> Cmd Msg
+callSortAPI items =
+    Http.post
+        { url = Urls.sortUrl
+        , body = Http.jsonBody (Encode.object [ ( "input_list", Encode.list Encode.string (List.map .title items) ) ])
+        , expect = Http.expectJson (SortResponseReceived (List.map .id items)) sortAPIResponseDecoder
+        }
+
+
+postCollectEvent : Model -> ItemData -> Cmd Msg
+postCollectEvent model item =
+    let
+        actionType =
+            case item.done of
+                0 ->
+                    "UNCROSSED"
+
+                _ ->
+                    "CROSSED"
+
+        latitudeValue =
+            case model.geolocation of
+                Just geolocation ->
+                    Encode.float geolocation.latitude
+
+                Nothing ->
+                    Encode.null
+
+        longitudeValue =
+            case model.geolocation of
+                Just geolocation ->
+                    Encode.float geolocation.longitude
+
+                Nothing ->
+                    Encode.null
+    in
+    Http.post
+        { url = Urls.collectUrl
+        , body =
+            Http.jsonBody
+                (Encode.object
+                    [ ( "action_type", Encode.string actionType )
+                    , ( "name", Encode.string item.title )
+                    , ( "item_id", Encode.string item.id )
+                    , ( "latitude", latitudeValue )
+                    , ( "longitude", longitudeValue )
+                    , ( "user_agent", Encode.string model.userAgent )
+                    , ( "user_key", Encode.string model.apiKey )
+                    ]
+                )
+        , expect = Http.expectWhatever CollectResponseReceived
+        }
 
 
 
@@ -1297,7 +927,7 @@ headerView model =
         [ nav [ Aria.ariaLabel "Header", style "height" "auto" ]
             [ div [ class "nav-wrapper", style "display" "flex" ]
                 [ div [ class "chips-wrapper filter-chips", Aria.ariaLabel "Filterbereich", Aria.role "navigation" ]
-                    ([ noTagsFilterView model.noTagsFilterActive ] ++ List.map filterTagChip (sortFilterTags model.filterTags))
+                    ([ noTagsFilterView model.noTagsFilterActive ] ++ List.map filterTagChip (FilterTag.sort model.filterTags))
                 , ul [ id "nav-mobile" ]
                     [ li [] [ sortButton model.overrideOrdering ]
                     , li []
@@ -1539,33 +1169,6 @@ displayTagChip tag =
         [ text tag ]
 
 
-isVisible : Model -> ItemData -> Bool
-isVisible model item =
-    let
-        filters =
-            activeFilters model.filterTags
-
-        filteringActive =
-            (List.length filters > 0) || model.noTagsFilterActive
-    in
-    if not filteringActive || item.editing || (model.noTagsFilterActive && (List.length item.tags == 0)) then
-        True
-
-    else
-        List.foldl (||) False (List.map (\x -> List.member x filters) item.tags)
-
-
-sortItems : Bool -> List ItemData -> List ItemData
-sortItems useOverrideIndex items =
-    if useOverrideIndex then
-        List.sortBy .orderIndexOverride items
-            |> List.reverse
-
-    else
-        List.sortBy .orderIndexDefault items
-            |> List.reverse
-
-
 addCardButton : Html Msg
 addCardButton =
     div [ class "fixed-action-btn center-horizontally" ]
@@ -1581,192 +1184,145 @@ addCardButton =
 
 
 
--- UTILITIES
+-- GEOLOCATION
 
 
-type alias ItemDataReceived =
-    { id : String
-    , title : String
-    , tags : List String
-    , done : Int
-    , revision : Int
-    , oldId : Maybe String
-    }
+type alias Geolocation =
+    { latitude : Float, longitude : Float }
 
 
-jsonParseItemData : Decode.Decoder ItemDataReceived
-jsonParseItemData =
-    Decode.map6 ItemDataReceived
-        (Decode.field "id" Decode.string)
-        (Decode.field "title" Decode.string)
-        (Decode.field "tags" (Decode.list Decode.string))
-        (Decode.field "done" Decode.int)
-        (Decode.field "revision" (Decode.oneOf [ Decode.int, Decode.null 0 ]))
-        (Decode.maybe (Decode.field "oldId" Decode.string))
-
-
-jsonParseItemList : Decode.Decoder (List ItemDataReceived)
-jsonParseItemList =
-    Decode.list jsonParseItemData
-
-
-parseItems : String -> List ItemDataReceived
-parseItems rawString =
-    case Decode.decodeString jsonParseItemList rawString of
-        Ok itemsList ->
-            itemsList
+parseGeolocation : Decode.Value -> Maybe Geolocation
+parseGeolocation portMsg =
+    case Decode.decodeValue (Decode.map2 Geolocation (Decode.field "latitude" Decode.float) (Decode.field "longitude" Decode.float)) portMsg of
+        Ok geolocation ->
+            Just geolocation
 
         Err _ ->
-            []
+            Nothing
 
 
-receivedToItem : Int -> ItemDataReceived -> ItemData
-receivedToItem index itemReceived =
-    { id = itemReceived.id
-    , title = itemReceived.title
-    , tags = itemReceived.tags
-    , draftTitle = itemReceived.title
-    , draftTags = itemReceived.tags
-    , draftTagsInput = ""
-    , draftChanged = False
-    , done = itemReceived.done
-    , orderIndexDefault = index
-    , orderIndexOverride = index
-    , editing = False
-    , synced = True
-    , new = False
-    , lastSyncedRevision = itemReceived.revision
-    , oldId =
-        case itemReceived.oldId of
-            Just oldId ->
-                oldId
 
-            Nothing ->
-                ""
+-- MQTT PARSING
+
+
+type alias MqttMessageDoneStatus =
+    { id : String
+    , status : Int
     }
 
 
-uniqueTags : List ItemData -> Set.Set String
-uniqueTags items =
-    Set.fromList (allTags items)
+parseMQTTClientId : String -> Maybe String
+parseMQTTClientId rawString =
+    case Decode.decodeString (Decode.field "clientId" Decode.string) rawString of
+        Ok clientId ->
+            Just clientId
+
+        Err _ ->
+            Nothing
 
 
-allTags : List ItemData -> List String
-allTags =
-    List.concatMap .tags
+parseMQTTMessageDoneStatus : String -> Maybe MqttMessageDoneStatus
+parseMQTTMessageDoneStatus rawString =
+    case Decode.decodeString (Decode.map2 MqttMessageDoneStatus (Decode.field "id" Decode.string) (Decode.field "status" Decode.int)) rawString of
+        Ok mqttData ->
+            Just mqttData
+
+        Err _ ->
+            Nothing
 
 
-toggleTag : String -> List FilterTag -> List FilterTag
-toggleTag tag tagList =
+parseMQTTMessageNewItem : String -> Maybe ItemDataReceived
+parseMQTTMessageNewItem rawString =
+    case Decode.decodeString ItemData.jsonParseItemDataReceived rawString of
+        Ok itemDataReceived ->
+            Just itemDataReceived
+
+        Err _ ->
+            Nothing
+
+
+parseMQTTMessageItemDeleted : String -> Maybe String
+parseMQTTMessageItemDeleted rawString =
+    case Decode.decodeString (Decode.field "id" Decode.string) rawString of
+        Ok itemId ->
+            Just itemId
+
+        Err _ ->
+            Nothing
+
+
+
+-- ITEMS DICT HANDLING
+
+
+addNewItem : String -> Dict String ItemData -> Dict String ItemData
+addNewItem newId dict =
     let
-        toggle tagToMatch filterTag =
-            if tagToMatch == filterTag.tag then
-                { filterTag | isActive = not filterTag.isActive }
+        newIndex =
+            case ItemData.maxOrderIndex (Dict.values dict) of
+                Just maxIndex ->
+                    maxIndex + 1
 
-            else
-                filterTag
+                Nothing ->
+                    0
     in
-    List.map (toggle tag) tagList
+    Dict.insert newId
+        { id = newId
+        , title = ""
+        , tags = []
+        , draftTitle = ""
+        , draftTags = []
+        , draftTagsInput = ""
+        , draftChanged = False
+        , done = 0
+        , orderIndexDefault = newIndex
+        , orderIndexOverride = newIndex
+        , editing = True
+        , synced = False
+        , new = True
+        , lastSyncedRevision = -1
+        , oldId = ""
+        }
+        dict
 
 
-maybeActiveTag : FilterTag -> Maybe String
-maybeActiveTag filterTag =
-    if filterTag.isActive then
-        Just filterTag.tag
+addReceivedItem : ItemDataReceived -> Dict String ItemData -> Dict String ItemData
+addReceivedItem itemDataReceived dict =
+    let
+        newIndex =
+            case ItemData.maxOrderIndex (Dict.values dict) of
+                Just maxIndex ->
+                    maxIndex + 1
 
-    else
-        Nothing
+                Nothing ->
+                    0
 
-
-activeFilters : List FilterTag -> List String
-activeFilters filterTags =
-    List.filterMap maybeActiveTag filterTags
-
-
-filterTagNames : Dict String ItemData -> List String
-filterTagNames items =
-    Set.toList (uniqueTags (Dict.values items))
+        itemData =
+            ItemData.receivedToItem newIndex itemDataReceived
+    in
+    Dict.insert itemData.id itemData dict
 
 
-sortFilterTags : List FilterTag -> List FilterTag
-sortFilterTags filterTags =
-    List.sortBy .tag filterTags
+updateFromReceivedItem : ItemDataReceived -> Dict String ItemData -> Dict String ItemData
+updateFromReceivedItem itemDataReceived dict =
+    Dict.update itemDataReceived.id
+        (\maybeItem ->
+            case maybeItem of
+                Just item ->
+                    if item.editing then
+                        Just item
+
+                    else
+                        Just { item | title = itemDataReceived.title, tags = itemDataReceived.tags, done = itemDataReceived.done }
+
+                Nothing ->
+                    Nothing
+        )
+        dict
 
 
-itemListToDict : List ItemData -> Dict String ItemData
-itemListToDict items =
-    Dict.fromList (itemListToAssoc items)
 
-
-itemListToAssoc : List ItemData -> List ( String, ItemData )
-itemListToAssoc items =
-    List.map (\item -> ( item.id, item )) items
-
-
-maxOrderIndex : List ItemData -> Maybe Int
-maxOrderIndex items =
-    List.maximum (List.map .orderIndexDefault items)
-
-
-sortAPIResponseDecoder : Decode.Decoder (List Int)
-sortAPIResponseDecoder =
-    Decode.field "sort_indices" (Decode.list Decode.int)
-
-
-argsort : List comparable -> List Int
-argsort l =
-    List.indexedMap Tuple.pair l
-        |> List.sortBy Tuple.second
-        |> List.map Tuple.first
-
-
-encodeItemData : ItemData -> Encode.Value
-encodeItemData { id, title, tags, draftTitle, draftTags, draftTagsInput, draftChanged, done, orderIndexDefault, orderIndexOverride, editing, synced, new, lastSyncedRevision, oldId } =
-    Encode.object
-        [ ( "id", Encode.string id )
-        , ( "title", Encode.string title )
-        , ( "tags", Encode.list Encode.string tags )
-        , ( "draftTitle", Encode.string draftTitle )
-        , ( "draftTags", Encode.list Encode.string draftTags )
-        , ( "draftTagsInput", Encode.string draftTagsInput )
-        , ( "draftChanged", Encode.bool draftChanged )
-        , ( "done", Encode.int done )
-        , ( "orderIndexDefault", Encode.int orderIndexDefault )
-        , ( "orderIndexOverride", Encode.int orderIndexOverride )
-        , ( "editing", Encode.bool editing )
-        , ( "synced", Encode.bool synced )
-        , ( "new", Encode.bool new )
-        , ( "lastSyncedRevision", Encode.int lastSyncedRevision )
-        , ( "oldId", Encode.string oldId )
-        ]
-
-
-encodeFilterTag : FilterTag -> Encode.Value
-encodeFilterTag { tag, isActive } =
-    Encode.object
-        [ ( "tag", Encode.string tag )
-        , ( "isActive", Encode.bool isActive )
-        ]
-
-
-encodeModel : Model -> Encode.Value
-encodeModel { items, overrideOrdering, filterTags, noTagsFilterActive, apiKey } =
-    Encode.object
-        [ ( "items", Encode.dict identity encodeItemData items )
-        , ( "overrideOrdering", Encode.bool overrideOrdering )
-        , ( "filterTags", Encode.list encodeFilterTag filterTags )
-        , ( "noTagsFilterActive", Encode.bool noTagsFilterActive )
-        ]
-
-
-draftHasChanged : ItemData -> Bool
-draftHasChanged item =
-    (item.draftTitle /= item.title) || not (listEqual item.draftTags item.tags) || (String.trim item.draftTagsInput /= "")
-
-
-resetViewport : Cmd Msg
-resetViewport =
-    Task.perform (\_ -> NoOp) (Dom.setViewport 0 0)
+-- DICT MERGING
 
 
 newOnly : Dict String ItemData -> String -> ItemData -> Dict String ItemData -> Dict String ItemData
@@ -1816,3 +1372,69 @@ oldOnly key val res =
 mergeIntoItemDict : Dict String ItemData -> Dict String ItemData -> Dict String ItemData
 mergeIntoItemDict newDict oldDict =
     Dict.merge (newOnly oldDict) both oldOnly newDict oldDict Dict.empty
+
+
+
+-- UTILITIES
+
+
+isVisible : Model -> ItemData -> Bool
+isVisible model item =
+    let
+        filters =
+            FilterTag.activeTags model.filterTags
+
+        filteringActive =
+            (List.length filters > 0) || model.noTagsFilterActive
+    in
+    if not filteringActive || item.editing || (model.noTagsFilterActive && (List.length item.tags == 0)) then
+        True
+
+    else
+        List.foldl (||) False (List.map (\x -> List.member x filters) item.tags)
+
+
+sortItems : Bool -> List ItemData -> List ItemData
+sortItems useOverrideIndex items =
+    if useOverrideIndex then
+        List.sortBy .orderIndexOverride items
+            |> List.reverse
+
+    else
+        List.sortBy .orderIndexDefault items
+            |> List.reverse
+
+
+filterTagNames : Dict String ItemData -> List String
+filterTagNames items =
+    Set.toList (ItemData.uniqueTags (Dict.values items))
+
+
+updateOverrideOrderIndex : Dict String Int -> String -> ItemData -> ItemData
+updateOverrideOrderIndex idToIndexDict itemId item =
+    { item
+        | orderIndexOverride =
+            case Dict.get itemId idToIndexDict of
+                Just newIndex ->
+                    newIndex
+
+                Nothing ->
+                    item.orderIndexOverride
+    }
+
+
+sortAPIResponseDecoder : Decode.Decoder (List Int)
+sortAPIResponseDecoder =
+    Decode.field "sort_indices" (Decode.list Decode.int)
+
+
+argsort : List comparable -> List Int
+argsort l =
+    List.indexedMap Tuple.pair l
+        |> List.sortBy Tuple.second
+        |> List.map Tuple.first
+
+
+resetViewport : Cmd Msg
+resetViewport =
+    Task.perform (\_ -> NoOp) (Dom.setViewport 0 0)
