@@ -90,6 +90,102 @@ itemListToAssoc items =
     List.map (\item -> ( item.id, item )) items
 
 
+updateDraftTitle : String -> Maybe ItemData -> Maybe ItemData
+updateDraftTitle newTitle maybeItem =
+    case maybeItem of
+        Just item ->
+            let
+                newItem =
+                    { item | draftTitle = newTitle }
+            in
+            Just { newItem | draftChanged = draftHasChanged newItem }
+
+        Nothing ->
+            Nothing
+
+
+updateDraftTags : List String -> Maybe ItemData -> Maybe ItemData
+updateDraftTags newDraftTags maybeItem =
+    case maybeItem of
+        Just item ->
+            let
+                newItem =
+                    { item | draftTags = newDraftTags }
+            in
+            Just { newItem | draftChanged = draftHasChanged newItem }
+
+        Nothing ->
+            Nothing
+
+
+updateDraftTagsInput : String -> Maybe ItemData -> Maybe ItemData
+updateDraftTagsInput newText maybeItem =
+    case maybeItem of
+        Just item ->
+            let
+                newItem =
+                    { item | draftTagsInput = newText }
+            in
+            Just { newItem | draftChanged = draftHasChanged newItem }
+
+        Nothing ->
+            Nothing
+
+
+toggleEdit : Maybe ItemData -> Maybe ItemData
+toggleEdit maybeItem =
+    case maybeItem of
+        Just item ->
+            Just { item | editing = not item.editing, draftTitle = item.title, draftTags = item.tags, draftTagsInput = "", draftChanged = False }
+
+        Nothing ->
+            Nothing
+
+
+toggleDone : Maybe ItemData -> Maybe ItemData
+toggleDone maybeItem =
+    case maybeItem of
+        Just item ->
+            Just
+                { item
+                    | done =
+                        if item.done == 0 then
+                            1
+
+                        else
+                            0
+                }
+
+        Nothing ->
+            Nothing
+
+
+setSynced : Bool -> Maybe ItemData -> Maybe ItemData
+setSynced newSynced maybeItem =
+    case maybeItem of
+        Just item ->
+            Just
+                { item
+                    | synced = newSynced
+                }
+
+        Nothing ->
+            Nothing
+
+
+setDone : Int -> Maybe ItemData -> Maybe ItemData
+setDone newStatus maybeItem =
+    case maybeItem of
+        Just item ->
+            Just
+                { item
+                    | done = newStatus
+                }
+
+        Nothing ->
+            Nothing
+
+
 type alias ItemDataReceived =
     { id : String
     , title : String
