@@ -1,6 +1,7 @@
 module ItemData exposing (..)
 
 import Dict exposing (Dict)
+import Json.Decode as Decode
 import Json.Encode as Encode
 import Set
 
@@ -87,3 +88,65 @@ itemListToDict items =
 itemListToAssoc : List ItemData -> List ( String, ItemData )
 itemListToAssoc items =
     List.map (\item -> ( item.id, item )) items
+
+
+type alias ItemDataReceived =
+    { id : String
+    , title : String
+    , tags : List String
+    , done : Int
+    , revision : Int
+    , oldId : Maybe String
+    }
+
+
+jsonParseItemDataReceived : Decode.Decoder ItemDataReceived
+jsonParseItemDataReceived =
+    Decode.map6 ItemDataReceived
+        (Decode.field "id" Decode.string)
+        (Decode.field "title" Decode.string)
+        (Decode.field "tags" (Decode.list Decode.string))
+        (Decode.field "done" Decode.int)
+        (Decode.field "revision" (Decode.oneOf [ Decode.int, Decode.null 0 ]))
+        (Decode.maybe (Decode.field "oldId" Decode.string))
+
+
+jsonParseReceivedItemList : Decode.Decoder (List ItemDataReceived)
+jsonParseReceivedItemList =
+    Decode.list jsonParseItemDataReceived
+
+
+parseReceivedItems : String -> List ItemDataReceived
+parseReceivedItems rawString =
+    case Decode.decodeString jsonParseReceivedItemList rawString of
+        Ok itemsList ->
+            itemsList
+
+        Err _ ->
+            []
+
+
+receivedToItem : Int -> ItemDataReceived -> ItemData
+receivedToItem index itemReceived =
+    { id = itemReceived.id
+    , title = itemReceived.title
+    , tags = itemReceived.tags
+    , draftTitle = itemReceived.title
+    , draftTags = itemReceived.tags
+    , draftTagsInput = ""
+    , draftChanged = False
+    , done = itemReceived.done
+    , orderIndexDefault = index
+    , orderIndexOverride = index
+    , editing = False
+    , synced = True
+    , new = False
+    , lastSyncedRevision = itemReceived.revision
+    , oldId =
+        case itemReceived.oldId of
+            Just oldId ->
+                oldId
+
+            Nothing ->
+                ""
+    }

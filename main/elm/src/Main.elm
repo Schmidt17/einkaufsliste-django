@@ -10,7 +10,7 @@ import Html.Events exposing (on, onClick, onFocus, onInput, onMouseDown, prevent
 import Html.Events.Extra.Mouse exposing (onWithOptions)
 import Html.Events.Extra.Touch exposing (onStart)
 import Http
-import ItemData exposing (ItemData)
+import ItemData exposing (ItemData, ItemDataReceived)
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Random
@@ -488,7 +488,7 @@ update msg model =
                 Ok rawString ->
                     let
                         serverItems =
-                            ItemData.itemListToDict (List.indexedMap receivedToItem (parseItems rawString))
+                            ItemData.itemListToDict (List.indexedMap ItemData.receivedToItem (ItemData.parseReceivedItems rawString))
 
                         items =
                             mergeIntoItemDict serverItems model.items
@@ -1117,7 +1117,7 @@ addReceivedItem itemDataReceived dict =
                     0
 
         itemData =
-            receivedToItem newIndex itemDataReceived
+            ItemData.receivedToItem newIndex itemDataReceived
     in
     Dict.insert itemData.id itemData dict
 
@@ -1219,7 +1219,7 @@ parseMQTTMessageDoneStatus rawString =
 
 parseMQTTMessageNewItem : String -> Maybe ItemDataReceived
 parseMQTTMessageNewItem rawString =
-    case Decode.decodeString jsonParseItemData rawString of
+    case Decode.decodeString ItemData.jsonParseItemDataReceived rawString of
         Ok itemDataReceived ->
             Just itemDataReceived
 
@@ -1550,68 +1550,6 @@ addCardButton =
 
 
 -- UTILITIES
-
-
-type alias ItemDataReceived =
-    { id : String
-    , title : String
-    , tags : List String
-    , done : Int
-    , revision : Int
-    , oldId : Maybe String
-    }
-
-
-jsonParseItemData : Decode.Decoder ItemDataReceived
-jsonParseItemData =
-    Decode.map6 ItemDataReceived
-        (Decode.field "id" Decode.string)
-        (Decode.field "title" Decode.string)
-        (Decode.field "tags" (Decode.list Decode.string))
-        (Decode.field "done" Decode.int)
-        (Decode.field "revision" (Decode.oneOf [ Decode.int, Decode.null 0 ]))
-        (Decode.maybe (Decode.field "oldId" Decode.string))
-
-
-jsonParseItemList : Decode.Decoder (List ItemDataReceived)
-jsonParseItemList =
-    Decode.list jsonParseItemData
-
-
-parseItems : String -> List ItemDataReceived
-parseItems rawString =
-    case Decode.decodeString jsonParseItemList rawString of
-        Ok itemsList ->
-            itemsList
-
-        Err _ ->
-            []
-
-
-receivedToItem : Int -> ItemDataReceived -> ItemData
-receivedToItem index itemReceived =
-    { id = itemReceived.id
-    , title = itemReceived.title
-    , tags = itemReceived.tags
-    , draftTitle = itemReceived.title
-    , draftTags = itemReceived.tags
-    , draftTagsInput = ""
-    , draftChanged = False
-    , done = itemReceived.done
-    , orderIndexDefault = index
-    , orderIndexOverride = index
-    , editing = False
-    , synced = True
-    , new = False
-    , lastSyncedRevision = itemReceived.revision
-    , oldId =
-        case itemReceived.oldId of
-            Just oldId ->
-                oldId
-
-            Nothing ->
-                ""
-    }
 
 
 toggleTag : String -> List FilterTag -> List FilterTag
