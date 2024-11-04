@@ -46,6 +46,35 @@ encode { id, title, tags, draftTitle, draftTags, draftTagsInput, draftChanged, d
         ]
 
 
+decode : Decode.Decoder ItemData
+decode =
+    Decode.succeed ItemData
+        |> required "id" Decode.string
+        |> required "title" Decode.string
+        |> required "tags" (Decode.list Decode.string)
+        |> required "draftTitle" Decode.string
+        |> required "draftTags" (Decode.list Decode.string)
+        |> required "draftTagsInput" Decode.string
+        |> required "draftChanged" Decode.bool
+        |> required "done" Decode.int
+        |> required "orderIndexDefault" Decode.int
+        |> required "orderIndexOverride" Decode.int
+        |> required "editing" Decode.bool
+        |> required "synced" Decode.bool
+        |> required "new" Decode.bool
+        |> required "lastSyncedRevision" Decode.int
+        |> required "oldId" (Decode.oneOf [ Decode.string, Decode.null "" ])
+
+
+decodeApply =
+    Decode.map2 (|>)
+
+
+required : String -> Decode.Decoder a -> Decode.Decoder (a -> b) -> Decode.Decoder b
+required fieldName itemDecoder functionDecoder =
+    decodeApply (Decode.field fieldName itemDecoder) functionDecoder
+
+
 maxOrderIndex : List ItemData -> Maybe Int
 maxOrderIndex items =
     List.maximum (List.map .orderIndexDefault items)

@@ -5449,7 +5449,7 @@ var $author$project$FilterTag$FilterTag = F2(
 		return {aq: isActive, J: tag};
 	});
 var $elm$json$Json$Decode$bool = _Json_decodeBool;
-var $author$project$Main$filterTagDecoder = A3(
+var $author$project$FilterTag$decode = A3(
 	$elm$json$Json$Decode$map2,
 	$author$project$FilterTag$FilterTag,
 	A2($elm$json$Json$Decode$field, 'tag', $elm$json$Json$Decode$string),
@@ -5462,7 +5462,7 @@ var $author$project$Main$filterTagsFromLocalStorage = function (flags) {
 			$elm$json$Json$Decode$at,
 			_List_fromArray(
 				['localStore', 'filterTags']),
-			$elm$json$Json$Decode$list($author$project$Main$filterTagDecoder)),
+			$elm$json$Json$Decode$list($author$project$FilterTag$decode)),
 		flags);
 	if (!_v0.$) {
 		var data = _v0.a;
@@ -5471,6 +5471,114 @@ var $author$project$Main$filterTagsFromLocalStorage = function (flags) {
 		return $elm$core$Maybe$Nothing;
 	}
 };
+var $author$project$ItemData$ItemData = function (id) {
+	return function (title) {
+		return function (tags) {
+			return function (draftTitle) {
+				return function (draftTags) {
+					return function (draftTagsInput) {
+						return function (draftChanged) {
+							return function (done) {
+								return function (orderIndexDefault) {
+									return function (orderIndexOverride) {
+										return function (editing) {
+											return function (synced) {
+												return function (_new) {
+													return function (lastSyncedRevision) {
+														return function (oldId) {
+															return {O: done, S: draftChanged, ab: draftTags, ac: draftTagsInput, ad: draftTitle, am: editing, ae: id, bs: lastSyncedRevision, bx: _new, au: oldId, aY: orderIndexDefault, bH: orderIndexOverride, a4: synced, K: tags, Q: title};
+														};
+													};
+												};
+											};
+										};
+									};
+								};
+							};
+						};
+					};
+				};
+			};
+		};
+	};
+};
+var $elm$json$Json$Decode$int = _Json_decodeInt;
+var $elm$json$Json$Decode$null = _Json_decodeNull;
+var $elm$json$Json$Decode$oneOf = _Json_oneOf;
+var $author$project$ItemData$decodeApply = $elm$json$Json$Decode$map2($elm$core$Basics$apR);
+var $author$project$ItemData$required = F3(
+	function (fieldName, itemDecoder, functionDecoder) {
+		return A2(
+			$author$project$ItemData$decodeApply,
+			A2($elm$json$Json$Decode$field, fieldName, itemDecoder),
+			functionDecoder);
+	});
+var $author$project$ItemData$decode = A3(
+	$author$project$ItemData$required,
+	'oldId',
+	$elm$json$Json$Decode$oneOf(
+		_List_fromArray(
+			[
+				$elm$json$Json$Decode$string,
+				$elm$json$Json$Decode$null('')
+			])),
+	A3(
+		$author$project$ItemData$required,
+		'lastSyncedRevision',
+		$elm$json$Json$Decode$int,
+		A3(
+			$author$project$ItemData$required,
+			'new',
+			$elm$json$Json$Decode$bool,
+			A3(
+				$author$project$ItemData$required,
+				'synced',
+				$elm$json$Json$Decode$bool,
+				A3(
+					$author$project$ItemData$required,
+					'editing',
+					$elm$json$Json$Decode$bool,
+					A3(
+						$author$project$ItemData$required,
+						'orderIndexOverride',
+						$elm$json$Json$Decode$int,
+						A3(
+							$author$project$ItemData$required,
+							'orderIndexDefault',
+							$elm$json$Json$Decode$int,
+							A3(
+								$author$project$ItemData$required,
+								'done',
+								$elm$json$Json$Decode$int,
+								A3(
+									$author$project$ItemData$required,
+									'draftChanged',
+									$elm$json$Json$Decode$bool,
+									A3(
+										$author$project$ItemData$required,
+										'draftTagsInput',
+										$elm$json$Json$Decode$string,
+										A3(
+											$author$project$ItemData$required,
+											'draftTags',
+											$elm$json$Json$Decode$list($elm$json$Json$Decode$string),
+											A3(
+												$author$project$ItemData$required,
+												'draftTitle',
+												$elm$json$Json$Decode$string,
+												A3(
+													$author$project$ItemData$required,
+													'tags',
+													$elm$json$Json$Decode$list($elm$json$Json$Decode$string),
+													A3(
+														$author$project$ItemData$required,
+														'title',
+														$elm$json$Json$Decode$string,
+														A3(
+															$author$project$ItemData$required,
+															'id',
+															$elm$json$Json$Decode$string,
+															$elm$json$Json$Decode$succeed($author$project$ItemData$ItemData))))))))))))))));
 var $elm$core$Dict$Black = 1;
 var $elm$core$Dict$RBNode_elm_builtin = F5(
 	function (a, b, c, d, e) {
@@ -5599,114 +5707,6 @@ var $elm$json$Json$Decode$dict = function (decoder) {
 		$elm$core$Dict$fromList,
 		$elm$json$Json$Decode$keyValuePairs(decoder));
 };
-var $author$project$ItemData$ItemData = function (id) {
-	return function (title) {
-		return function (tags) {
-			return function (draftTitle) {
-				return function (draftTags) {
-					return function (draftTagsInput) {
-						return function (draftChanged) {
-							return function (done) {
-								return function (orderIndexDefault) {
-									return function (orderIndexOverride) {
-										return function (editing) {
-											return function (synced) {
-												return function (_new) {
-													return function (lastSyncedRevision) {
-														return function (oldId) {
-															return {O: done, S: draftChanged, ab: draftTags, ac: draftTagsInput, ad: draftTitle, am: editing, ae: id, bs: lastSyncedRevision, bx: _new, au: oldId, aY: orderIndexDefault, bH: orderIndexOverride, a4: synced, K: tags, Q: title};
-														};
-													};
-												};
-											};
-										};
-									};
-								};
-							};
-						};
-					};
-				};
-			};
-		};
-	};
-};
-var $elm$json$Json$Decode$int = _Json_decodeInt;
-var $elm$json$Json$Decode$null = _Json_decodeNull;
-var $elm$json$Json$Decode$oneOf = _Json_oneOf;
-var $author$project$Main$decodeApply = $elm$json$Json$Decode$map2($elm$core$Basics$apR);
-var $author$project$Main$required = F3(
-	function (fieldName, itemDecoder, functionDecoder) {
-		return A2(
-			$author$project$Main$decodeApply,
-			A2($elm$json$Json$Decode$field, fieldName, itemDecoder),
-			functionDecoder);
-	});
-var $author$project$Main$itemDataDecoder = A3(
-	$author$project$Main$required,
-	'oldId',
-	$elm$json$Json$Decode$oneOf(
-		_List_fromArray(
-			[
-				$elm$json$Json$Decode$string,
-				$elm$json$Json$Decode$null('')
-			])),
-	A3(
-		$author$project$Main$required,
-		'lastSyncedRevision',
-		$elm$json$Json$Decode$int,
-		A3(
-			$author$project$Main$required,
-			'new',
-			$elm$json$Json$Decode$bool,
-			A3(
-				$author$project$Main$required,
-				'synced',
-				$elm$json$Json$Decode$bool,
-				A3(
-					$author$project$Main$required,
-					'editing',
-					$elm$json$Json$Decode$bool,
-					A3(
-						$author$project$Main$required,
-						'orderIndexOverride',
-						$elm$json$Json$Decode$int,
-						A3(
-							$author$project$Main$required,
-							'orderIndexDefault',
-							$elm$json$Json$Decode$int,
-							A3(
-								$author$project$Main$required,
-								'done',
-								$elm$json$Json$Decode$int,
-								A3(
-									$author$project$Main$required,
-									'draftChanged',
-									$elm$json$Json$Decode$bool,
-									A3(
-										$author$project$Main$required,
-										'draftTagsInput',
-										$elm$json$Json$Decode$string,
-										A3(
-											$author$project$Main$required,
-											'draftTags',
-											$elm$json$Json$Decode$list($elm$json$Json$Decode$string),
-											A3(
-												$author$project$Main$required,
-												'draftTitle',
-												$elm$json$Json$Decode$string,
-												A3(
-													$author$project$Main$required,
-													'tags',
-													$elm$json$Json$Decode$list($elm$json$Json$Decode$string),
-													A3(
-														$author$project$Main$required,
-														'title',
-														$elm$json$Json$Decode$string,
-														A3(
-															$author$project$Main$required,
-															'id',
-															$elm$json$Json$Decode$string,
-															$elm$json$Json$Decode$succeed($author$project$ItemData$ItemData))))))))))))))));
 var $author$project$Main$itemsFromLocalStorage = function (flags) {
 	var _v0 = A2(
 		$elm$json$Json$Decode$decodeValue,
@@ -5714,7 +5714,7 @@ var $author$project$Main$itemsFromLocalStorage = function (flags) {
 			$elm$json$Json$Decode$at,
 			_List_fromArray(
 				['localStore', 'items']),
-			$elm$json$Json$Decode$dict($author$project$Main$itemDataDecoder)),
+			$elm$json$Json$Decode$dict($author$project$ItemData$decode)),
 		flags);
 	if (!_v0.$) {
 		var data = _v0.a;
@@ -6345,10 +6345,10 @@ var $elm$http$Http$expectString = function (toMsg) {
 		toMsg,
 		$elm$http$Http$resolve($elm$core$Result$Ok));
 };
-var $author$project$Main$backendBaseUrl = 'https://picluster.a-h.wtf/einkaufsliste-multiuser/api/v1';
-var $author$project$Main$itemsSyncUrl = F2(
+var $author$project$Urls$backendBaseUrl = 'https://picluster.a-h.wtf/einkaufsliste-multiuser/api/v1';
+var $author$project$Urls$itemsSyncUrl = F2(
 	function (apiKey, clientId) {
-		return $author$project$Main$backendBaseUrl + ('/items/sync?k=' + (apiKey + ('&c=' + clientId)));
+		return $author$project$Urls$backendBaseUrl + ('/items/sync?k=' + (apiKey + ('&c=' + clientId)));
 	});
 var $elm$http$Http$jsonBody = function (value) {
 	return A2(
@@ -6541,7 +6541,7 @@ var $author$project$Main$syncItems = F3(
 								A2($elm$json$Json$Encode$list, $author$project$ItemData$encode, items))
 							]))),
 				v: $elm$http$Http$expectString($author$project$Main$ItemsReceived),
-				z: A2($author$project$Main$itemsSyncUrl, apiKey, clientId)
+				z: A2($author$project$Urls$itemsSyncUrl, apiKey, clientId)
 			});
 	});
 var $author$project$Main$userAgentFromFlags = function (flags) {
@@ -6807,8 +6807,8 @@ var $author$project$Main$sortAPIResponseDecoder = A2(
 	$elm$json$Json$Decode$field,
 	'sort_indices',
 	$elm$json$Json$Decode$list($elm$json$Json$Decode$int));
-var $author$project$Main$dataBaseUrl = 'https://picluster.a-h.wtf/einkaufs_api';
-var $author$project$Main$sortUrl = $author$project$Main$dataBaseUrl + '/sort/';
+var $author$project$Urls$dataBaseUrl = 'https://picluster.a-h.wtf/einkaufs_api';
+var $author$project$Urls$sortUrl = $author$project$Urls$dataBaseUrl + '/sort/';
 var $author$project$Main$callSortAPI = function (items) {
 	return $elm$http$Http$post(
 		{
@@ -6838,7 +6838,7 @@ var $author$project$Main$callSortAPI = function (items) {
 						},
 						items)),
 				$author$project$Main$sortAPIResponseDecoder),
-			z: $author$project$Main$sortUrl
+			z: $author$project$Urls$sortUrl
 		});
 };
 var $author$project$Main$DeleteResponseReceived = F2(
@@ -6866,9 +6866,9 @@ var $author$project$Main$httpDelete = function (options) {
 			z: options.z
 		});
 };
-var $author$project$Main$itemUrl = F2(
+var $author$project$Urls$itemUrl = F2(
 	function (apiKey, itemId) {
-		return $author$project$Main$backendBaseUrl + ('/items/' + (itemId + ('?k=' + apiKey)));
+		return $author$project$Urls$backendBaseUrl + ('/items/' + (itemId + ('?k=' + apiKey)));
 	});
 var $author$project$Main$deleteItem = F2(
 	function (apiKey, itemId) {
@@ -6879,7 +6879,7 @@ var $author$project$Main$deleteItem = F2(
 					$elm$http$Http$expectJson,
 					$author$project$Main$DeleteResponseReceived(itemId),
 					A2($elm$json$Json$Decode$field, 'success', $elm$json$Json$Decode$bool)),
-				z: A2($author$project$Main$itemUrl, apiKey, itemId)
+				z: A2($author$project$Urls$itemUrl, apiKey, itemId)
 			});
 	});
 var $elm$core$Dict$foldl = F3(
@@ -7537,7 +7537,7 @@ var $author$project$ItemData$parseReceivedItems = function (rawString) {
 var $author$project$Main$CollectResponseReceived = function (a) {
 	return {$: 24, a: a};
 };
-var $author$project$Main$collectUrl = $author$project$Main$dataBaseUrl + '/collect/';
+var $author$project$Urls$collectUrl = $author$project$Urls$dataBaseUrl + '/collect/';
 var $elm$http$Http$expectBytesResponse = F2(
 	function (toMsg, toResult) {
 		return A3(
@@ -7610,7 +7610,7 @@ var $author$project$Main$postCollectEvent = F2(
 								$elm$json$Json$Encode$string(model.A))
 							]))),
 				v: $elm$http$Http$expectWhatever($author$project$Main$CollectResponseReceived),
-				z: $author$project$Main$collectUrl
+				z: $author$project$Urls$collectUrl
 			});
 	});
 var $author$project$Main$ItemPosted = F2(
@@ -7621,9 +7621,9 @@ var $author$project$Main$PostResponse = F3(
 	function (success, newId, revision) {
 		return {by: newId, cA: revision, cH: success};
 	});
-var $author$project$Main$itemsUrl = F2(
+var $author$project$Urls$itemsUrl = F2(
 	function (apiKey, clientId) {
-		return $author$project$Main$backendBaseUrl + ('/items?k=' + (apiKey + ('&c=' + clientId)));
+		return $author$project$Urls$backendBaseUrl + ('/items?k=' + (apiKey + ('&c=' + clientId)));
 	});
 var $elm$json$Json$Decode$map3 = _Json_map3;
 var $author$project$Main$postItem = F3(
@@ -7656,7 +7656,7 @@ var $author$project$Main$postItem = F3(
 						A2($elm$json$Json$Decode$field, 'success', $elm$json$Json$Decode$bool),
 						A2($elm$json$Json$Decode$field, 'newId', $elm$json$Json$Decode$string),
 						A2($elm$json$Json$Decode$field, 'revision', $elm$json$Json$Decode$int))),
-				z: A2($author$project$Main$itemsUrl, apiKey, clientId)
+				z: A2($author$project$Urls$itemsUrl, apiKey, clientId)
 			});
 	});
 var $author$project$Main$NoOp = {$: 27};
@@ -7878,9 +7878,9 @@ var $author$project$Main$httpUpdate = function (options) {
 			z: options.z
 		});
 };
-var $author$project$Main$updateDoneUrl = F2(
+var $author$project$Urls$updateDoneUrl = F2(
 	function (apiKey, itemId) {
-		return $author$project$Main$backendBaseUrl + ('/items/' + (itemId + ('/done?k=' + apiKey)));
+		return $author$project$Urls$backendBaseUrl + ('/items/' + (itemId + ('/done?k=' + apiKey)));
 	});
 var $author$project$Main$updateDoneBackend = F3(
 	function (apiKey, itemId, doneStatus) {
@@ -7898,7 +7898,7 @@ var $author$project$Main$updateDoneBackend = F3(
 					$elm$http$Http$expectJson,
 					$author$project$Main$DoneResponseReceived(itemId),
 					A2($elm$json$Json$Decode$field, 'success', $elm$json$Json$Decode$bool)),
-				z: A2($author$project$Main$updateDoneUrl, apiKey, itemId)
+				z: A2($author$project$Urls$updateDoneUrl, apiKey, itemId)
 			});
 	});
 var $elm$core$List$sort = function (xs) {
@@ -8031,7 +8031,7 @@ var $author$project$Main$updateItem = F2(
 						$author$project$Main$UpdateResponse,
 						A2($elm$json$Json$Decode$field, 'success', $elm$json$Json$Decode$bool),
 						A2($elm$json$Json$Decode$field, 'revision', $elm$json$Json$Decode$int))),
-				z: A2($author$project$Main$itemUrl, apiKey, item.ae)
+				z: A2($author$project$Urls$itemUrl, apiKey, item.ae)
 			});
 	});
 var $author$project$Main$updateOverrideOrderIndex = F3(

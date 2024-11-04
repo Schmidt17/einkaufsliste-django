@@ -1,5 +1,6 @@
 module FilterTag exposing (..)
 
+import Json.Decode as Decode
 import Json.Encode as Encode
 
 
@@ -15,6 +16,11 @@ encode { tag, isActive } =
         [ ( "tag", Encode.string tag )
         , ( "isActive", Encode.bool isActive )
         ]
+
+
+decode : Decode.Decoder FilterTag
+decode =
+    Decode.map2 FilterTag (Decode.field "tag" Decode.string) (Decode.field "isActive" Decode.bool)
 
 
 maybeActiveTag : FilterTag -> Maybe String

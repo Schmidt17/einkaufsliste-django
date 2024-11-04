@@ -19,6 +19,7 @@ import Set
 import Task
 import Time
 import UUID
+import Urls
 
 
 
@@ -53,12 +54,6 @@ encodeModel { items, overrideOrdering, filterTags, noTagsFilterActive, apiKey } 
         , ( "filterTags", Encode.list FilterTag.encode filterTags )
         , ( "noTagsFilterActive", Encode.bool noTagsFilterActive )
         ]
-
-
-type alias MqttMessageDoneStatus =
-    { id : String
-    , status : Int
-    }
 
 
 
@@ -171,47 +166,22 @@ userAgentFromFlags flags =
 
 itemsFromLocalStorage : Decode.Value -> Maybe (Dict String ItemData)
 itemsFromLocalStorage flags =
-    case Decode.decodeValue (Decode.at [ "localStore", "items" ] (Decode.dict itemDataDecoder)) flags of
+    case Decode.decodeValue (Decode.at [ "localStore", "items" ] (Decode.dict ItemData.decode)) flags of
         Ok data ->
             Just data
 
         Err _ ->
             Nothing
-
-
-itemDataDecoder : Decode.Decoder ItemData
-itemDataDecoder =
-    Decode.succeed ItemData
-        |> required "id" Decode.string
-        |> required "title" Decode.string
-        |> required "tags" (Decode.list Decode.string)
-        |> required "draftTitle" Decode.string
-        |> required "draftTags" (Decode.list Decode.string)
-        |> required "draftTagsInput" Decode.string
-        |> required "draftChanged" Decode.bool
-        |> required "done" Decode.int
-        |> required "orderIndexDefault" Decode.int
-        |> required "orderIndexOverride" Decode.int
-        |> required "editing" Decode.bool
-        |> required "synced" Decode.bool
-        |> required "new" Decode.bool
-        |> required "lastSyncedRevision" Decode.int
-        |> required "oldId" (Decode.oneOf [ Decode.string, Decode.null "" ])
 
 
 filterTagsFromLocalStorage : Decode.Value -> Maybe (List FilterTag)
 filterTagsFromLocalStorage flags =
-    case Decode.decodeValue (Decode.at [ "localStore", "filterTags" ] (Decode.list filterTagDecoder)) flags of
+    case Decode.decodeValue (Decode.at [ "localStore", "filterTags" ] (Decode.list FilterTag.decode)) flags of
         Ok data ->
             Just data
 
         Err _ ->
             Nothing
-
-
-filterTagDecoder : Decode.Decoder FilterTag
-filterTagDecoder =
-    Decode.map2 FilterTag (Decode.field "tag" Decode.string) (Decode.field "isActive" Decode.bool)
 
 
 overrideOrderingFromLocalStorage : Decode.Value -> Maybe Bool
@@ -232,15 +202,6 @@ noTagsFilterFromLocalStorage flags =
 
         Err _ ->
             Nothing
-
-
-decodeApply =
-    Decode.map2 (|>)
-
-
-required : String -> Decode.Decoder a -> Decode.Decoder (a -> b) -> Decode.Decoder b
-required fieldName itemDecoder functionDecoder =
-    decodeApply (Decode.field fieldName itemDecoder) functionDecoder
 
 
 
@@ -276,190 +237,6 @@ type Msg
     | GotFocus String
     | NoTagsFilterClicked
     | NoOp
-
-
-backendBaseUrl : String
-backendBaseUrl =
-    "https://picluster.a-h.wtf/einkaufsliste-multiuser/api/v1"
-
-
-itemsUrl : String -> String -> String
-itemsUrl apiKey clientId =
-    backendBaseUrl ++ "/items?k=" ++ apiKey ++ "&c=" ++ clientId
-
-
-itemUrl : String -> String -> String
-itemUrl apiKey itemId =
-    backendBaseUrl ++ "/items/" ++ itemId ++ "?k=" ++ apiKey
-
-
-updateDoneUrl : String -> String -> String
-updateDoneUrl apiKey itemId =
-    backendBaseUrl ++ "/items/" ++ itemId ++ "/done?k=" ++ apiKey
-
-
-itemsSyncUrl : String -> String -> String
-itemsSyncUrl apiKey clientId =
-    backendBaseUrl ++ "/items/sync?k=" ++ apiKey ++ "&c=" ++ clientId
-
-
-dataBaseUrl : String
-dataBaseUrl =
-    "https://picluster.a-h.wtf/einkaufs_api"
-
-
-sortUrl : String
-sortUrl =
-    dataBaseUrl ++ "/sort/"
-
-
-collectUrl : String
-collectUrl =
-    dataBaseUrl ++ "/collect/"
-
-
-syncItems : String -> String -> List ItemData -> Cmd Msg
-syncItems apiKey clientId items =
-    Http.post
-        { url = itemsSyncUrl apiKey clientId
-        , body = Http.jsonBody (Encode.object [ ( "clientItems", Encode.list ItemData.encode items ) ])
-        , expect = Http.expectString ItemsReceived
-        }
-
-
-type alias PostResponse =
-    { success : Bool
-    , newId : String
-    , revision : Int
-    }
-
-
-type alias UpdateResponse =
-    { success : Bool
-    , revision : Int
-    }
-
-
-postItem : String -> String -> ItemData -> Cmd Msg
-postItem apiKey clientId item =
-    Http.post
-        { url = itemsUrl apiKey clientId
-        , body = Http.jsonBody (Encode.object [ ( "itemData", Encode.object [ ( "title", Encode.string item.title ), ( "tags", Encode.list Encode.string item.tags ) ] ) ])
-        , expect =
-            Http.expectJson (ItemPosted item.id)
-                (Decode.map3 PostResponse
-                    (Decode.field "success" Decode.bool)
-                    (Decode.field "newId" Decode.string)
-                    (Decode.field "revision" Decode.int)
-                )
-        }
-
-
-deleteItem : String -> String -> Cmd Msg
-deleteItem apiKey itemId =
-    httpDelete
-        { url = itemUrl apiKey itemId
-        , body = Http.emptyBody
-        , expect = Http.expectJson (DeleteResponseReceived itemId) (Decode.field "success" Decode.bool)
-        }
-
-
-updateItem : String -> ItemData -> Cmd Msg
-updateItem apiKey item =
-    httpUpdate
-        { url = itemUrl apiKey item.id
-        , body = Http.jsonBody (Encode.object [ ( "itemData", Encode.object [ ( "title", Encode.string item.title ), ( "tags", Encode.list Encode.string item.tags ) ] ) ])
-        , expect = Http.expectJson (UpdateResponseReceived item.id) (Decode.map2 UpdateResponse (Decode.field "success" Decode.bool) (Decode.field "revision" Decode.int))
-        }
-
-
-httpUpdate : { url : String, body : Http.Body, expect : Http.Expect msg } -> Cmd msg
-httpUpdate options =
-    Http.request
-        { method = "UPDATE"
-        , headers = [ Http.header "Content-Type" "application/json" ]
-        , url = options.url
-        , body = options.body
-        , expect = options.expect
-        , timeout = Nothing
-        , tracker = Nothing
-        }
-
-
-httpDelete : { url : String, body : Http.Body, expect : Http.Expect msg } -> Cmd msg
-httpDelete options =
-    Http.request
-        { method = "DELETE"
-        , headers = [ Http.header "Content-Type" "application/json" ]
-        , url = options.url
-        , body = options.body
-        , expect = options.expect
-        , timeout = Nothing
-        , tracker = Nothing
-        }
-
-
-updateDoneBackend : String -> String -> Int -> Cmd Msg
-updateDoneBackend apiKey itemId doneStatus =
-    httpUpdate
-        { url = updateDoneUrl apiKey itemId
-        , body = Http.jsonBody (Encode.object [ ( "done", Encode.int doneStatus ) ])
-        , expect = Http.expectJson (DoneResponseReceived itemId) (Decode.field "success" Decode.bool)
-        }
-
-
-callSortAPI : List ItemData -> Cmd Msg
-callSortAPI items =
-    Http.post
-        { url = sortUrl
-        , body = Http.jsonBody (Encode.object [ ( "input_list", Encode.list Encode.string (List.map .title items) ) ])
-        , expect = Http.expectJson (SortResponseReceived (List.map .id items)) sortAPIResponseDecoder
-        }
-
-
-postCollectEvent : Model -> ItemData -> Cmd Msg
-postCollectEvent model item =
-    let
-        actionType =
-            case item.done of
-                0 ->
-                    "UNCROSSED"
-
-                _ ->
-                    "CROSSED"
-
-        latitudeValue =
-            case model.geolocation of
-                Just geolocation ->
-                    Encode.float geolocation.latitude
-
-                Nothing ->
-                    Encode.null
-
-        longitudeValue =
-            case model.geolocation of
-                Just geolocation ->
-                    Encode.float geolocation.longitude
-
-                Nothing ->
-                    Encode.null
-    in
-    Http.post
-        { url = collectUrl
-        , body =
-            Http.jsonBody
-                (Encode.object
-                    [ ( "action_type", Encode.string actionType )
-                    , ( "name", Encode.string item.title )
-                    , ( "item_id", Encode.string item.id )
-                    , ( "latitude", latitudeValue )
-                    , ( "longitude", longitudeValue )
-                    , ( "user_agent", Encode.string model.userAgent )
-                    , ( "user_key", Encode.string model.apiKey )
-                    ]
-                )
-        , expect = Http.expectWhatever CollectResponseReceived
-        }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -975,6 +752,154 @@ subscriptions model =
 
 
 
+-- HTTP COMMANDS
+
+
+syncItems : String -> String -> List ItemData -> Cmd Msg
+syncItems apiKey clientId items =
+    Http.post
+        { url = Urls.itemsSyncUrl apiKey clientId
+        , body = Http.jsonBody (Encode.object [ ( "clientItems", Encode.list ItemData.encode items ) ])
+        , expect = Http.expectString ItemsReceived
+        }
+
+
+type alias PostResponse =
+    { success : Bool
+    , newId : String
+    , revision : Int
+    }
+
+
+type alias UpdateResponse =
+    { success : Bool
+    , revision : Int
+    }
+
+
+postItem : String -> String -> ItemData -> Cmd Msg
+postItem apiKey clientId item =
+    Http.post
+        { url = Urls.itemsUrl apiKey clientId
+        , body = Http.jsonBody (Encode.object [ ( "itemData", Encode.object [ ( "title", Encode.string item.title ), ( "tags", Encode.list Encode.string item.tags ) ] ) ])
+        , expect =
+            Http.expectJson (ItemPosted item.id)
+                (Decode.map3 PostResponse
+                    (Decode.field "success" Decode.bool)
+                    (Decode.field "newId" Decode.string)
+                    (Decode.field "revision" Decode.int)
+                )
+        }
+
+
+deleteItem : String -> String -> Cmd Msg
+deleteItem apiKey itemId =
+    httpDelete
+        { url = Urls.itemUrl apiKey itemId
+        , body = Http.emptyBody
+        , expect = Http.expectJson (DeleteResponseReceived itemId) (Decode.field "success" Decode.bool)
+        }
+
+
+updateItem : String -> ItemData -> Cmd Msg
+updateItem apiKey item =
+    httpUpdate
+        { url = Urls.itemUrl apiKey item.id
+        , body = Http.jsonBody (Encode.object [ ( "itemData", Encode.object [ ( "title", Encode.string item.title ), ( "tags", Encode.list Encode.string item.tags ) ] ) ])
+        , expect = Http.expectJson (UpdateResponseReceived item.id) (Decode.map2 UpdateResponse (Decode.field "success" Decode.bool) (Decode.field "revision" Decode.int))
+        }
+
+
+httpUpdate : { url : String, body : Http.Body, expect : Http.Expect msg } -> Cmd msg
+httpUpdate options =
+    Http.request
+        { method = "UPDATE"
+        , headers = [ Http.header "Content-Type" "application/json" ]
+        , url = options.url
+        , body = options.body
+        , expect = options.expect
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
+httpDelete : { url : String, body : Http.Body, expect : Http.Expect msg } -> Cmd msg
+httpDelete options =
+    Http.request
+        { method = "DELETE"
+        , headers = [ Http.header "Content-Type" "application/json" ]
+        , url = options.url
+        , body = options.body
+        , expect = options.expect
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
+updateDoneBackend : String -> String -> Int -> Cmd Msg
+updateDoneBackend apiKey itemId doneStatus =
+    httpUpdate
+        { url = Urls.updateDoneUrl apiKey itemId
+        , body = Http.jsonBody (Encode.object [ ( "done", Encode.int doneStatus ) ])
+        , expect = Http.expectJson (DoneResponseReceived itemId) (Decode.field "success" Decode.bool)
+        }
+
+
+callSortAPI : List ItemData -> Cmd Msg
+callSortAPI items =
+    Http.post
+        { url = Urls.sortUrl
+        , body = Http.jsonBody (Encode.object [ ( "input_list", Encode.list Encode.string (List.map .title items) ) ])
+        , expect = Http.expectJson (SortResponseReceived (List.map .id items)) sortAPIResponseDecoder
+        }
+
+
+postCollectEvent : Model -> ItemData -> Cmd Msg
+postCollectEvent model item =
+    let
+        actionType =
+            case item.done of
+                0 ->
+                    "UNCROSSED"
+
+                _ ->
+                    "CROSSED"
+
+        latitudeValue =
+            case model.geolocation of
+                Just geolocation ->
+                    Encode.float geolocation.latitude
+
+                Nothing ->
+                    Encode.null
+
+        longitudeValue =
+            case model.geolocation of
+                Just geolocation ->
+                    Encode.float geolocation.longitude
+
+                Nothing ->
+                    Encode.null
+    in
+    Http.post
+        { url = Urls.collectUrl
+        , body =
+            Http.jsonBody
+                (Encode.object
+                    [ ( "action_type", Encode.string actionType )
+                    , ( "name", Encode.string item.title )
+                    , ( "item_id", Encode.string item.id )
+                    , ( "latitude", latitudeValue )
+                    , ( "longitude", longitudeValue )
+                    , ( "user_agent", Encode.string model.userAgent )
+                    , ( "user_key", Encode.string model.apiKey )
+                    ]
+                )
+        , expect = Http.expectWhatever CollectResponseReceived
+        }
+
+
+
 -- VIEW
 
 
@@ -1278,6 +1203,12 @@ parseGeolocation portMsg =
 
 
 -- MQTT PARSING
+
+
+type alias MqttMessageDoneStatus =
+    { id : String
+    , status : Int
+    }
 
 
 parseMQTTClientId : String -> Maybe String
