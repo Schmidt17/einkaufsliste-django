@@ -1149,12 +1149,6 @@ updateFromReceivedItem itemDataReceived dict =
 -- SUBSCRIPTIONS
 
 
-type alias ChipsInitArgs =
-    { parentSelector : String
-    , tags : List String
-    }
-
-
 port receiveMQTTMessageDoneStatus : (String -> msg) -> Sub msg
 
 
