@@ -50,7 +50,7 @@ encodeModel { items, overrideOrdering, filterTags, noTagsFilterActive, apiKey } 
     Encode.object
         [ ( "items", Encode.dict identity ItemData.encode items )
         , ( "overrideOrdering", Encode.bool overrideOrdering )
-        , ( "filterTags", Encode.list encodeFilterTag filterTags )
+        , ( "filterTags", Encode.list FilterTag.encode filterTags )
         , ( "noTagsFilterActive", Encode.bool noTagsFilterActive )
         ]
 
@@ -522,7 +522,7 @@ update msg model =
         FilterClicked tag ->
             let
                 newModel =
-                    { model | filterTags = toggleTag tag model.filterTags }
+                    { model | filterTags = FilterTag.toggleByTag tag model.filterTags }
             in
             ( newModel, writeToLocalStorage (encodeModel newModel) )
 
@@ -1557,19 +1557,6 @@ sortItems useOverrideIndex items =
             |> List.reverse
 
 
-toggleTag : String -> List FilterTag -> List FilterTag
-toggleTag tag tagList =
-    let
-        toggle tagToMatch filterTag =
-            if tagToMatch == filterTag.tag then
-                { filterTag | isActive = not filterTag.isActive }
-
-            else
-                filterTag
-    in
-    List.map (toggle tag) tagList
-
-
 filterTagNames : Dict String ItemData -> List String
 filterTagNames items =
     Set.toList (ItemData.uniqueTags (Dict.values items))
@@ -1585,14 +1572,6 @@ argsort l =
     List.indexedMap Tuple.pair l
         |> List.sortBy Tuple.second
         |> List.map Tuple.first
-
-
-encodeFilterTag : FilterTag -> Encode.Value
-encodeFilterTag { tag, isActive } =
-    Encode.object
-        [ ( "tag", Encode.string tag )
-        , ( "isActive", Encode.bool isActive )
-        ]
 
 
 resetViewport : Cmd Msg
