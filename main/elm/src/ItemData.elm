@@ -21,7 +21,7 @@ type alias ItemData =
     , synced : Bool
     , new : Bool
     , lastSyncedRevision : Int
-    , clientRevision : Int
+    , clientRevision : Maybe Int
     , oldId : String
     }
 
@@ -43,7 +43,14 @@ encode { id, title, tags, draftTitle, draftTags, draftTagsInput, draftChanged, d
         , ( "synced", Encode.bool synced )
         , ( "new", Encode.bool new )
         , ( "lastSyncedRevision", Encode.int lastSyncedRevision )
-        , ( "clientRevision", Encode.int clientRevision )
+        , ( "clientRevision"
+          , case clientRevision of
+                Just clRev ->
+                    Encode.int clRev
+
+                Nothing ->
+                    Encode.null
+          )
         , ( "oldId", Encode.string oldId )
         ]
 
@@ -65,7 +72,7 @@ decode =
         |> required "synced" Decode.bool
         |> required "new" Decode.bool
         |> required "lastSyncedRevision" Decode.int
-        |> required "clientRevision" Decode.int
+        |> required "clientRevision" (Decode.maybe Decode.int)
         |> required "oldId" (Decode.oneOf [ Decode.string, Decode.null "" ])
 
 
@@ -224,8 +231,18 @@ incrementClientRevision maybeItem =
         Just item ->
             Just
                 { item
-                    | clientRevision = item.clientRevision + 1
+                    | clientRevision = incrementMaybe item.clientRevision
                 }
+
+        Nothing ->
+            Nothing
+
+
+incrementMaybe : Maybe Int -> Maybe Int
+incrementMaybe maybeInt =
+    case maybeInt of
+        Just int ->
+            Just (int + 1)
 
         Nothing ->
             Nothing
@@ -237,18 +254,20 @@ type alias ItemDataReceived =
     , tags : List String
     , done : Int
     , revision : Int
+    , clientRevisionWas : Maybe Int
     , oldId : Maybe String
     }
 
 
 jsonParseItemDataReceived : Decode.Decoder ItemDataReceived
 jsonParseItemDataReceived =
-    Decode.map6 ItemDataReceived
+    Decode.map7 ItemDataReceived
         (Decode.field "id" Decode.string)
         (Decode.field "title" Decode.string)
         (Decode.field "tags" (Decode.list Decode.string))
         (Decode.field "done" Decode.int)
         (Decode.field "revision" (Decode.oneOf [ Decode.int, Decode.null 0 ]))
+        (Decode.maybe (Decode.field "clientRevisionWas" Decode.int))
         (Decode.maybe (Decode.field "oldId" Decode.string))
 
 
@@ -283,7 +302,7 @@ receivedToItem index itemReceived =
     , synced = True
     , new = False
     , lastSyncedRevision = itemReceived.revision
-    , clientRevision = itemReceived.revision
+    , clientRevision = itemReceived.clientRevisionWas
     , oldId =
         case itemReceived.oldId of
             Just oldId ->

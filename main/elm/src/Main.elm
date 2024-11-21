@@ -266,6 +266,12 @@ update msg model =
                           else
                             []
                          )
+                            ++ (if mismatchedClientRevisions items then
+                                    [ syncItems model.apiKey model.clientId (List.sortBy .orderIndexDefault (Dict.values items)) ]
+
+                                else
+                                    []
+                               )
                             ++ [ writeToLocalStorage (encodeModel newModel) ]
                         )
                     )
@@ -363,7 +369,7 @@ update msg model =
                                     , editing = False
                                     , new = False
                                     , synced = False
-                                    , clientRevision = item.clientRevision + 1
+                                    , clientRevision = ItemData.incrementMaybe item.clientRevision
                                 }
 
                             newItems =
@@ -1282,7 +1288,7 @@ addNewItem newId dict =
         , synced = False
         , new = True
         , lastSyncedRevision = -1
-        , clientRevision = -1
+        , clientRevision = Just -1
         , oldId = ""
         }
         dict
@@ -1323,26 +1329,69 @@ updateFromReceivedItem itemDataReceived dict =
         dict
 
 
+hasMismatchedClientRevision : ItemData -> Bool
+hasMismatchedClientRevision item =
+    case item.clientRevision of
+        Just clientRevision ->
+            clientRevision > item.lastSyncedRevision
+
+        Nothing ->
+            True
+
+
+mismatchedClientRevisions : Dict String ItemData -> Bool
+mismatchedClientRevisions items =
+    List.foldl (||) False (List.map hasMismatchedClientRevision (Dict.values items))
+
+
 
 -- DICT MERGING
+
+
+clientRevisionsMismatch : ItemData -> ItemData -> Bool
+clientRevisionsMismatch valLeft valRight =
+    case valLeft.clientRevision of
+        Just requestClientRevision ->
+            case valRight.clientRevision of
+                Just currentClientRevision ->
+                    if currentClientRevision > requestClientRevision then
+                        True
+
+                    else
+                        False
+
+                Nothing ->
+                    False
+
+        Nothing ->
+            False
 
 
 newOnly : Dict String ItemData -> String -> ItemData -> Dict String ItemData -> Dict String ItemData
 newOnly oldDict key val res =
     case Dict.get val.oldId oldDict of
         Just oldItem ->
-            Dict.insert key
-                { oldItem
-                    | id = key
-                    , oldId = oldItem.id
-                    , title = val.title
-                    , tags = val.tags
-                    , done = val.done
-                    , orderIndexDefault = val.orderIndexDefault
-                    , lastSyncedRevision = val.lastSyncedRevision
-                    , synced = True
-                }
-                res
+            let
+                keepClientItem =
+                    clientRevisionsMismatch val oldItem
+            in
+            if keepClientItem then
+                Dict.insert key oldItem res
+
+            else
+                Dict.insert key
+                    { oldItem
+                        | id = key
+                        , oldId = oldItem.id
+                        , title = val.title
+                        , tags = val.tags
+                        , done = val.done
+                        , orderIndexDefault = val.orderIndexDefault
+                        , lastSyncedRevision = val.lastSyncedRevision
+                        , clientRevision = Just val.lastSyncedRevision
+                        , synced = True
+                    }
+                    res
 
         Nothing ->
             Dict.insert key val res
@@ -1350,7 +1399,14 @@ newOnly oldDict key val res =
 
 both : String -> ItemData -> ItemData -> Dict String ItemData -> Dict String ItemData
 both key valLeft valRight res =
+    let
+        keepClientItem =
+            clientRevisionsMismatch valLeft valRight
+    in
     if valRight.editing then
+        Dict.insert key valRight res
+
+    else if keepClientItem then
         Dict.insert key valRight res
 
     else
@@ -1361,6 +1417,7 @@ both key valLeft valRight res =
                 , done = valLeft.done
                 , orderIndexDefault = valLeft.orderIndexDefault
                 , lastSyncedRevision = valLeft.lastSyncedRevision
+                , clientRevision = Just valLeft.lastSyncedRevision
                 , synced = True
             }
             res
