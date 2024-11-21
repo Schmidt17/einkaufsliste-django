@@ -283,7 +283,7 @@ update msg model =
         CardClicked itemId ->
             let
                 newItems =
-                    Dict.update itemId (\item -> ItemData.toggleDone item |> ItemData.setSynced False) model.items
+                    Dict.update itemId (\item -> ItemData.toggleDone item |> ItemData.setSynced False |> ItemData.incrementClientRevision) model.items
 
                 maybeItem =
                     Dict.get itemId newItems
@@ -363,6 +363,7 @@ update msg model =
                                     , editing = False
                                     , new = False
                                     , synced = False
+                                    , clientRevision = item.clientRevision + 1
                                 }
 
                             newItems =
@@ -1281,6 +1282,7 @@ addNewItem newId dict =
         , synced = False
         , new = True
         , lastSyncedRevision = -1
+        , clientRevision = -1
         , oldId = ""
         }
         dict

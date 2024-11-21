@@ -21,12 +21,13 @@ type alias ItemData =
     , synced : Bool
     , new : Bool
     , lastSyncedRevision : Int
+    , clientRevision : Int
     , oldId : String
     }
 
 
 encode : ItemData -> Encode.Value
-encode { id, title, tags, draftTitle, draftTags, draftTagsInput, draftChanged, done, orderIndexDefault, orderIndexOverride, editing, synced, new, lastSyncedRevision, oldId } =
+encode { id, title, tags, draftTitle, draftTags, draftTagsInput, draftChanged, done, orderIndexDefault, orderIndexOverride, editing, synced, new, lastSyncedRevision, clientRevision, oldId } =
     Encode.object
         [ ( "id", Encode.string id )
         , ( "title", Encode.string title )
@@ -42,6 +43,7 @@ encode { id, title, tags, draftTitle, draftTags, draftTagsInput, draftChanged, d
         , ( "synced", Encode.bool synced )
         , ( "new", Encode.bool new )
         , ( "lastSyncedRevision", Encode.int lastSyncedRevision )
+        , ( "clientRevision", Encode.int clientRevision )
         , ( "oldId", Encode.string oldId )
         ]
 
@@ -63,6 +65,7 @@ decode =
         |> required "synced" Decode.bool
         |> required "new" Decode.bool
         |> required "lastSyncedRevision" Decode.int
+        |> required "clientRevision" Decode.int
         |> required "oldId" (Decode.oneOf [ Decode.string, Decode.null "" ])
 
 
@@ -215,6 +218,19 @@ setDone newStatus maybeItem =
             Nothing
 
 
+incrementClientRevision : Maybe ItemData -> Maybe ItemData
+incrementClientRevision maybeItem =
+    case maybeItem of
+        Just item ->
+            Just
+                { item
+                    | clientRevision = item.clientRevision + 1
+                }
+
+        Nothing ->
+            Nothing
+
+
 type alias ItemDataReceived =
     { id : String
     , title : String
@@ -267,6 +283,7 @@ receivedToItem index itemReceived =
     , synced = True
     , new = False
     , lastSyncedRevision = itemReceived.revision
+    , clientRevision = itemReceived.revision
     , oldId =
         case itemReceived.oldId of
             Just oldId ->
