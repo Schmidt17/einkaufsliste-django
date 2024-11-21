@@ -21,12 +21,13 @@ type alias ItemData =
     , synced : Bool
     , new : Bool
     , lastSyncedRevision : Int
+    , clientRevision : Maybe Int
     , oldId : String
     }
 
 
 encode : ItemData -> Encode.Value
-encode { id, title, tags, draftTitle, draftTags, draftTagsInput, draftChanged, done, orderIndexDefault, orderIndexOverride, editing, synced, new, lastSyncedRevision, oldId } =
+encode { id, title, tags, draftTitle, draftTags, draftTagsInput, draftChanged, done, orderIndexDefault, orderIndexOverride, editing, synced, new, lastSyncedRevision, clientRevision, oldId } =
     Encode.object
         [ ( "id", Encode.string id )
         , ( "title", Encode.string title )
@@ -42,6 +43,14 @@ encode { id, title, tags, draftTitle, draftTags, draftTagsInput, draftChanged, d
         , ( "synced", Encode.bool synced )
         , ( "new", Encode.bool new )
         , ( "lastSyncedRevision", Encode.int lastSyncedRevision )
+        , ( "clientRevision"
+          , case clientRevision of
+                Just clRev ->
+                    Encode.int clRev
+
+                Nothing ->
+                    Encode.null
+          )
         , ( "oldId", Encode.string oldId )
         ]
 
@@ -63,6 +72,7 @@ decode =
         |> required "synced" Decode.bool
         |> required "new" Decode.bool
         |> required "lastSyncedRevision" Decode.int
+        |> required "clientRevision" (Decode.maybe Decode.int)
         |> required "oldId" (Decode.oneOf [ Decode.string, Decode.null "" ])
 
 
@@ -215,24 +225,49 @@ setDone newStatus maybeItem =
             Nothing
 
 
+incrementClientRevision : Maybe ItemData -> Maybe ItemData
+incrementClientRevision maybeItem =
+    case maybeItem of
+        Just item ->
+            Just
+                { item
+                    | clientRevision = incrementMaybe item.clientRevision
+                }
+
+        Nothing ->
+            Nothing
+
+
+incrementMaybe : Maybe Int -> Maybe Int
+incrementMaybe maybeInt =
+    case maybeInt of
+        Just int ->
+            Just (int + 1)
+
+        Nothing ->
+            Nothing
+
+
 type alias ItemDataReceived =
     { id : String
     , title : String
     , tags : List String
     , done : Int
     , revision : Int
+    , clientRevisionWas : Maybe Int
     , oldId : Maybe String
     }
 
 
 jsonParseItemDataReceived : Decode.Decoder ItemDataReceived
 jsonParseItemDataReceived =
-    Decode.map6 ItemDataReceived
+    Decode.map7 ItemDataReceived
         (Decode.field "id" Decode.string)
         (Decode.field "title" Decode.string)
         (Decode.field "tags" (Decode.list Decode.string))
         (Decode.field "done" Decode.int)
         (Decode.field "revision" (Decode.oneOf [ Decode.int, Decode.null 0 ]))
+        (Decode.maybe (Decode.field "clientRevisionWas" Decode.int))
         (Decode.maybe (Decode.field "oldId" Decode.string))
 
 
@@ -267,6 +302,7 @@ receivedToItem index itemReceived =
     , synced = True
     , new = False
     , lastSyncedRevision = itemReceived.revision
+    , clientRevision = itemReceived.clientRevisionWas
     , oldId =
         case itemReceived.oldId of
             Just oldId ->
