@@ -820,7 +820,7 @@ updateItem apiKey item =
 httpUpdate : { url : String, body : Http.Body, expect : Http.Expect msg } -> Cmd msg
 httpUpdate options =
     Http.request
-        { method = "UPDATE"
+        { method = "PUT"
         , headers = [ Http.header "Content-Type" "application/json" ]
         , url = options.url
         , body = options.body
