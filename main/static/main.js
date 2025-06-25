@@ -7998,18 +7998,7 @@ var $author$project$Main$DoneResponseReceived = F2(
 	});
 var $author$project$Main$httpUpdate = function (options) {
 	return $elm$http$Http$request(
-		{
-			body: options.body,
-			expect: options.expect,
-			headers: _List_fromArray(
-				[
-					A2($elm$http$Http$header, 'Content-Type', 'application/json')
-				]),
-			method: 'PUT',
-			timeout: $elm$core$Maybe$Nothing,
-			tracker: $elm$core$Maybe$Nothing,
-			url: options.url
-		});
+		{body: options.body, expect: options.expect, headers: _List_Nil, method: 'PUT', timeout: $elm$core$Maybe$Nothing, tracker: $elm$core$Maybe$Nothing, url: options.url});
 };
 var $author$project$Urls$updateDoneUrl = F2(
 	function (apiKey, itemId) {

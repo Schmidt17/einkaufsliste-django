@@ -821,7 +821,7 @@ httpUpdate : { url : String, body : Http.Body, expect : Http.Expect msg } -> Cmd
 httpUpdate options =
     Http.request
         { method = "PUT"
-        , headers = [ Http.header "Content-Type" "application/json" ]
+        , headers = []
         , url = options.url
         , body = options.body
         , expect = options.expect
